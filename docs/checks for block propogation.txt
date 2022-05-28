@@ -1,0 +1,12 @@
+
+-- Only send transaction ids in block propogation
+
+Light checks
+1. Check if index is n+1
+2. Check if previous hash is correct in the incoming block
+3. Check if 0000x in the beginning of block
+
+Heavy checks
+4. Check transactions in the mempool
+5. Calculate transaction hashes
+6. 

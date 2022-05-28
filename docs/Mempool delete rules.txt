@@ -1,0 +1,11 @@
+Updater every 6h
+
+Mempool delete
+1. Delete without signatures
+2. Delete everything older than 24h only if the updater has run else run updater
+3. Older than 6h, majority invalid receipts
+
+
+Multinode
+1. Transactions older than two prior blocks delete.
+

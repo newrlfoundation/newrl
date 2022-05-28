@@ -1,0 +1,20 @@
+Timings.txt
+
+
+TO - Start block mining
+T1 - Block mining finish. Timestamp of block is T0
+
+A node receive block at T2. Node time is not synchronos with network
+T3_global = T0 + NO_BLOCK_TIMEOUT
+T3_local = T3_global - get_time_difference()
+Wait till T3_local. And then mine empty. 
+
+T4 = Committee members propogate receipts
+T5 = Live commitee members receive adequate receipts
+T6_global = T0 + NO_RECEIPT_COMMITTEE_TIMEOUT
+T6_local = T6_global - get_time_difference()
+
+T7 = Rest of network receive block and receipts
+T8 = Rest of network accept the block
+T9_global = T0 + NETWORK_BLOCK_TIMEOUT
+T9_local = T9_global - get_time_difference()
