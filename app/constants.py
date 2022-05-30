@@ -3,7 +3,7 @@ import os
 
 from .ntypes import NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE
 
-SOFTWARE_VERSION = "0.0.12"
+SOFTWARE_VERSION = "1.0.0"
 
 IS_TEST = os.environ.get('NEWRL_TEST') is not None
 if IS_TEST:
@@ -22,9 +22,9 @@ ALLOWED_CUSTODIANS_FILE = 'allowed_custodians.json'
 DB_MIGRATIONS_PATH = 'app/migrations/migrations'
 AUTH_FILE_PATH = DATA_PATH + '.auth.json'
 
-BOOTSTRAP_NODES = ['testnet.newrl.net']
+BOOTSTRAP_NODES = ['mainnet.newrl.net']
 REQUEST_TIMEOUT = 1
-NEWRL_PORT = 8182  # Devnet
+NEWRL_PORT = 8456
 NEWRL_TOKEN = "newrl_token"
 TREASURY = "treasury_address"
 COINBASE_SC = "coinbase_sc_address"
