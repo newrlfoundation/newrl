@@ -14,6 +14,7 @@ def clear_db():
     cur.execute('DROP TABLE IF EXISTS tokens')
     cur.execute('DROP TABLE IF EXISTS balances')
     cur.execute('DROP TABLE IF EXISTS blocks')
+    cur.execute('DROP TABLE IF EXISTS block_proposals')
     cur.execute('DROP TABLE IF EXISTS transactions')
     cur.execute('DROP TABLE IF EXISTS transfers')
     cur.execute('DROP TABLE IF EXISTS receipts')
@@ -71,6 +72,14 @@ def init_db():
                     hash text,
                     creator_wallet text,
                     transactions_hash text)
+                    ''')
+    
+    cur.execute('''
+                    CREATE TABLE IF NOT EXISTS block_proposals
+                    (block_index integer,
+                    timestamp text,
+                    hash text PRIMARY KEY,
+                    creator_wallet text)
                     ''')
     
     cur.execute('''

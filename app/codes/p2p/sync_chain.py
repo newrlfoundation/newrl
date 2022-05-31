@@ -10,6 +10,7 @@ from app.codes import blockchain
 from app.codes.crypto import calculate_hash
 from app.codes.minermanager import get_committee_for_current_block
 from app.codes.p2p.outgoing import broadcast_receipt, broadcast_block
+from app.codes.utils import store_block_proposal
 from app.constants import NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
 from app.codes.p2p.peers import get_peers
 
@@ -67,7 +68,10 @@ def receive_block(block):
         accept_block(block, block['hash'])
         broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
     
+    store_block_proposal(block)
+    
     if not validate_block_miner(block['data']):
+        # Store proposal to penalise false miner
         return False
 
     if not validate_block(block):

@@ -58,3 +58,38 @@ def get_last_block_hash():
         }
     else:
         return None
+
+
+def store_block_proposal(block):
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
+    block_proposal_data = (
+        block['index'],
+        block['data']['timestamp'],
+        block['hash'],
+        block['data']['creator_wallet'],
+    )
+    cur.execute(
+        '''
+        INSERT OR IGNORE INTO block_proposals
+        (block_index, timestamp, hash, creator_wallet)
+        VALUES(?, ?, ?, ?)
+        ''',
+        block_proposal_data
+    )
+    con.commit()
+    con.close()
+
+
+def get_proposals_for_block(block_index):
+    con = sqlite3.connect(NEWRL_DB)
+    con.row_factory = sqlite3.Row
+    cur = con.cursor()
+    cur.execute(
+        '''
+        SELECT * FROM block_proposals
+        block_index = ?
+        ''',
+        (block_index, )
+    )
+    con.close()

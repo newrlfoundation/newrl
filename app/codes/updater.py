@@ -15,7 +15,7 @@ from ..nvalues import ASQI_WALLET, TREASURY_WALLET_ADDRESS
 from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, GLOBAL_INTERNAL_CLOCK_SECONDS, IS_TEST, NEWRL_DB, NEWRL_PORT, NO_BLOCK_TIMEOUT, NO_RECEIPT_COMMITTEE_TIMEOUT, REQUEST_TIMEOUT, MEMPOOL_PATH, TIME_BETWEEN_BLOCKS_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS
 from .p2p.peers import get_peers
 from .p2p.utils import is_my_address
-from .utils import BufferedLog, get_time_ms
+from .utils import BufferedLog, get_proposals_for_block, get_time_ms
 from .blockchain import Blockchain, get_last_block, get_last_block_index
 from .transactionmanager import Transactionmanager, get_valid_addresses
 from .state_updater import update_db_states
@@ -134,6 +134,7 @@ def run_updater(add_to_chain=False):
 
     previous_block = get_last_block(cur=cur)
     transactionsdata['previous_block_receipts'] = get_receipts_from_storage(previous_block['index'])
+    transactionsdata['previous_block_proposals'] = get_proposals_for_block(previous_block['index'])
 
     if add_to_chain:
         block = blockchain.mine_block(cur, transactionsdata)
