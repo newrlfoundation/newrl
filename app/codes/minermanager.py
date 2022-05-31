@@ -4,7 +4,7 @@ import random
 
 from .p2p.peers import add_peer
 from .clock.global_time import get_corrected_time_ms, get_time_difference
-from ..nvalues import ASQI_WALLET
+from ..nvalues import SENTINEL_NODE_WALLET
 from .utils import get_last_block_hash
 # from .p2p.outgoing import propogate_transaction_to_peers
 from .p2p.utils import get_my_address
@@ -105,14 +105,14 @@ def get_miner_for_current_block(last_block=None):
         last_block = get_last_block_hash()
 
     if not last_block:
-        return {'wallet_address': ASQI_WALLET}
+        return {'wallet_address': SENTINEL_NODE_WALLET}
 
     random.seed(last_block['index'])
 
     committee_list = get_committee_for_current_block()
 
     if len(committee_list) == 0:
-        return {'wallet_address': ASQI_WALLET}
+        return {'wallet_address': SENTINEL_NODE_WALLET}
 
     return random.choice(committee_list)
 
@@ -124,14 +124,14 @@ def get_committee_for_current_block(last_block=None):
         last_block = get_last_block_hash()
 
     if not last_block:
-        return [{'wallet_address': ASQI_WALLET}]
+        return [{'wallet_address': SENTINEL_NODE_WALLET}]
 
     random.seed(last_block['index'])
 
     miners = get_eligible_miners()
 
     if len(miners) == 0:
-        return [{'wallet_address': ASQI_WALLET}]
+        return [{'wallet_address': SENTINEL_NODE_WALLET}]
 
     committee_size = min(COMMITTEE_SIZE, len(miners))
     committee = random.sample(miners, k=committee_size)

@@ -1,7 +1,7 @@
 import sqlite3
 
 from ...ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME
-from ...nvalues import ASQI_WALLET, ASQI_WALLET_PUBLIC, FOUNDATION_WALLET, FOUNDATION_WALLET_PUBLIC
+from ...nvalues import ASQI_WALLET, SENTINEL_NODE_WALLET, ASQI_WALLET_PUBLIC, FOUNDATION_WALLET, FOUNDATION_WALLET_PUBLIC, SENTINEL_NODE_WALLET_PUBLIC
 
 from ...constants import NEWRL_DB
 
@@ -16,9 +16,12 @@ def init_newrl_tokens():
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
 
-    create_newrl_tokens(cur, FOUNDATION_RESERVE * 2)
     create_wallet(cur, FOUNDATION_WALLET, FOUNDATION_WALLET_PUBLIC)
     create_wallet(cur, ASQI_WALLET, ASQI_WALLET_PUBLIC)
+    create_wallet(cur, SENTINEL_NODE_WALLET, SENTINEL_NODE_WALLET_PUBLIC)
+
+    create_newrl_tokens(cur, FOUNDATION_RESERVE * 2)
+    
     credit_wallet(cur, FOUNDATION_WALLET, FOUNDATION_RESERVE)
     credit_wallet(cur, ASQI_WALLET, FOUNDATION_RESERVE)
 
