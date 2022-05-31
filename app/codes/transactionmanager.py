@@ -140,6 +140,8 @@ class Transactionmanager:
                 continue
             msgsign = signature['msgsign']
             pubkey = get_public_key_from_address(signaddress)
+            if pubkey is None:
+                return False
     #		print("encoded pubkey from json file: ",pubkey)
             # here we decode the base64 form to get pubkeybytes
             pubkeybytes = base64.b64decode(pubkey)
@@ -462,7 +464,7 @@ def get_public_key_from_address(address):
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
     public_key = wallet_cursor.fetchone()
     if public_key is None:
-        raise Exception('Wallet with address not found')
+        return None
     return public_key[0]
 
 
