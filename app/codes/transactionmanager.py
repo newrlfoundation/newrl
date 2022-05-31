@@ -227,7 +227,7 @@ class Transactionmanager:
                 else:
                     linkedwalletstatus = False
                 if linkedwalletstatus:
-                    parentwalletaddress = self.transaction['specific_data']['wallet_specific_data']['parentaddress']
+                    parentwalletaddress = self.transaction['specific_data']['specific_data']['parentaddress']
                     if custodian == parentwalletaddress:
                         self.validity = 1  # linking a new wallet is signed by existing wallet itself
                     else:
