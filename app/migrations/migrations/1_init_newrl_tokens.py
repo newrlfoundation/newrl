@@ -1,13 +1,10 @@
 import sqlite3
 
 from ...ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME
+from ...nvalues import ASQI_WALLET, ASQI_WALLET_PUBLIC, FOUNDATION_WALLET, FOUNDATION_WALLET_PUBLIC
 
 from ...constants import NEWRL_DB
 
-FOUNDATION_WALLET = '0xc29193dbab0fe018d878e258c93064f01210ec1a'
-ASQI_WALLET = '0x20513a419d5b11cd510ae518dc04ac1690afbed6'
-FOUNDATION_PUBLIC_KEY = 'sB8/+o32Q7tRTjB2XcG65QS94XOj9nP+mI7S6RIHuXzKLRlbpnu95Zw0MxJ2VGacF4TY5rdrIB8VNweKzEqGzg=='
-ASQI_PUBLIC_KEY = 'PizgnsfVWBzJxJ6RteOQ1ZyeOdc9n5KT+GrQpKz7IXLQIiVmSlvZ5EHw83GZL7wqZYQiGrHH+lKU7xE5KxmeKg=='
 
 FOUNDATION_RESERVE = 3000000000
 
@@ -20,8 +17,8 @@ def init_newrl_tokens():
     cur = con.cursor()
 
     create_newrl_tokens(cur, FOUNDATION_RESERVE * 2)
-    create_wallet(cur, FOUNDATION_WALLET, FOUNDATION_PUBLIC_KEY)
-    create_wallet(cur, ASQI_WALLET, ASQI_PUBLIC_KEY)
+    create_wallet(cur, FOUNDATION_WALLET, FOUNDATION_WALLET_PUBLIC)
+    create_wallet(cur, ASQI_WALLET, ASQI_WALLET_PUBLIC)
     credit_wallet(cur, FOUNDATION_WALLET, FOUNDATION_RESERVE)
     credit_wallet(cur, ASQI_WALLET, FOUNDATION_RESERVE)
 
