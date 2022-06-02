@@ -4,7 +4,7 @@
 
 ## Prerequisites 
 1. A computer accessible outside with port open for incoming.
-    1. To start a node on AWS, launch an EC2 instance from instructions [here](https://docs.aws.amazon.com/efs/latest/ug/gs-step-one-create-ec2-resources.html). Make sure to make port 8090 open to public when configuring the security group. 
+    1. To start a node on AWS, launch an EC2 instance from instructions [here](https://docs.aws.amazon.com/efs/latest/ug/gs-step-one-create-ec2-resources.html). Make sure to make port 8456 open to public when configuring the security group. 
     2. To start a node on Digital ocean droplet, instructions [here](https://docs.digitalocean.com/products/droplets/quickstart/)
 3. Git installed. Steps [here](https://git-scm.com/downloads)
 4. Python3.7+ installed. This is preinstalled on most common linux distributions. On ubuntu the steps will be `sudo apt update && sudo apt install python3.10-venv`
