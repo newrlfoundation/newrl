@@ -153,7 +153,7 @@ def broadcast_miner_update_api():
 
 @router.post("/revert-chain", tags=[p2p_tag])
 def revert_chain_api(api_key, block_index: int, propogate: bool = False):
-    if calculate_hash(api_key) != '7b345f5ad85b955ab9ad62885283c4420960359bf3faa3a805bf4c7586f80d23':
+    if calculate_hash(api_key) != '4a01127180cb827a4752abe578b47cbe23ba677037b5bb0cd420549bdb4a274d':
         return {'status': 'INVALID_KEY'}
     revert_chain(block_index)
     if propogate:
