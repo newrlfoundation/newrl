@@ -262,7 +262,8 @@ def call_sc(sc_request: CallSC):
         "address": sc_request.sc_address,
         "function" : sc_request.function_called,
         "signers" : sc_request.signers,
-        "params" : sc_request.params
+        "params" : sc_request.params,
+        "value": sc_request.value
     }
 
     fulltrandata = {
