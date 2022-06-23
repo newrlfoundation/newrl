@@ -37,14 +37,23 @@ def update_db_states(cur, block):
 
         transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction['trans_code']
 
-        update_state_from_transaction(
-            cur,
-            transaction['type'],
-            transaction_data,
-            transaction_code,
-            transaction['timestamp'],
-            signature
-        )
+        if transaction['type']== TRANSACTION_SMART_CONTRACT:
+            update_state_from_sc_tx(
+                cur,
+                transaction_data,
+                transaction_code,
+                transaction['timestamp'],
+                signature
+            )
+        else:            
+            update_state_from_transaction(
+                cur,
+                transaction['type'],
+                transaction_data,
+                transaction_code,
+                transaction['timestamp'],
+                signature
+            )
     return True
 
 
@@ -106,7 +115,80 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
         )
 
 
+def update_state_from_sc_tx(cur, transaction_data, transaction_code, transaction_timestamp,transaction_signer=None):
+    """Handling smart contract transaction differently from the rest"""
+    funct = transaction_data['function']
+    if funct == "setup":  # sc is being set up
+        contract = dict(transaction_data['params'])
+        transaction_data['params']['parent'] = transaction_code
+    else:
+        contract = get_contract_from_address(
+            cur, transaction_data['address'])
+    module = importlib.import_module(
+        ".codes.contracts."+contract['name'], package="app")
+    sc_class = getattr(module, contract['name'])
+    sc_instance = sc_class(transaction_data['address'])
+#    sc_instance = nusd1(transaction['specific_data']['address'])
+    funct = getattr(sc_instance, funct)
+    params_for_funct=transaction_data['params']
+    # adding singers address to the dict
+    params_for_funct['function_caller']=transaction_signer
+    try:
+        child_transactions_array = funct(params_for_funct)   ##TODO: modify the smart contract function behaviour to give this output
+    except Exception as e:
+        print('Exception durint smart contract function run', e)
 
+    sc_address = transaction_data['address']
+
+    for child_transaction in child_transactions_array:
+        child_transaction = child_transaction['transaction']
+        child_transaction_signatures = child_transaction['signatures']  # relevant for two-way-transfer, not otherwise
+        child_transaction_data = child_transaction['specific_data']
+        child_transaction_type = child_transaction['type']
+
+        if transaction_type == TRANSACTION_MINER_ADDITION:
+            print('Smart contracts can't add miners')
+            continue
+        if child_transaction_type==TRANSACTION_SC_INTERNAL:    #new type for SC's private data update
+            ###TBD
+            pass
+        if child_transaction_type==TRANSACTION_SMART_CONTRACT: #need to call recursively the same function
+            ###TBD
+            pass
+        if child_transaction_type == TRANSACTION_WALLET_CREATION:  # this is a wallet creation transaction
+            if child_transaction_data['custodian']!= sc_address:
+                print('Incorrect custodian for child transaction. Continuing with next child tx or exiting.')
+                continue
+            else:
+                add_wallet_pid(cur, child_transaction_data)   # may need to add a check here if SC is allowed to add wallets (ref: allowed_custodians)
+        if child_transaction_type == TRANSACTION_TOKEN_CREATION:  # this is a token creation or addition transaction
+            if child_transaction_data['custodian']!= sc_address:
+                print('Incorrect custodian for child transaction. Continuing with next child tx or exiting.')
+                continue
+            else:
+                tokencode = child_transaction_data['tokencode']   #check syntax
+                ## code to get custodian of token from its tokencode if it exists, else check not needed.
+                ## if tokencode is new or if sc_address is custodian of token
+                ##    add_token(cur, transaction_data, transaction_code)
+                ## else error msg and continue to next child transaction
+
+        if child_transaction_type == TRANSACTION_TWO_WAY_TRANSFER  # this is a transfer tx
+            ###TBD
+            sender1 = child_transaction_data['wallet1']
+            sender2 = child_transaction_data['wallet2']
+            ###TBD
+        if child_transaction_type == TRANSACTION_ONE_WAY_TRANSFER:
+            ### TBD
+                  
+        if child_transaction_type == TRANSACTION_TRUST_SCORE_CHANGE:  # score update transaction                  
+            ### TBD ; including checks for why the specific persons are relevant for this SC to change
+            personid1 = get_pid_from_wallet(cur, transaction_data['address1'])
+            personid2 = get_pid_from_wallet(cur, transaction_data['address2'])
+            new_score = transaction_data['new_score']
+            tstamp = transaction_timestamp
+            update_trust_score(cur, personid1, personid2, new_score, tstamp)
+            ### TBD
+            
 def add_block_reward(cur, creator, blockindex):
     """Reward the minder by chaning their NWRL balance"""
     if creator is None:
