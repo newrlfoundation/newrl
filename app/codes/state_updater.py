@@ -110,6 +110,8 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
 
 def add_block_reward(cur, creator, blockindex):
     """Reward the minder by chaning their NWRL balance"""
+    if creator is None:
+        return False
     reward = 0
     RATIO = 2/3
     STARTING_REWARD = 1000

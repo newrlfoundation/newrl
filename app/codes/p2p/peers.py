@@ -209,9 +209,9 @@ def call_api_on_peers(url):
 
 def remove_dead_peer(peer, my_address):
     address = peer['address']
-    if socket.gethostbyname(address) == my_address:
-        return
     try:
+        if socket.gethostbyname(address) == my_address:
+            return
         response = requests.get(
             'http://' + address + f':{NEWRL_PORT}' + '/get-status',
             timeout=REQUEST_TIMEOUT

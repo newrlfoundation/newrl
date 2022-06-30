@@ -31,16 +31,18 @@ def validate(transaction, propagate=False, validate_economics=True):
     valid = False
     if not signatures_valid:
         msg = "Transaction has invalid signatures"
-    if validate_economics:
-        economics_valid = transaction_manager.econvalidator()
-        if not economics_valid:
-            msg = "Transaction economic validation failed"
-            valid = False
-        msg = "Transaction economic validation successful"
-        valid = True
     else:
-        msg = "Valid signatures. Not checking economics"
-        valid = True
+        if validate_economics:
+            economics_valid = transaction_manager.econvalidator()
+            if not economics_valid:
+                msg = "Transaction economic validation failed"
+                valid = False
+            else:
+                msg = "Transaction economic validation successful"
+                valid = True
+        else:
+            msg = "Valid signatures. Not checking economics"
+            valid = True
     # if  economics_valid and signatures_valid:
     #     msg = "Transaction is valid"
     #     valid = True
