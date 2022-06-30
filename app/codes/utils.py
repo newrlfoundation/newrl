@@ -61,6 +61,8 @@ def get_last_block_hash():
 
 
 def store_block_proposal(block):
+    # TODO - Do this in temp file system instead of db
+    return
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
     block_proposal_data = (
@@ -82,6 +84,7 @@ def store_block_proposal(block):
 
 
 def get_proposals_for_block(block_index):
+    # TODO - Do this from temp file system instead of db
     con = sqlite3.connect(NEWRL_DB)
     con.row_factory = sqlite3.Row
     cur = con.cursor()

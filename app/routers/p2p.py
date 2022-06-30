@@ -37,7 +37,7 @@ def get_mempool_transactions_api(req: TransactionsRequest):
     return get_mempool_transactions(req.transaction_codes)
 
 @router.post("/get-blocks", tags=[p2p_tag])
-def get_mempool_transactions_api(req: BlockRequest):
+def get_blocks_api(req: BlockRequest):
     return get_blocks(req.block_indexes)
 
 @router.post("/receive-transaction", tags=[p2p_tag])

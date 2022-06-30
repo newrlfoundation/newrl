@@ -5,11 +5,26 @@ from .ntypes import NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE
 
 SOFTWARE_VERSION = "1.0.0"
 
+NEWRL_ENV = os.environ.get('NEWRL_ENV')
 IS_TEST = os.environ.get('NEWRL_TEST') is not None
-if IS_TEST:
-    print('Using constants for Test')
 
-DATA_PATH = 'data_test/' if IS_TEST else 'data/'
+if NEWRL_ENV == 'testnet':
+    BOOTSTRAP_NODES = ['testnet.newrl.net']
+    NEWRL_PORT = 8090
+    DATA_PATH = 'data_testnet/'
+    print('Starting node on testnet')
+elif NEWRL_ENV == 'mainnet':
+    BOOTSTRAP_NODES = ['mainnet.newrl.net']
+    NEWRL_PORT = 8456
+    DATA_PATH = 'data_mainnet/'
+    print('Starting node on mainnet')
+else:
+    BOOTSTRAP_NODES = ['testnet.newrl.net']
+    NEWRL_PORT = 8182
+    DATA_PATH = 'data_devnet/'
+    print('Starting node on devnet')
+
+DATA_PATH = 'data_test/' if IS_TEST else DATA_PATH
 LOG_FILE_PATH = DATA_PATH + 'logs/'
 MEMPOOL_PATH = DATA_PATH + 'mempool/'
 TMP_PATH = DATA_PATH + 'tmp/'
@@ -22,9 +37,7 @@ ALLOWED_CUSTODIANS_FILE = 'allowed_custodians.json'
 DB_MIGRATIONS_PATH = 'app/migrations/migrations'
 AUTH_FILE_PATH = DATA_PATH + '.auth.json'
 
-BOOTSTRAP_NODES = ['mainnet.newrl.net']
 REQUEST_TIMEOUT = 1
-NEWRL_PORT = 8456
 NEWRL_TOKEN = "newrl_token"
 TREASURY = "treasury_address"
 COINBASE_SC = "coinbase_sc_address"

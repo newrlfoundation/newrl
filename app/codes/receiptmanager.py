@@ -35,7 +35,7 @@ def get_receipts_for_block_from_db(block_index):
     con.row_factory = sqlite3.Row
     cur = con.cursor()
     receipt_cursor = cur.execute(
-        'SELECT * FROM receipts where block_index=?', (block_index,))
+        'SELECT * FROM receipts where included_block_index=?', (block_index,))
     
     # if receipt_cursor is None:
     #     return []
@@ -57,7 +57,7 @@ def update_receipts_in_state(cur, block):
                 receipt['data']['block_index'],
                 receipt['data']['block_hash'],
                 receipt['data']['vote'],
-                receipt['timestamp'],
+                receipt['data']['timestamp'],
                 wallet_cursor[0],
             )
 
