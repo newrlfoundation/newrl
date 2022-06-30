@@ -15,6 +15,7 @@ def clear_db():
     cur.execute('DROP TABLE IF EXISTS tokens')
     cur.execute('DROP TABLE IF EXISTS balances')
     cur.execute('DROP TABLE IF EXISTS blocks')
+    cur.execute('DROP TABLE IF EXISTS block_proposals')
     cur.execute('DROP TABLE IF EXISTS transactions')
     cur.execute('DROP TABLE IF EXISTS transfers')
     cur.execute('DROP TABLE IF EXISTS receipts')
@@ -39,6 +40,9 @@ def init_db():
                     jurisdiction integer,
                     specific_data text)
                     ''')
+    cur.execute('''
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_wallet_public ON wallets (wallet_public)
+                ''')
 
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS tokens
@@ -48,7 +52,7 @@ def init_db():
                     first_owner text,
                     custodian text,
                     legaldochash text,
-                    amount_created real,
+                    amount_created integer,
                     sc_flag integer,
                     disallowed text,
                     tokendecimal integer,
@@ -60,19 +64,33 @@ def init_db():
                     CREATE TABLE IF NOT EXISTS balances
                     (wallet_address text, 
                     tokencode text,
-                    balance real, UNIQUE (wallet_address, tokencode))
+                    balance integer, UNIQUE (wallet_address, tokencode))
                     ''')
+    cur.execute('''
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_balances_wallet_address ON balances (wallet_address)
+                ''')
+    cur.execute('''
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_balances_tokencode ON balances (tokencode)
+                ''')
+    cur.execute('''
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_balances_wallet_address_tokencode
+                     ON balances (wallet_address, tokencode)
+                ''')
 
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS blocks
                     (block_index integer PRIMARY KEY,
-                    timestamp text,
+                    timestamp integer,
                     proof integer,
+                    status integer,
                     previous_hash text,
                     hash text,
                     creator_wallet text,
                     transactions_hash text)
                     ''')
+    cur.execute('''
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_block_hash ON blocks (hash)
+                ''')
     
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS receipts
@@ -80,18 +98,23 @@ def init_db():
                     block_hash text,
                     vote integer,
                     wallet_address text,
-                    timestamp text)
+                    included_block_index text,
+                    timestamp integer)
                     ''')
+    cur.execute('''
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_receipts_block_index_hash
+                     ON receipts (block_index, block_hash)
+                ''')
 
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS transactions
                     (
                     transaction_code text PRIMARY KEY,
                     block_index integer,
-                    timestamp text,
+                    timestamp integer,
                     type integer,
                     currency text,
-                    fee real,
+                    fee integer,
                     description text,
                     valid integer,
                     specific_data text,
@@ -105,13 +128,13 @@ def init_db():
                     asset2_code integer,
                     wallet1 text,
                     wallet2 text,
-                    asset1_number real
-                    asset2_number real)
+                    asset1_number integer
+                    asset2_number integer)
                     ''')
     
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS contracts
-                    (address TEXT,
+                    (address TEXT NOT NULL PRIMARY KEY,
                     creator TEXT,
                     ts_init INTEGER,
                     name TEXT,
@@ -126,16 +149,22 @@ def init_db():
                     contractspecs TEXT,
                     legalparams TEXT)
                     ''')
+
     # cur.execute('DROP TABLE IF EXISTS miners')
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS miners
                     (id text NOT NULL PRIMARY KEY,
                     wallet_address text,
                     network_address text NOT NULL,
-                    last_broadcast_timestamp text,
+                    last_broadcast_timestamp integer,
                     UNIQUE (wallet_address)
                     )
                     ''')
+    cur.execute('''
+                    CREATE UNIQUE INDEX IF NOT EXISTS miners_wallet_address_timestamp
+                     ON miners (wallet_address, last_broadcast_timestamp)
+                ''')
+
     con.commit()
     con.close()
 
@@ -164,12 +193,12 @@ def init_trust_db():
                     (person_id text NOT NULL PRIMARY KEY, 
                     wallet_id integer)
                     ''')
-    
+    # TODO - Add Indexes, set unique on src, dest
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS trust_scores
                     (src_person_id text NOT NULL, 
                     dest_person_id text NOT NULL,
-                    score real,
+                    score integer,
                     last_time integer)
                     ''')
     cur.execute('''
@@ -230,6 +259,7 @@ def revert_chain(block_index):
     cur.execute('DROP TABLE IF EXISTS transfers')
     cur.execute('DROP TABLE IF EXISTS contracts')
     cur.execute('DROP TABLE IF EXISTS miners')
+    # TODO - Drop all trust tables too
     con.commit()
     con.close()
 

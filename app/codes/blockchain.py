@@ -7,13 +7,14 @@ import json
 import sqlite3
 
 from app.codes.clock.global_time import get_corrected_time_ms
-from app.codes.receiptmanager import update_receipts_in_state
+# from app.codes.minermanager import get_committee_wallet_addresses
+from app.codes.receiptmanager import get_receipts_for_block_from_db, update_receipts_in_state
 
 from .fs.temp_manager import remove_block_from_temp
 from ..constants import BLOCK_TIME_INTERVAL_SECONDS, NEWRL_DB, NO_BLOCK_TIMEOUT
 from .utils import get_time_ms
 from .crypto import calculate_hash
-from .state_updater import update_db_states, update_trust_scores
+from .state_updater import update_db_states
 from .utils import get_time_ms
 from .auth.auth import get_node_wallet_address
 from .fs.mempool_manager import remove_transaction_from_mempool
@@ -50,6 +51,13 @@ class Blockchain:
         if block_cursor is None:
             return None
         block = dict(block_cursor)
+        block = {
+            'index': block['block_index'],
+            'timestamp': int(block['timestamp']),
+            'proof': block['proof'],
+            'previous_hash': block['previous_hash'],
+            'creator_wallet': block['creator_wallet'],
+        }
 
         transactions_cursor = cur.execute(
             'SELECT * FROM transactions where block_index=?', (block_index,)).fetchall()
@@ -59,6 +67,7 @@ class Blockchain:
             transactions))
         block['text'] = {
             'transactions': transactions,
+            'previous_block_receipts': get_receipts_for_block_from_db(block_index)
         }
 
         return block
@@ -112,6 +121,7 @@ class Blockchain:
             'proof': 0,
             'text': text,
             'creator_wallet': get_node_wallet_address(),
+            # 'committee': get_committee_wallet_addresses(),
             'previous_hash': last_block_hash
         }
 
@@ -136,6 +146,7 @@ class Blockchain:
             'proof': 0,
             'text': text,
             'creator_wallet': get_node_wallet_address(),
+            # 'committee': get_committee_wallet_addresses(),
             'previous_hash': last_block_hash
         }
         return block

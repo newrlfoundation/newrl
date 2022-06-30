@@ -17,6 +17,18 @@ def get_blocks_for_index_from_storage(block_index, folder=TMP_PATH):
     return blocks
 
 
+def get_all_receipts_from_storage(exclude_block_index=None, folder=TMP_PATH):
+    recipts = []
+    for block_file in glob.glob(f'{folder}/receipt_*.json'):
+        with open(block_file, 'r') as _file:
+            receipt = json.load(_file)
+            if (exclude_block_index is not None
+                and receipt['data']['block_index'] == exclude_block_index):
+                continue
+            recipts.append(receipt)
+    return recipts
+
+
 def get_receipts_from_storage(block_index, folder=TMP_PATH):
     """Returns a list of receipts matching a block index from mempool"""
     blocks = []
@@ -29,8 +41,9 @@ def get_receipts_from_storage(block_index, folder=TMP_PATH):
 
 def store_block_to_temp(block, folder=TMP_PATH):
     block_index = block['index'] if 'index' in block else 'block_index'
-    existing_files_for_block = glob.glob(f'{folder}/block_{block_index}_*.json')
-    new_file_name = f'{folder}/block_{block_index}_{len(existing_files_for_block)}.json'
+    block_hash = block['hash']
+    # existing_files_for_block = glob.glob(f'{folder}/block_{block_index}_*.json')
+    new_file_name = f'{folder}/block_{block_index}_{block_hash}.json'
     with open(new_file_name, 'w') as _file:
         json.dump(block, _file)
     return new_file_name
@@ -38,8 +51,14 @@ def store_block_to_temp(block, folder=TMP_PATH):
 
 def store_receipt_to_temp(receipt, folder=TMP_PATH):
     block_index = receipt['data']['block_index']
-    existing_files_for_block = glob.glob(f'{folder}/receipt_{block_index}_*.json')
-    new_file_name = f'{folder}/receipt_{block_index}_{len(existing_files_for_block)}.json'
+    block_hash = receipt['data']['block_hash']
+    # receipts = get_receipts_from_storage(block_index=block_index)
+    # for _receipt in receipts:
+    #     if _receipt['data']['block_index'] == block_index and _receipt['data']['block_hash'] == block_hash:
+    #         return
+    # existing_files_for_block = glob.glob(f'{folder}/receipt_{block_index}_*.json')
+    # new_file_name = f'{folder}/receipt_{block_index}_{len(existing_files_for_block)}.json'
+    new_file_name = f'{folder}/receipt_{block_index}_{block_hash}.json'
     with open(new_file_name, 'w') as _file:
         json.dump(receipt, _file)
     return new_file_name

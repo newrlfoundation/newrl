@@ -25,13 +25,13 @@ def generate_block_receipt(block, vote=1):
     receipt_data = {
         'block_index': block['index'],
         'block_hash': calculate_hash(block),
-        'vote': vote
+        'vote': vote,
+        'timestamp': get_corrected_time_ms()
     }
     return {
         "data": receipt_data,
         "public_key": public_key,
         "signature": sign_object(private_key, receipt_data),
-        'timestamp': get_corrected_time_ms()
     }
 
 
