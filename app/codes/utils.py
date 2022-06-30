@@ -60,39 +60,39 @@ def get_last_block_hash():
         return None
 
 
-def store_block_proposal(block):
-    # TODO - Do this in temp file system instead of db
-    return
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
-    block_proposal_data = (
-        block['index'],
-        block['data']['timestamp'],
-        block['hash'],
-        block['data']['creator_wallet'],
-    )
-    cur.execute(
-        '''
-        INSERT OR IGNORE INTO block_proposals
-        (block_index, timestamp, hash, creator_wallet)
-        VALUES(?, ?, ?, ?)
-        ''',
-        block_proposal_data
-    )
-    con.commit()
-    con.close()
+# def store_block_proposal(block):
+#     # TODO - Do this in temp file system instead of db
+#     return
+#     con = sqlite3.connect(NEWRL_DB)
+#     cur = con.cursor()
+#     block_proposal_data = (
+#         block['index'],
+#         block['data']['timestamp'],
+#         block['hash'],
+#         block['data']['creator_wallet'],
+#     )
+#     cur.execute(
+#         '''
+#         INSERT OR IGNORE INTO block_proposals
+#         (block_index, timestamp, hash, creator_wallet)
+#         VALUES(?, ?, ?, ?)
+#         ''',
+#         block_proposal_data
+#     )
+#     con.commit()
+#     con.close()
 
 
-def get_proposals_for_block(block_index):
-    # TODO - Do this from temp file system instead of db
-    con = sqlite3.connect(NEWRL_DB)
-    con.row_factory = sqlite3.Row
-    cur = con.cursor()
-    cur.execute(
-        '''
-        SELECT * FROM block_proposals
-        block_index = ?
-        ''',
-        (block_index, )
-    )
-    con.close()
+# def get_proposals_for_block(block_index):
+#     # TODO - Do this from temp file system instead of db
+#     con = sqlite3.connect(NEWRL_DB)
+#     con.row_factory = sqlite3.Row
+#     cur = con.cursor()
+#     cur.execute(
+#         '''
+#         SELECT * FROM block_proposals
+#         block_index = ?
+#         ''',
+#         (block_index, )
+#     )
+#     con.close()

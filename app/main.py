@@ -50,8 +50,8 @@ def app_startup():
     try:
         if not args['disablenetwork']:
             sync_timer_clock_with_global()
-            if not args['disableupdate']:
-                update_software(propogate=False)
+            # if not args['disableupdate']:
+            #     update_software(propogate=False)
             if not args['disablebootstrap']:
                 init_bootstrap_nodes()
             sync_chain_from_peers()
@@ -70,12 +70,12 @@ def shutdown_event():
     os._exit(0)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--disablenetwork", help="run the node local only with no network connection", action="store_true")
-    parser.add_argument("--disableupdate", help="run the node without updating software", action="store_true")
-    parser.add_argument("--disablebootstrap", help="run the node without bootstrapping", action="store_true")
-    _args = parser.parse_args()
-    args["disablenetwork"] = _args.disablenetwork
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--disablenetwork", help="run the node local only with no network connection", action="store_true")
+    # parser.add_argument("--disableupdate", help="run the node without updating software", action="store_true")
+    # parser.add_argument("--disablebootstrap", help="run the node without bootstrapping", action="store_true")
+    # _args = parser.parse_args()
+    # args["disablenetwork"] = _args.disablenetwork
     uvicorn.run("app.main:app", host="0.0.0.0", port=NEWRL_PORT, reload=True)
 
 
