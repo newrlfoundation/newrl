@@ -1,9 +1,7 @@
 import sqlite3
 
 from app.constants import NEWRL_DB
-
-DAO_MANAGER = 'ct9dc895fe5905dc73a2273e70be077bf3e94ea3b7'
-ASQI_WALLET = '0x20513a419d5b11cd510ae518dc04ac1690afbed6'
+from app.nvalues import DAO_MANAGER, ASQI_WALLET
 
 
 def migrate():
