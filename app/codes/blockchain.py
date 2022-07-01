@@ -57,6 +57,7 @@ class Blockchain:
             'proof': block['proof'],
             'previous_hash': block['previous_hash'],
             'creator_wallet': block['creator_wallet'],
+            'hash': block['hash'],
         }
 
         transactions_cursor = cur.execute(

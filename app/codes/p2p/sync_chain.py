@@ -132,8 +132,8 @@ def sync_chain_from_node(url, block_index=None):
         for block in blocks_data:
             # block['index'] = block['block_index']
             # block['timestamp'] = int(block['timestamp'])
-            # hash = block['hash']
-            hash = calculate_hash(block)
+            hash = block['hash']  # TODO - Use calculate hash
+            # hash = calculate_hash(block)
             # block.pop('hash', None)
             # block.pop('transactions_hash', None)
             # block.pop('block_index', None)
