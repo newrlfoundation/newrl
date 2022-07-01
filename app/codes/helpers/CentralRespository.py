@@ -49,7 +49,7 @@ class CentralRepository:
             if (not self.queryCheck(queryParam[x])):
                 return False
         values = tuple(queryParam.values())
-        return self.cur.execute()
+        return self.cur.execute('INSERT INTO ' + table_name + ' (' + keys + ') VALUES (' + question_marks + ')', values)
 
     def update_private_sc_state(self, table_name: str, queryParam: dict,whereAndParam:dict,whereOrQueryParam:dict):
         keys = ','.join(queryParam.keys())
