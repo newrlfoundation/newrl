@@ -102,8 +102,7 @@ class ContractMaster():
         cur.execute(f'''INSERT INTO contracts
                 (address, creator, ts_init, name, version, actmode, status, next_act_ts, signatories, parent, oracleids, selfdestruct, contractspecs, legalparams)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', qparams)
-        return self.address
-
+        return []
     def loadcontract(self, cur, contractaddress):
         #this loads the contract from the state db
         #it should take as input contractaddress and output the contractparams as they are in the db as of the time of calling it
