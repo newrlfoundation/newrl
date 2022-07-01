@@ -60,6 +60,32 @@ class TransactionCreator:
         }
         return add_token_request
 
+    def transaction_type_3(self,data:dict):
+        txspecdata = {
+            "address": data['sc_address'],
+            "function": data['function_called'],
+            "signers": data['signers'],
+            "params": data['params']
+        }
+        fulltrandata = {
+            "transaction": {
+                "timestamp": "",
+                "trans_code": "000000",
+                "type": 3,
+                "currency": "NWRL",
+                "fee": 0.0,
+                "descr": "",
+                "valid": 1,
+                "block_index": 0,
+                "specific_data": txspecdata
+            },
+            "signatures": []
+        }
+        newtx = Transactionmanager()
+        tdatanew = newtx.transactioncreator(fulltrandata)
+        return tdatanew
+
+
     def transaction_type_5(self,data:dict):
         trandata = {
             "transfer_type": 5,
@@ -113,3 +139,22 @@ class TransactionCreator:
         newtx = Transactionmanager()
         tdatanew = newtx.transactioncreator(fulltrandata)
         return tdatanew
+
+    def transaction_type_8(self,data:dict):
+        fulltrandata = {
+            "transaction": {
+                "timestamp": "",
+                "trans_code": "000000",
+                "type": 8,
+                "currency": "NWRL",
+                "fee": 0.0,
+                "descr": "",
+                "valid": 1,
+                "block_index": 0,
+                "specific_data": data
+            },
+            "signatures": []
+        }
+        newtx = Transactionmanager()
+        datanew = newtx.transactioncreator(fulltrandata)
+        return datanew

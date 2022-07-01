@@ -5,11 +5,13 @@ from lib2to3.pgen2 import token
 from app.codes.clock.global_time import get_corrected_time_ms
 
 from app.nvalues import NETWORK_TRUST_MANAGER
-
+from .helpers import SmartContractStateValidator
 
 from ..constants import NEWRL_DB
 from .db_updater import *
-from ..ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
+from ..ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, \
+    TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, \
+    TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
 
 
 def update_db_states(cur, block):
@@ -21,24 +23,25 @@ def update_db_states(cur, block):
     # if newblockindex != last_block[0]:
     #     print("The latest block index does not match given previous index")
     #     return False
-#    latest_index = cur.execute('SELECT MAX(block_index) FROM blocks')
+    #    latest_index = cur.execute('SELECT MAX(block_index) FROM blocks')
     add_tx_to_block(cur, newblockindex, transactions)
 
     if 'creator_wallet' in block and block['creator_wallet'] is not None:
         add_block_reward(cur, block['creator_wallet'], newblockindex)
 
-    collated_txns = simplify_transactions(cur,transactions)
+    collated_txns = simplify_transactions(cur, transactions)
 
     for transaction in collated_txns:
-        
-        signature=transaction['signatures']
+
+        signature = transaction['signatures']
         transaction = transaction['transaction']
         transaction_data = transaction['specific_data']
 
         while isinstance(transaction_data, str):
             transaction_data = json.loads(transaction_data)
 
-        transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction['trans_code']
+        transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
+            'trans_code']
 
         update_state_from_transaction(
             cur,
@@ -51,7 +54,8 @@ def update_db_states(cur, block):
     return True
 
 
-def update_state_from_transaction(cur, transaction_type, transaction_data, transaction_code, transaction_timestamp,transaction_signer=None):
+def update_state_from_transaction(cur, transaction_type, transaction_data, transaction_code, transaction_timestamp,
+                                  transaction_signer=None):
     if transaction_type == TRANSACTION_WALLET_CREATION:  # this is a wallet creation transaction
         add_wallet_pid(cur, transaction_data)
 
@@ -88,18 +92,19 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
             contract = get_contract_from_address(
                 cur, transaction_data['address'])
         module = importlib.import_module(
-            ".codes.contracts."+contract['name'], package="app")
+            ".codes.contracts." + contract['name'], package="app")
         sc_class = getattr(module, contract['name'])
         sc_instance = sc_class(transaction_data['address'])
-    #    sc_instance = nusd1(transaction['specific_data']['address'])
+        #    sc_instance = nusd1(transaction['specific_data']['address'])
         funct = getattr(sc_instance, funct)
-        params_for_funct=transaction_data['params']
+        params_for_funct = transaction_data['params']
         # adding singers address to the dict
-        params_for_funct['function_caller']=transaction_signer
+        params_for_funct['function_caller'] = transaction_signer
         try:
             funct(cur, params_for_funct)
         except Exception as e:
             print('Exception durint smart contract function run', e)
+
     if transaction_type == TRANSACTION_MINER_ADDITION:
         add_miner(
             cur,
@@ -109,19 +114,18 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
         )
 
 
-
 def add_block_reward(cur, creator, blockindex):
     """Reward the minder by chaning their NWRL balance"""
     if creator is None:
         return False
     reward = 0
-    RATIO = 2/3
+    RATIO = 2 / 3
     STARTING_REWARD = 1000
-    block_step = math.ceil(float(blockindex)/1000000)
+    block_step = math.ceil(float(blockindex) / 1000000)
     reward = STARTING_REWARD * pow(RATIO, (block_step - 1))
     reward_tx_data = {
         "tokenname": NEWRL_TOKEN_NAME,
-        "tokencode" : NEWRL_TOKEN_CODE,
+        "tokencode": NEWRL_TOKEN_CODE,
         "tokentype": '1',
         "tokenattributes": {},
         "first_owner": creator,
@@ -140,9 +144,9 @@ def update_trust_scores(cur, block):
 
     for receipt in receipts:
         wallet_cursor = cur.execute(
-        'SELECT wallet_address FROM wallets where wallet_public=?', 
-        (receipt['public_key'],)).fetchone()
-    
+            'SELECT wallet_address FROM wallets where wallet_public=?',
+            (receipt['public_key'],)).fetchone()
+
         if wallet_cursor is not None:
             wallet_address = wallet_cursor[0]
             vote = receipt['data']['vote']
@@ -150,7 +154,7 @@ def update_trust_scores(cur, block):
             trust_score_cursor = cur.execute('''
                 SELECT score FROM trust_scores where src_person_id=? and dest_person_id=?
                 ''', (NETWORK_TRUST_MANAGER, wallet_address)).fetchone()
-            
+
             if trust_score_cursor is None:
                 existing_score = 1
             else:
@@ -165,26 +169,24 @@ def update_trust_scores(cur, block):
             update_trust_score(cur, NETWORK_TRUST_MANAGER, wallet_address, new_score, get_corrected_time_ms())
 
 
+def simplify_transactions(cur, transactions):
+    simplified_transactions = []
+    for transaction in transactions:
+        print(transaction)
+        if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
+            # recursive method that iterates till there is no sc txn
+            non_sc_txns = get_non_sc_txns(cur, transaction)
+            simplified_transactions.extend(non_sc_txns)
+        else:
+            simplified_transactions.append(transaction)
+    return simplified_transactions
 
 
-def simplify_transactions(cur,transactions):
-  simplified_transactions = []
-  for transaction in transactions:
-    print(transaction)
-    if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
-      #recursive method that iterates till there is no sc txn  
-      non_sc_txns = get_non_sc_txns(cur,transaction)
-      simplified_transactions.extend(non_sc_txns)
-    else:
-      simplified_transactions.append(transaction)
-  return simplified_transactions
-
-
-def get_non_sc_txns(cur,transaction):
-    child_transactions = execute_sc(cur,transaction)
+def get_non_sc_txns(cur, transaction):
+    child_transactions = execute_sc(cur, transaction)
     _simplified_transactions = []
     for child_transaction in child_transactions:
-        if(child_transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT):
+        if (child_transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT):
             non_sc_child_txns = get_non_sc_txns(cur, child_transaction)
             _simplified_transactions.extend(non_sc_child_txns)
         else:
@@ -195,12 +197,11 @@ def get_non_sc_txns(cur,transaction):
     return _simplified_transactions
 
 
-def execute_sc(cur,transaction_main):
-
-
+def execute_sc(cur, transaction_main):
     transaction = transaction_main["transaction"]
     transaction_data = transaction['specific_data']
-    transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction['trans_code']
+    transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
+        'trans_code']
     transaction_signer = transaction_main['signatures']
 
     funct = transaction_data['function']
@@ -210,7 +211,7 @@ def execute_sc(cur,transaction_main):
     else:
         contract = get_contract_from_address(cur, transaction_data['address'])
     module = importlib.import_module(
-            ".codes.contracts."+contract['name'], package="app")
+        ".codes.contracts." + contract['name'], package="app")
     sc_class = getattr(module, contract['name'])
     sc_instance = sc_class(transaction_data['address'])
     funct = getattr(sc_instance, funct)
@@ -224,31 +225,33 @@ def execute_sc(cur,transaction_main):
         print('Exception durint smart contract function run', e)
     pass
 
-def validate_sc_child_transaction(transaction):
+
+def validate_sc_child_transaction(transaction,):
     '''Debug Method'''
+    SmartContractStateValidator.validate()
     return True
 
-def get_debug_txns():
 
+def get_debug_txns():
     txn5 = {
         "transaction": {
-        "timestamp": 1656589367000,
-        "trans_code": "8d93552b56448b176a6ea0690e728040f1f8a5ea",
-        "type": 5,
-        "currency": "NWRL",
-        "fee": 0.0,
-        "descr": "",
-        "valid": 1,
-        "block_index": 0,
-        "specific_data": {
-            "transfer_type": 1,
-            "asset1_code": "NWRL",
-            "asset2_code": "",
-            "wallet1": "cte9bf57899687d0e732e7ff895aefa57e6525de35",
-            "wallet2": "0x20513a419d5b11cd510ae518dc04ac1690afbed6",
-            "asset1_number": 1,
-            "asset2_number": 0,
-            "additional_data": {}
+            "timestamp": 1656589367000,
+            "trans_code": "8d93552b56448b176a6ea0690e728040f1f8a5ea",
+            "type": 5,
+            "currency": "NWRL",
+            "fee": 0.0,
+            "descr": "",
+            "valid": 1,
+            "block_index": 0,
+            "specific_data": {
+                "transfer_type": 1,
+                "asset1_code": "NWRL",
+                "asset2_code": "",
+                "wallet1": "cte9bf57899687d0e732e7ff895aefa57e6525de35",
+                "wallet2": "0x20513a419d5b11cd510ae518dc04ac1690afbed6",
+                "asset1_number": 1,
+                "asset2_number": 0,
+                "additional_data": {}
             }
         },
         "signatures": []

@@ -65,9 +65,9 @@ class CentralRepository:
             if (not self.queryCheck(queryParam[x])):
                 return False
         values = tuple(queryParam.values())
-        return self.cur.execute()
+        return self.cur.execute('INSERT INTO ' + table_name + ' (' + keys + ') VALUES (' + question_marks + ')', values)
 
-    def update_private_sc_state(self, table_name: str, queryParam: dict, whereAndParam: dict, whereOrQueryParam: dict):
+    def update_private_sc_state(self, table_name: str, queryParam: dict, unique_column:str,unique_value:str,contract_address:str):
         keys = ','.join(queryParam.keys())
         question_marks = ','.join(list('?' * len(queryParam)))
         for x in queryParam:
@@ -75,8 +75,15 @@ class CentralRepository:
                 return False
             if (not self.queryCheck(queryParam[x])):
                 return False
+        if not self.queryCheck(unique_column):
+            return False
+        if not self.queryCheck(unique_value):
+            return False
+        if not self.queryCheck(contract_address):
+            return False
         values = tuple(queryParam.values())
-        return self.cur.execute('UPDATE INTO ' + table_name + ' (' + keys + ') VALUES (' + question_marks + ')', values)
+        values.append(unique_value,contract_address)
+        return self.cur.execute('UPDATE INTO ' + table_name + ' (' + keys + ') VALUES (' + question_marks + ') WHERE '+unique_column+'=? AND contract_address=?', values)
 
     def queryCheck(self, query: str):
         if query in self.escape_string:
