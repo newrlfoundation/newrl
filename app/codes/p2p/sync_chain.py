@@ -130,13 +130,13 @@ def sync_chain_from_node(url, block_index=None):
         #     failed_for_invalid_block = True
         #     time.sleep(5)
         for block in blocks_data:
-            block['index'] = block['block_index']
-            block['timestamp'] = int(block['timestamp'])
-            hash = block['hash']
-            # hash = calculate_hash(block)
-            block.pop('hash', None)
-            block.pop('transactions_hash', None)
-            block.pop('block_index', None)
+            # block['index'] = block['block_index']
+            # block['timestamp'] = int(block['timestamp'])
+            # hash = block['hash']
+            hash = calculate_hash(block)
+            # block.pop('hash', None)
+            # block.pop('transactions_hash', None)
+            # block.pop('block_index', None)
             for idx, tx in enumerate(block['text']['transactions']):
                 specific_data = tx['transaction']['specific_data']
                 while isinstance(specific_data, str):
