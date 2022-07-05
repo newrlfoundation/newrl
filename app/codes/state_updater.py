@@ -1,18 +1,18 @@
+import logging
 import math
 import json
 import importlib
 from lib2to3.pgen2 import token
+
+from app.codes.transactionmanager import Transactionmanager
+from .helpers.SmartContractStateValidator import validate
 from app.codes.clock.global_time import get_corrected_time_ms
-
+from app.codes.helpers.CentralRespository import CentralRepository
 from app.nvalues import NETWORK_TRUST_MANAGER
-from .helpers import SmartContractStateValidator
-
 from ..constants import NEWRL_DB
 from .db_updater import *
-from ..ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, \
-    TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, \
-    TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
-
+from ..ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
+logger = logging.getLogger(__name__)
 
 def update_db_states(cur, block):
     newblockindex = block['index'] if 'index' in block else block['block_index']
@@ -104,6 +104,7 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
             funct(cur, params_for_funct)
         except Exception as e:
             print('Exception durint smart contract function run', e)
+            logger.e
 
     if transaction_type == TRANSACTION_MINER_ADDITION:
         add_miner(
@@ -112,6 +113,10 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
             transaction_data['network_address'],
             transaction_data['broadcast_timestamp'],
         )
+    if transaction_type == TRANSACTION_SC_UPDATE:
+        cr = CentralRepository(cur,cur)
+        if(transaction_data['operation']== "save"):
+            cr.save_private_sc_state(transaction_data['table_name'],transaction_data["data"])
 
 
 def add_block_reward(cur, creator, blockindex):
@@ -169,31 +174,37 @@ def update_trust_scores(cur, block):
             update_trust_score(cur, NETWORK_TRUST_MANAGER, wallet_address, new_score, get_corrected_time_ms())
 
 
-def simplify_transactions(cur, transactions):
-    simplified_transactions = []
-    for transaction in transactions:
-        print(transaction)
-        if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
-            # recursive method that iterates till there is no sc txn
-            non_sc_txns = get_non_sc_txns(cur, transaction)
-            simplified_transactions.extend(non_sc_txns)
-        else:
-            simplified_transactions.append(transaction)
-    return simplified_transactions
+
+def simplify_transactions(cur,transactions):
+  simplified_transactions = []
+  for transaction in transactions:
+    print(transaction)
+    if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
+      #recursive method that iterates till there is no sc txn  
+      try:  
+        non_sc_txns = get_non_sc_txns(cur,transaction)
+        simplified_transactions.extend(non_sc_txns)
+      except Exception as e:
+        print(e)
+        logger.error(e)
+    else:
+      simplified_transactions.append(transaction)
+  return simplified_transactions
 
 
-def get_non_sc_txns(cur, transaction):
-    child_transactions = execute_sc(cur, transaction)
+def get_non_sc_txns(cur,transaction):
+    child_transactions = execute_sc(cur,transaction)
     _simplified_transactions = []
     for child_transaction in child_transactions:
-        if (child_transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT):
+        logger.info("Processing child transaction",child_transaction)
+        if not validate_sc_child_transaction(child_transaction, transaction['transaction']["specific_data"]["address"]):
+            raise Exception("Sc child txn validation chain failed")
+        if(child_transaction.transaction['type'] == TRANSACTION_SMART_CONTRACT):
+            # child_transaction["transaction"]["specific_data"]["address"] = 
             non_sc_child_txns = get_non_sc_txns(cur, child_transaction)
             _simplified_transactions.extend(non_sc_child_txns)
         else:
-            if validate_sc_child_transaction(child_transaction):
-                _simplified_transactions.append(child_transaction)
-            else:
-                return []  # break? throw exception
+            _simplified_transactions.append(child_transaction.get_transaction_complete())
     return _simplified_transactions
 
 
@@ -218,44 +229,14 @@ def execute_sc(cur, transaction_main):
     params_for_funct = transaction_data['params']
     params_for_funct['function_caller'] = transaction_signer
     try:
-        child_transactions = funct(cur, params_for_funct)
-        # child_transactions = get_debug_txns()
+        child_transactions = funct(params_for_funct)
         return child_transactions
     except Exception as e:
         print('Exception durint smart contract function run', e)
+        logger.error(e)
     pass
 
 
-def validate_sc_child_transaction(transaction,):
-    '''Debug Method'''
-    SmartContractStateValidator.validate()
-    return True
+def validate_sc_child_transaction(transaction: Transactionmanager, contract_address):    
+    return validate(transaction,contract_address)
 
-
-def get_debug_txns():
-    txn5 = {
-        "transaction": {
-            "timestamp": 1656589367000,
-            "trans_code": "8d93552b56448b176a6ea0690e728040f1f8a5ea",
-            "type": 5,
-            "currency": "NWRL",
-            "fee": 0.0,
-            "descr": "",
-            "valid": 1,
-            "block_index": 0,
-            "specific_data": {
-                "transfer_type": 1,
-                "asset1_code": "NWRL",
-                "asset2_code": "",
-                "wallet1": "cte9bf57899687d0e732e7ff895aefa57e6525de35",
-                "wallet2": "0x20513a419d5b11cd510ae518dc04ac1690afbed6",
-                "asset1_number": 1,
-                "asset2_number": 0,
-                "additional_data": {}
-            }
-        },
-        "signatures": []
-    }
-
-    return [txn5]
-    pass

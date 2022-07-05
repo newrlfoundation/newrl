@@ -91,17 +91,17 @@ class TransactionCreator:
             "transfer_type": 5,
             "asset1_code": str(data['asset1_code']),
             "asset2_code": str(data.get('asset2_code',"")),
-            "wallet1": data['wallet1_address'],
-            "wallet2": data['wallet2_address'],
-            "asset1_number": data['asset1_qty'],
-            "asset2_number": data.get('asset2_qty',""),
+            "wallet1": data['wallet1'],
+            "wallet2": data['wallet2'],
+            "asset1_number": data['asset1_number'],
+            "asset2_number": data.get('asset2_number', 0),
             "additional_data": data['additional_data']
         }
         fulltrandata = {
             "transaction": {
                 "timestamp": "",
                 "trans_code": "000000",
-                "type": type,
+                "type": 5,
                 "currency": "NWRL",
                 "fee": 0.0,
                 "descr": data.get('description',""),
@@ -111,9 +111,9 @@ class TransactionCreator:
             },
             "signatures": []
         }
-        newtransfer = Transfermanager(transfer_data=fulltrandata)
-        tdatanew = newtransfer.loadandcreate()
-        return tdatanew
+        newtx = Transactionmanager()
+        newtx.transactioncreator(fulltrandata)
+        return newtx
 
     def transaction_type_6(self,data:dict):
         txspecdata = {
@@ -141,6 +141,13 @@ class TransactionCreator:
         return tdatanew
 
     def transaction_type_8(self,data:dict):
+        txspecdata = {
+            "table_name": data['table_name'],
+            "operation": data['operation'],
+            "data": data['data'],
+            "sc_address": data["sc_address"]
+        }
+
         fulltrandata = {
             "transaction": {
                 "timestamp": "",
@@ -151,10 +158,10 @@ class TransactionCreator:
                 "descr": "",
                 "valid": 1,
                 "block_index": 0,
-                "specific_data": data
+                "specific_data": txspecdata
             },
             "signatures": []
         }
         newtx = Transactionmanager()
-        datanew = newtx.transactioncreator(fulltrandata)
-        return datanew
+        newtx.transactioncreator(fulltrandata)
+        return newtx

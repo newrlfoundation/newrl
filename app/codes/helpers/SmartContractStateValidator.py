@@ -2,7 +2,7 @@ from app.codes.transactionmanager import Transactionmanager
 from app.ntypes import *
 
 
-def validate(contract_address: str, transaction: Transactionmanager):
+def validate(transaction: Transactionmanager, contract_address: str):
     type = transaction.transaction['type']
     if type == TRANSACTION_WALLET_CREATION:
         if transaction.transaction['specific_data']['custodian_wallet'] != contract_address:
@@ -23,8 +23,10 @@ def validate(contract_address: str, transaction: Transactionmanager):
 
     if type == TRANSACTION_MINER_ADDITION:
         return False
-    if type == 8:
-        if transaction.transaction['specific_data']['contract_address'] != contract_address:
-            return False
-    if type != 8:
+    if type == TRANSACTION_SC_UPDATE:
+        if transaction.transaction['specific_data']['sc_address'] != contract_address:
+            return False   
+    if type != TRANSACTION_SC_UPDATE:
         return transaction.econvalidator()
+    
+    return True
