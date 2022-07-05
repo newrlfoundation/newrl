@@ -13,7 +13,7 @@ class CentralRepository:
         self.query = ""
 
     def join_Query(self):
-        self
+        pass
 
     def insert_Query(self):
         self.query = 'INSERT INTO '
