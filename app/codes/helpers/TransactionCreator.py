@@ -29,21 +29,41 @@ class TransactionCreator:
             "public_key": wallet['public']
         }
         return add_wallet_request
+
     def transaction_type_two(self,data:dict):
         add_token_request = {
-            "token_name": data['token_name'],
-            "token_code": data['token_code'],
-            "token_type": data.get('token_type',1),
+            "tokenname": data['tokenname'],
+            "tokencode": data['tokencode'],
+            "tokentype": data.get('tokentype', 1),
             "first_owner": data['first_owner'],
-            "custodian": data['custodian_address'],
-            "legal_doc": data.get('legal_docs',{}),
-            "amount_created": data.get('amount',0),
-            "tokendecimal": data.get('token_decimal',0),
-            "disallowed_regions": data.get('disallowed_origin',[]),
-            "is_smart_contract_token": data.get('is_sc_token',False),
-            "token_attributes": data.get('token_attributes',{})
+            "custodian": data['custodian'],
+            "disallowed": data.get('disallowed', {}),
+            "legaldochash": data.get('legaldochash'),
+            "amount_created": data.get('amount_created', 0),
+            "tokendecimal": data.get('tokendecimal', 0),
+            "disallowed_origin": data.get('disallowed_origin', []),
+            "is_sc_token": data.get('is_sc_token', False),
+            "tokenattributes": data.get('tokenattributes', {})
         }
-        return create_token_transaction(add_token_request)
+        fulltrandata = {
+            "transaction": {
+                "timestamp": "",
+                "trans_code": "000000",
+                "type": 2,
+                "currency": "NWRL",
+                "fee": 0.0,
+                "descr": "",
+                "valid": 1,
+                "block_index": 0,
+                "specific_data": add_token_request
+            },
+            "signatures": []
+        }
+        newtx = Transactionmanager()
+        newtx.transactioncreator(fulltrandata)
+        return newtx
+        #return create_token_transaction(add_token_request)
+
     def transaction_type_two_modal(self,data:CreateTokenRequest):
         add_token_request = {
             "token_name": data.token_name,
@@ -62,8 +82,8 @@ class TransactionCreator:
 
     def transaction_type_3(self,data:dict):
         txspecdata = {
-            "address": data['sc_address'],
-            "function": data['function_called'],
+            "address": data['address'],
+            "function": data['function'],
             "signers": data['signers'],
             "params": data['params']
         }
@@ -82,8 +102,8 @@ class TransactionCreator:
             "signatures": []
         }
         newtx = Transactionmanager()
-        tdatanew = newtx.transactioncreator(fulltrandata)
-        return tdatanew
+        newtx.transactioncreator(fulltrandata)
+        return newtx
 
 
     def transaction_type_5(self,data:dict):

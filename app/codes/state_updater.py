@@ -3,6 +3,7 @@ import math
 import json
 import importlib
 from lib2to3.pgen2 import token
+import traceback
 
 from app.codes.transactionmanager import Transactionmanager
 from .helpers.SmartContractStateValidator import validate
@@ -184,9 +185,8 @@ def simplify_transactions(cur,transactions):
       try:  
         non_sc_txns = get_non_sc_txns(cur,transaction)
         simplified_transactions.extend(non_sc_txns)
-      except Exception as e:
-        print(e)
-        logger.error(e)
+      except Exception:
+        logger.error(traceback.format_exc())
     else:
       simplified_transactions.append(transaction)
   return simplified_transactions
@@ -201,7 +201,7 @@ def get_non_sc_txns(cur,transaction):
             raise Exception("Sc child txn validation chain failed")
         if(child_transaction.transaction['type'] == TRANSACTION_SMART_CONTRACT):
             # child_transaction["transaction"]["specific_data"]["address"] = 
-            non_sc_child_txns = get_non_sc_txns(cur, child_transaction)
+            non_sc_child_txns = get_non_sc_txns(cur, child_transaction.get_transaction_complete())
             _simplified_transactions.extend(non_sc_child_txns)
         else:
             _simplified_transactions.append(child_transaction.get_transaction_complete())
@@ -232,7 +232,8 @@ def execute_sc(cur, transaction_main):
         child_transactions = funct(params_for_funct)
         return child_transactions
     except Exception as e:
-        print('Exception durint smart contract function run', e)
+        print('Exception during smart contract function run', e)
+        #TODO pass it back ?
         logger.error(e)
     pass
 
