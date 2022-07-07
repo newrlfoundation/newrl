@@ -609,4 +609,7 @@ def is_smart_contract(cur,address):
     if sc_id is None:
         return False
     else:
-        return True  
+        return True 
+
+def __str__(self):
+    return str(self.get_transaction_complete())
