@@ -186,25 +186,27 @@ def simplify_transactions(cur,transactions):
         non_sc_txns = get_non_sc_txns(cur,transaction)
         simplified_transactions.extend(non_sc_txns)
       except Exception:
+        logger.error(f"Exception during sc txn execution for txn : {transaction}")
         logger.error(traceback.format_exc())
     else:
       simplified_transactions.append(transaction)
   return simplified_transactions
 
 
-def get_non_sc_txns(cur,transaction):
-    child_transactions = execute_sc(cur,transaction)
+def get_non_sc_txns(cur, transaction):
+    child_transactions = execute_sc(cur, transaction)
     _simplified_transactions = []
     for child_transaction in child_transactions:
-        logger.info("Processing child transaction",child_transaction)
+        logger.info("Processing child transaction" + str(child_transaction))
         if not validate_sc_child_transaction(child_transaction, transaction['transaction']["specific_data"]["address"]):
             raise Exception("Sc child txn validation chain failed")
         if(child_transaction.transaction['type'] == TRANSACTION_SMART_CONTRACT):
-            # child_transaction["transaction"]["specific_data"]["address"] = 
-            non_sc_child_txns = get_non_sc_txns(cur, child_transaction.get_transaction_complete())
+            non_sc_child_txns = get_non_sc_txns(
+                cur, child_transaction.get_transaction_complete())
             _simplified_transactions.extend(non_sc_child_txns)
         else:
-            _simplified_transactions.append(child_transaction.get_transaction_complete())
+            _simplified_transactions.append(
+                child_transaction.get_transaction_complete())
     return _simplified_transactions
 
 
@@ -232,9 +234,9 @@ def execute_sc(cur, transaction_main):
         child_transactions = funct(params_for_funct)
         return child_transactions
     except Exception as e:
-        print('Exception during smart contract function run', e)
-        #TODO pass it back ?
+        print(f"Exception during smart contract function execution for transaction {transaction_code} + {e}")
         logger.error(e)
+        raise Exception(e)
     pass
 
 

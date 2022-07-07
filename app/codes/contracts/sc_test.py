@@ -10,7 +10,7 @@ class sc_test(ContractMaster):
         ContractMaster.__init__(self, self.template,self.version, address)
 
     def transfer_and_update(self,params):
-
+   #     raise Exception("Invalid value sent")
         #txn type 5
         transaction_creator = TransactionCreator()
         transfer_proposal_data = {
@@ -18,7 +18,7 @@ class sc_test(ContractMaster):
             "asset1_code": "NWRL",
             "asset2_code": "",
             "wallet1": self.address,
-            "wallet2": "0xc29193dbab0fe018d878e258c93064f01210ec1a",
+            "wallet2": "0x20513a419d5b11cd510ae518dc04ac1690afbed6",
             "asset1_number": 1,
             "asset2_number": 0,
             "additional_data": {}
@@ -51,4 +51,4 @@ class sc_test(ContractMaster):
         }
         sc_proposal1 = transaction_creator.transaction_type_3(sc_proposal1_data)
 
-        return [sc_proposal1]
+        return [transfer_proposal, sc_proposal1]
