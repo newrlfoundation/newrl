@@ -12,17 +12,17 @@ if NEWRL_ENV == 'testnet':
     BOOTSTRAP_NODES = ['testnet.newrl.net']
     NEWRL_PORT = 8090
     DATA_PATH = 'data_testnet/'
-    print('Starting node on testnet')
+    print('Using testnet constants')
 elif NEWRL_ENV == 'mainnet':
     BOOTSTRAP_NODES = ['mainnet.newrl.net']
     NEWRL_PORT = 8456
     DATA_PATH = 'data_mainnet/'
-    print('Starting node on mainnet')
+    print('Using mainnet constants')
 else:
     BOOTSTRAP_NODES = ['testnet.newrl.net']
     NEWRL_PORT = 8182
     DATA_PATH = 'data_devnet/'
-    print('Starting node on devnet')
+    print('Using devnet constants')
 
 DATA_PATH = 'data_test/' if IS_TEST else DATA_PATH
 LOG_FILE_PATH = DATA_PATH + 'logs/'
@@ -64,3 +64,6 @@ TIME_MINER_BROADCAST_INTERVAL_SECONDS = 600
 MY_ADDRESS = ''
 
 ALLOWED_FEE_PAYMENT_TOKENS = [NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE]
+
+MAX_NETWORK_TRUST_SCORE = 1000000
+INITIAL_NETWORK_TRUST_SCORE = 100000
