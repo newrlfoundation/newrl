@@ -2,6 +2,10 @@ from .dao_main_template import DaoMainTemplate
 from ..db_updater import *
 import math
 
+from ..helpers.FetchRespository import FetchRepository
+from ..helpers.TransactionCreator import TransactionCreator
+
+
 class token_fund_dao(DaoMainTemplate):
     codehash=""
 
@@ -12,8 +16,9 @@ class token_fund_dao(DaoMainTemplate):
         # dao_type=2 is for token based DAO and 1 is for membership DAO
         super().__init__(contractaddress)
 
-    def invest(self,cur,callparamsip):
+    def invest(self,callparamsip,repo:FetchRepository):
         # Invest in any startup
+        tansaction_creator=TransactionCreator()
         callparams = input_to_dict(callparamsip)
         dao_id = self.address
         wallet_to_invest=callparams['wallet_to_invest']
@@ -27,13 +32,30 @@ class token_fund_dao(DaoMainTemplate):
 
         tokencode1 = token_to_invest_code
         amount1 = int(token_to_invest_amount or 0)
-        transfer_tokens_and_update_balances(
-            cur, sender2, sender1, tokencode1, amount1)
+        token_code = callparams['token_name']  # TODO fetch dao name
+        tokendata = {
+            "tokenname": tokencode1,
+            "tokencode": tokencode1,
+            "tokentype": '1',
+            "tokenattributes": {},
+            "first_owner": sender1,
+            "custodian": self.address,
+            "legaldochash": '',
+            "amount_created": amount1,
+            "value_created": '',
+            "disallowed": {},
+            "sc_flag": False
+        }
+        tansaction_creator.transaction_type_two(tokendata)
+        # transfer_tokens_and_update_balances(
+        #     cur, sender2, sender1, tokencode1, amount1)
+
 
         tokencode2 = token_to_recieve
         amount2 = int(token_recieve_amt or 0)
-        transfer_tokens_and_update_balances(
-            cur, sender1, sender2, tokencode2, amount2)
+        # ToDo:Value Change from startup to the dao wallet
+        # transfer_tokens_and_update_balances(
+        #     cur, sender1, sender2, tokencode2, amount2)
 
         pass
 
@@ -42,17 +64,19 @@ class token_fund_dao(DaoMainTemplate):
 
         pass
 
-    def payout(self,cur,callparamsip):
+    def payout(self,callparamsip,repo:FetchRepository):
         # dividend to the members
+        trxn=[]
+        transaction_creator=TransactionCreator()
         callparams = input_to_dict(callparamsip)
         dao_id = self.address
         asset1_code=callparams['asset_code']
         amount=callparams['asset_amount']
-        dao_data=cur.execute(f'''Select dao_name as dao_name from dao_main where dao_sc_address=?''',[self.address])
-        dao_data=dao_data.fetchone()
-        token_code = dao_data[0]+'_token'
-        members=cur.execute(f'''select wallet_address as owner,balance as amount from balances where tokencode like ?''',[token_code]).fetchall()
-        locked_tokens=cur.execute(f'''select wallet_address as owner,amount_locked as amount from DAO_TOKEN_LOCK where dao_id like ?''',[dao_id]).fetchall()
+        token_code = callparams['token_name']
+        members=repo.select_Query("wallet_address,balance").add_table_name("balances").where_clause("tokecode",token_code,4).execute_query_multiple_result({"tokencpde":token_code})
+        # members=cur.execute(f'''select wallet_address as owner,balance as amount from balances where tokencode like ?''',[token_code]).fetchall()
+        locked_tokens=repo.select_Query("wallet_address,amount_locked").add_table_name("DAO_TOKEN_LOCK").where_clause("dao_id",dao_id,4).execute_query_multiple_result({"dao_id",dao_id})
+        # locked_tokens=cur.execute(f'''select wallet_address as owner,amount_locked as amount from DAO_TOKEN_LOCK where dao_id like ?''',[dao_id]).fetchall()
         total_tokens=0
         if members is not None:
             for i in members:
@@ -60,8 +84,30 @@ class token_fund_dao(DaoMainTemplate):
         ratio=int(amount)/int(total_tokens)
         for i in members:
             if(dao_id!=i[0]):
-                transfer_tokens_and_update_balances(cur,dao_id,i[0],asset1_code,math.ceil(i[1]*ratio))
+                transfer_proposal_data = {
+                    "transfer_type": 1,
+                    "asset1_code": asset1_code,
+                    "asset2_code": "",
+                    "wallet1": self.address,
+                    "wallet2": i[0],
+                    "asset1_number": math.ceil(i[1]*ratio),
+                    "asset2_number": 0,
+                    "additional_data": {}
+                }
+                trxn.append(transaction_creator.transaction_type_5(transfer_proposal_data))
+                # transfer_tokens_and_update_balances(cur,dao_id,i[0],asset1_code,math.ceil(i[1]*ratio))
         for i in locked_tokens:
             if (dao_id != i[0]):
-                transfer_tokens_and_update_balances(cur, dao_id, i[0], asset1_code, math.ceil(i[1] * ratio))
-        pass
+                transfer_proposal_data = {
+                    "transfer_type": 1,
+                    "asset1_code": asset1_code,
+                    "asset2_code": "",
+                    "wallet1": self.address,
+                    "wallet2": i[0],
+                    "asset1_number": math.ceil(i[1] * ratio),
+                    "asset2_number": 0,
+                    "additional_data": {}
+                }
+                trxn.append(transaction_creator.transaction_type_5(transfer_proposal_data))
+                # transfer_tokens_and_update_balances(cur, dao_id, i[0], asset1_code, math.ceil(i[1] * ratio))
+        return trxn

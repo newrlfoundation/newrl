@@ -64,21 +64,7 @@ class TransactionCreator:
         return newtx
         #return create_token_transaction(add_token_request)
 
-    def transaction_type_two_modal(self,data:CreateTokenRequest):
-        add_token_request = {
-            "token_name": data.token_name,
-            "token_code": data.token_code,
-            "token_type": data.token_type,
-            "first_owner": data.first_owner,
-            "custodian": data.custodian,
-            "legal_doc": data.legal_doc,
-            "amount_created": data.amount_created,
-            "tokendecimal": data.tokendecimal,
-            "disallowed_regions": data.disallowed_regions,
-            "is_smart_contract_token": data.is_smart_contract_token,
-            "token_attributes": data.token_attributes
-        }
-        return add_token_request
+
 
     def transaction_type_3(self,data:dict):
         txspecdata = {

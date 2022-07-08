@@ -56,6 +56,7 @@ class CentralRepository:
         placeHolder = ', :'.join(queryParam.keys())
         self.query = self.query + ' (' + keys + ') VALUES ( :' + placeHolder + ')'
         return self
+
     def save_private_sc_state(self, table_name: str, queryParam: dict):
         keys = ','.join(queryParam.keys())
         question_marks = ','.join(list('?' * len(queryParam)))
@@ -67,13 +68,14 @@ class CentralRepository:
         values = tuple(queryParam.values())
         return self.cur.execute('INSERT INTO ' + table_name + ' (' + keys + ') VALUES (' + question_marks + ')', values)
 
-    def update_private_sc_state(self, table_name: str, queryParam: dict, unique_column:str,unique_value:str,contract_address:str):
+    def update_private_sc_state(self, table_name: str, queryParam: dict, unique_column: str, unique_value: str,
+                                contract_address: str):
         keys = ','.join(queryParam.keys())
         question_marks = ','.join(list('?' * len(queryParam)))
         for x in queryParam:
-            if (not self.queryCheck(x)):
+            if not self.queryCheck(x):
                 return False
-            if (not self.queryCheck(queryParam[x])):
+            if not self.queryCheck(queryParam[x]):
                 return False
         if not self.queryCheck(unique_column):
             return False
@@ -82,9 +84,23 @@ class CentralRepository:
         if not self.queryCheck(contract_address):
             return False
         values = tuple(queryParam.values())
-        values.append(unique_value,contract_address)
-        return self.cur.execute('UPDATE INTO ' + table_name + ' (' + keys + ') VALUES (' + question_marks + ') WHERE '+unique_column+'=? AND contract_address=?', values)
+        values.append(unique_value, contract_address)
+        return self.cur.execute(
+            'UPDATE INTO ' + table_name + ' (' + keys + ') VALUES (' + question_marks + ') WHERE ' + unique_column + '=? AND contract_address=?',
+            values)
+    def delete_private_sc_state(self, table_name: str,  unique_column: str, unique_value: str,
+                                contract_address: str):
 
+        if not self.queryCheck(unique_column):
+            return False
+        if not self.queryCheck(unique_value):
+            return False
+        if not self.queryCheck(contract_address):
+            return False
+        values=[unique_value, contract_address]
+        return self.cur.execute(
+            'DELETE FROM ' + table_name +  ' WHERE ' + unique_column + '=? AND contract_address=?',
+            values)
     def queryCheck(self, query: str):
         if query in self.escape_string:
             return False

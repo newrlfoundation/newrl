@@ -3,7 +3,7 @@ import math
 #Min Yes Votes Voting Scheme
 #ProposalAccepted - if min_yes yes votes is met
 #ProposalRejected - if min_yes-1 no votes is met
-def voting_scheme_one(self,callparams):
+def voting_scheme_one(callparams):
 
     min_yes_proportion = callparams['voting_scheme_params']['min_yes_votes']
     total_votes = callparams['total_votes']
@@ -22,13 +22,13 @@ def voting_scheme_one(self,callparams):
     # #change min yes and no votes to dao params
     # data = row.fetchone()
     #check if min votes are met  
-def voting_scheme_two(self,cur,callparams):
+def voting_scheme_two(callparams):
 
     pass
-def voting_scheme_three(self,cur,callparams):
+def voting_scheme_three(callparams):
     pass
 
-def voting_scheme_token(self,cur,callparams):
+def voting_scheme_token(callparams):
     '''
     TODO 
     params : 
