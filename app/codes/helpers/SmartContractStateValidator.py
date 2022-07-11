@@ -16,8 +16,9 @@ def validate(transaction: Transactionmanager, contract_address: str):
     if type == TRANSACTION_TWO_WAY_TRANSFER:
         return False
     if type == TRANSACTION_ONE_WAY_TRANSFER:
-        if contract_address != transaction.transaction['specific_data']['wallet1']:
-            return False
+        if not 'is_type_value' in transaction.transaction['specific_data']['additional_data']:
+            if contract_address != transaction.transaction['specific_data']['wallet1']:
+                return False
     # if type==TRANSACTION_TRUST_SCORE_CHANGE:
     #     #         TBD
 

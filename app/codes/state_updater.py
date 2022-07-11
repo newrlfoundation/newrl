@@ -3,8 +3,10 @@ import math
 import json
 import importlib
 from lib2to3.pgen2 import token
+import re
 import traceback
 from app.codes.helpers.FetchRespository import FetchRepository
+from app.codes.helpers.TransactionCreator import TransactionCreator
 
 from app.codes.transactionmanager import Transactionmanager
 from .helpers.SmartContractStateValidator import validate
@@ -234,6 +236,9 @@ def execute_sc(cur, transaction_main):
     try:
         fetchRepository = FetchRepository(cur)
         child_transactions = funct(params_for_funct,fetchRepository)
+        #if value is present then make a child txn 5 based on it (it will be validated as part of child sc validation)
+        value_txns = get_value_txns(transaction_signer,transaction_data)
+        child_transactions.extend(value_txns)
         return child_transactions
     except Exception as e:
         print(f"Exception during smart contract function execution for transaction {transaction_code} + {e}")
@@ -244,4 +249,35 @@ def execute_sc(cur, transaction_main):
 
 def validate_sc_child_transaction(transaction: Transactionmanager, contract_address):    
     return validate(transaction,contract_address)
+
+
+def get_value_txns(transaction_signer, transaction_data):
+
+    if 'value' not in transaction_data['params']:
+        return []
+
+    transaction_creator = TransactionCreator() 
+    value_details = transaction_data['params']['value']
+    sender = transaction_signer[0]['wallet_address']
+    receiver = transaction_data['address']
+    value_txns = []
+
+    for value in value_details:
+        transfer_proposal_data = {
+            "transfer_type": 1,
+            "asset1_code": value['token_code'],
+            "asset2_code": "",
+            "wallet1": sender,
+            "wallet2": receiver,
+            "asset1_number": value['amount'],
+            "asset2_number": 0,
+            "additional_data": {
+                "is_type_value": True
+            }
+        }
+        transfer_proposal = transaction_creator.transaction_type_5(
+            transfer_proposal_data)
+        value_txns.append(transfer_proposal)
+
+    return value_txns    
 

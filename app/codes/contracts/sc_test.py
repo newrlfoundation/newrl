@@ -11,7 +11,11 @@ class sc_test(ContractMaster):
         ContractMaster.__init__(self, self.template,self.version, address)
 
     def transfer_and_update(self, params, fetFetchRepository : FetchRepository):
-        #txn type 5
+        '''
+        EXAMPLE METHOD THAT HAS SAMPLE CHILD TXNS 
+        '''
+
+        '''txn type 5 (one way transfer) sample proposal'''
         transaction_creator = TransactionCreator()
         transfer_proposal_data = {
             "transfer_type": 1,
@@ -25,7 +29,7 @@ class sc_test(ContractMaster):
         }
         transfer_proposal = transaction_creator.transaction_type_5(transfer_proposal_data)
 
-        #txn type 8
+        '''txn type 8 (sc-private state update) sample proposal'''
         sc_state_proposal1_data = {
             "operation": "save",
             "table_name": "sc_test",
@@ -37,7 +41,8 @@ class sc_test(ContractMaster):
         }
         sc_state_proposal1 = transaction_creator.transaction_type_8(sc_state_proposal1_data)
 
-        #txn tpye 3
+
+        '''txn type 3 (sc call) sample proposal'''
         sc_proposal1_params = {
             "recipient_address": "0x20513a419d5b11cd510ae518dc04ac1690afbed6",
             "amount": 2,
@@ -50,5 +55,9 @@ class sc_test(ContractMaster):
             "params": sc_proposal1_params
         }
         sc_proposal1 = transaction_creator.transaction_type_3(sc_proposal1_data)
-
         return [transfer_proposal, sc_proposal1]
+
+    def value_handle(self, params, fetFetchRepository: FetchRepository):
+        value = params["value"]
+        return []
+
