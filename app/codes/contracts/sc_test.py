@@ -1,3 +1,4 @@
+from app.codes.helpers.FetchRespository import FetchRepository
 from app.codes.helpers.TransactionCreator import TransactionCreator
 from .contract_master import ContractMaster
 
@@ -9,8 +10,7 @@ class sc_test(ContractMaster):
         self.version = ""
         ContractMaster.__init__(self, self.template,self.version, address)
 
-    def transfer_and_update(self,params):
-   #     raise Exception("Invalid value sent")
+    def transfer_and_update(self, params, fetFetchRepository : FetchRepository):
         #txn type 5
         transaction_creator = TransactionCreator()
         transfer_proposal_data = {
@@ -37,7 +37,7 @@ class sc_test(ContractMaster):
         }
         sc_state_proposal1 = transaction_creator.transaction_type_8(sc_state_proposal1_data)
 
-        # txn tpye 3
+        #txn tpye 3
         sc_proposal1_params = {
             "recipient_address": "0x20513a419d5b11cd510ae518dc04ac1690afbed6",
             "amount": 2,

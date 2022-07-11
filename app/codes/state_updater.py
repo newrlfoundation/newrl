@@ -4,6 +4,7 @@ import json
 import importlib
 from lib2to3.pgen2 import token
 import traceback
+from app.codes.helpers.FetchRespository import FetchRepository
 
 from app.codes.transactionmanager import Transactionmanager
 from .helpers.SmartContractStateValidator import validate
@@ -231,7 +232,8 @@ def execute_sc(cur, transaction_main):
     params_for_funct = transaction_data['params']
     params_for_funct['function_caller'] = transaction_signer
     try:
-        child_transactions = funct(params_for_funct)
+        fetchRepository = FetchRepository(cur)
+        child_transactions = funct(params_for_funct,fetchRepository)
         return child_transactions
     except Exception as e:
         print(f"Exception during smart contract function execution for transaction {transaction_code} + {e}")
