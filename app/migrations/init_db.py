@@ -86,6 +86,7 @@ def init_db():
                     previous_hash text,
                     hash text,
                     creator_wallet text,
+                    committee_list text,
                     transactions_hash text)
                     ''')
     cur.execute('''
@@ -199,8 +200,13 @@ def init_trust_db():
                     (src_person_id text NOT NULL, 
                     dest_person_id text NOT NULL,
                     score integer,
-                    last_time integer)
+                    last_time integer,
+                    UNIQUE (src_person_id, dest_person_id)
+                    )
                     ''')
+    cur.execute('''
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_trust_scores ON trust_scores (src_person_id, dest_person_id)
+                ''')
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS dao_main
                     (dao_personid text NOT NULL, 

@@ -251,6 +251,25 @@ def get_pid_from_wallet(cur, walletaddinput):
     return pid[0]
 
 
+def get_block_from_cursor(cur, block_index):
+    block = cur.execute(
+        '''SELECT 
+        block_index, hash, timestamp, status, proof,
+        previous_hash, creator_wallet, transactions_hash
+        FROM blocks where block_index=?'''
+    , (block_index,)).fetchone()
+
+    return {
+        'block_index': block[0],
+        'hash': block[1],
+        'timestamp': block[2],
+        'status': block[3],
+        'previous_hash': block[4],
+        'creator_wallet': block[5],
+        'transactions_hash': block[6],
+    }
+
+
 def create_contract_address():
     private_key_bytes = os.urandom(32)
     key = ecdsa.SigningKey.from_string(

@@ -3,7 +3,7 @@ import json
 import importlib
 from lib2to3.pgen2 import token
 from app.codes.clock.global_time import get_corrected_time_ms
-from app.codes.networkscoremanager import get_invalid_block_creation_score, get_invalid_receipt_score, get_valid_block_creation_score, get_valid_receipt_score
+from app.codes.networkscoremanager import get_invalid_block_creation_score, get_invalid_receipt_score, get_valid_block_creation_score, get_valid_receipt_score, update_network_trust_score_from_receipt
 from .p2p.utils import get_peers
 
 from app.nvalues import NETWORK_TRUST_MANAGER_PID
@@ -137,75 +137,6 @@ def add_block_reward(cur, creator, blockindex):
 def update_trust_scores(cur, block):
     receipts = block['text']['previous_block_receipts']
 
-    # block_proposals = block['text']['previous_block_proposals']
-
-    # for proposal in block_proposals:
-    #     wallet = proposal['creator_wallet']
-    #     # check if proposal is valid else negate
-
     for receipt in receipts:
-        wallet_cursor = cur.execute(
-        'SELECT wallet_address FROM wallets where wallet_public=?', 
-        (receipt['public_key'],)).fetchone()
-    
-        if wallet_cursor is not None:
-            wallet_address = wallet_cursor[0]
-            person_id = get_pid_from_wallet(cur, wallet_address)
-            vote = receipt['data']['vote']
-
-            trust_score_cursor = cur.execute('''
-                SELECT score FROM trust_scores where src_person_id=? and dest_person_id=?
-                ''', (NETWORK_TRUST_MANAGER_PID, person_id)).fetchone()
-                        
-            if trust_score_cursor is None:
-                existing_score = INITIAL_NETWORK_TRUST_SCORE
-            else:
-                existing_score = trust_score_cursor[0]
-
-            target_block_index = receipt['data']['block_index']
-            target_block_hash = receipt['data']['block_hash']
-            actual_block = get_block_from_cursor(cur, target_block_index)
-            actual_block_hash = actual_block['hash']
-            if vote == BLOCK_VOTE_MINER:
-                # Miner vote
-                if actual_block_hash == target_block_hash:
-                    score = get_valid_block_creation_score(existing_score)
-                else:
-                    score = get_invalid_block_creation_score(existing_score)
-            else:
-                # Committee member vote
-                if actual_block['proof'] == 42:  # Empty block check
-                    continue
-                if vote == 1:
-                    if actual_block_hash == target_block_hash:
-                        score = get_valid_receipt_score(existing_score)
-                    else:
-                        score = get_invalid_receipt_score(existing_score)
-                else:
-                        if actual_block_hash != target_block_hash:
-                            score = get_valid_receipt_score(existing_score)
-                        else:
-                            score = get_invalid_receipt_score(existing_score)
-
-
-            update_trust_score(cur, NETWORK_TRUST_MANAGER_PID, person_id, score, get_corrected_time_ms())
-
-
-def get_block_from_cursor(cur, block_index):
-    block = cur.execute(
-        '''SELECT 
-        block_index, hash, timestamp, status, proof,
-        previous_hash, creator_wallet, transactions_hash
-        FROM blocks where block_index=?'''
-    , (block_index,)).fetchone()
-
-    return {
-        'block_index': block[0],
-        'hash': block[1],
-        'timestamp': block[2],
-        'status': block[3],
-        'previous_hash': block[4],
-        'creator_wallet': block[5],
-        'transactions_hash': block[6],
-    }
+        update_network_trust_score_from_receipt(cur, receipt=receipt)
     
