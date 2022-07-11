@@ -97,7 +97,16 @@ def remove_block_from_temp(block_index):
     try:
         for block_file in glob.glob(f'{block_folder}/block_{block_index}_*.json'):
             os.remove(block_file)
-        for receipt_file in glob.glob(f'{block_folder}/receipt_{block_index}_*.json'):
+        # for receipt_file in glob.glob(f'{block_folder}/receipt_{block_index}_*.json'):
+        #     os.remove(receipt_file)
+    except Exception as e:
+        print('Could not remove block from tmp with index', block_index)
+
+
+def remove_receipt_from_temp(block_index, block_hash):
+    block_folder=TMP_PATH
+    try:
+        for receipt_file in glob.glob(f'{block_folder}/receipt_{block_index}_{block_hash}.json'):
             os.remove(receipt_file)
     except Exception as e:
         print('Could not remove block from tmp with index', block_index)

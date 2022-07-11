@@ -3,14 +3,15 @@ import json
 import importlib
 from lib2to3.pgen2 import token
 from app.codes.clock.global_time import get_corrected_time_ms
+from app.codes.networkscoremanager import get_invalid_block_creation_score, get_invalid_receipt_score, get_valid_block_creation_score, get_valid_receipt_score, update_network_trust_score_from_receipt
 from .p2p.utils import get_peers
 
 from app.nvalues import NETWORK_TRUST_MANAGER_PID
 
 
-from ..constants import COMMITTEE_SIZE, NEWRL_DB
+from ..constants import COMMITTEE_SIZE, INITIAL_NETWORK_TRUST_SCORE, NEWRL_DB
 from .db_updater import *
-from ..ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
+from ..ntypes import BLOCK_VOTE_MINER, NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
 
 
 def update_db_states(cur, block):
@@ -136,38 +137,6 @@ def add_block_reward(cur, creator, blockindex):
 def update_trust_scores(cur, block):
     receipts = block['text']['previous_block_receipts']
 
-    block_proposals = block['text']['previous_block_proposals']
-
-    for proposal in block_proposals:
-        wallet = proposal['creator_wallet']
-        # check if proposal is valid else negate
-
     for receipt in receipts:
-        wallet_cursor = cur.execute(
-        'SELECT wallet_address FROM wallets where wallet_public=?', 
-        (receipt['public_key'],)).fetchone()
+        update_network_trust_score_from_receipt(cur, receipt=receipt)
     
-        if wallet_cursor is not None:
-            wallet_address = wallet_cursor[0]
-            person_id = get_pid_from_wallet(wallet_address)
-            vote = receipt['data']['vote']
-
-            trust_score_cursor = cur.execute('''
-                SELECT score FROM trust_scores where src_person_id=? and dest_person_id=?
-                ''', (NETWORK_TRUST_MANAGER_PID, person_id)).fetchone()
-                        
-            if trust_score_cursor is None:
-                existing_score = 1
-            else:
-                existing_score = trust_score_cursor[0]
-
-            N = len(get_peers())
-            C = COMMITTEE_SIZE
-            delta = 10 / math.log(N)
-            if vote == 1:
-                new_score = (existing_score + 1) / 2
-                new_score = existing_score + (delta / C) * math.log(10 - 0.03 * existing_score)
-            else:
-                new_score = existing_score - (5 * delta / C) * math.log(3 + 0.03 * existing_score)
-
-            update_trust_score(cur, NETWORK_TRUST_MANAGER_PID, person_id, new_score, get_corrected_time_ms())

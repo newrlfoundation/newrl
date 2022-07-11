@@ -2,6 +2,8 @@
 
 import sqlite3
 
+from app.codes.fs.temp_manager import remove_receipt_from_temp
+
 from ..constants import NEWRL_DB
 
 
@@ -66,3 +68,5 @@ def update_receipts_in_state(cur, block):
                 (block_index, block_hash, vote, timestamp, wallet_address)
                 VALUES(?, ?, ?, ?, ?)
             ''', db_receipt_data)
+
+            remove_receipt_from_temp(receipt['data']['block_index'], receipt['data']['block_hash'])
