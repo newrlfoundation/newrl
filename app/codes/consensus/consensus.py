@@ -89,6 +89,10 @@ def check_community_consensus(block):
     if len(committee) == 1:
         if committee[0]['wallet_address'] == SENTINEL_NODE_WALLET:  # Todo - Check if block is empty
             return True
+        else:
+            return False
+    if len(committee) < COMMITTEE_SIZE / 2 + 1:
+        return False
 
     if receipt_counts['positive_receipt_count'] > MINIMUM_ACCEPTANCE_RATIO * COMMITTEE_SIZE:
         # TODO - Check if time elapsed has exceeded receipt cut off. Do not accept otherwise
