@@ -174,19 +174,23 @@ def init_trust_db():
                     ''')
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS dao_main
-                    (dao_personid text NOT NULL, 
+                    (
+                    contract_address text NOT NULL,
+                    dao_personid text NOT NULL, 
                     dao_name text NOT NULL,
                     founder_personid text NOT NULL,
                     dao_sc_address text NOT NULL)
                     ''')
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS dao_membership
-                    (dao_person_id text NOT NULL, 
+                    (contract_address text NOT NULL,
+                    dao_person_id text NOT NULL, 
                     member_person_id text NOT NULL)
                     ''')
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS proposal_data
                     (
+                    contract_address text NOT NULL,
                     proposal_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     dao_person_id text NOT NULL, 
                     function_called text NOT NULL, 
@@ -204,6 +208,7 @@ def init_trust_db():
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS DAO_TOKEN_LOCK
                     (
+                    contract_address NOT NULL,
                     dao_id  text Not NULL,
                     person_id text Not NULL,
                     pr  oposal_list TEXT ,
