@@ -16,7 +16,7 @@ class FetchRepository:
 
 
     def select_Query(self,select_param="*"):
-        self.__query = 'Select ('+select_param+') from '
+        self.__query = 'Select '+select_param+' from '
         return self
     def select_count(self,select_param="*"):
         self.__query = 'Select count(' + select_param + ') from '

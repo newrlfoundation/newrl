@@ -23,12 +23,13 @@ class dao_manager(ContractMaster):
         # create wallet and pid for contract or dao_sc_main
         dao_sc_address = dao_params['dao_address']
         dao_wallet_address=dao_params['dao_wallet_address']
-        dao_pid=repo.select_Query('(person_id)').add_table_name("person_wallet").where_clause('wallet_id',dao_wallet_address,1).execute_query_single_result({"wallet_id",dao_wallet_address})
-        dao_person_id = dao_pid
+        dao_pid=repo.select_Query('person_id').add_table_name("person_wallet").where_clause('wallet_id',dao_wallet_address,1).execute_query_single_result({"wallet_id":dao_wallet_address})
+        dao_person_id = dao_pid[0]
 
 
         # update dao db
         dao_name = dao_params['dao_name']
+        dao_token_name=dao_params['token_name']
         founders_personid = json.dumps(dao_params['founders'])
         if(len(founders_personid)<3):
             return False
@@ -69,7 +70,7 @@ class dao_manager(ContractMaster):
             "table_name": "contracts",
             "sc_address": self.address,
             "data": {
-                "address": self.address,
+                "address": dao_sc_address,
                 "creator": founders_personid,
                 "ts_init": contractparams['ts_init'] ,
                 "name": dao_params['dao_main_sc'],
@@ -87,6 +88,7 @@ class dao_manager(ContractMaster):
         }
         txn=transaction_creator.transaction_type_8(sc_state_proposal_data)
         return [txn_1,txn]
+
 
     def alter(self, cur, callParamsip):
         pass
