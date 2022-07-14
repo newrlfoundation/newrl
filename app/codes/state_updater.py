@@ -18,6 +18,8 @@ from .db_updater import *
 from ..ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
 logger = logging.getLogger(__name__)
 
+value_txns = []
+
 def update_db_states(cur, block):
     newblockindex = block['index'] if 'index' in block else block['block_index']
     transactions = block['text']['transactions']
@@ -33,7 +35,10 @@ def update_db_states(cur, block):
     if 'creator_wallet' in block and block['creator_wallet'] is not None:
         add_block_reward(cur, block['creator_wallet'], newblockindex)
 
+
     collated_txns = simplify_transactions(cur, transactions)
+    global simplified_transactions
+    simplified_transactions = []
 
     for transaction in collated_txns:
 
@@ -178,19 +183,23 @@ def update_trust_scores(cur, block):
             update_trust_score(cur, NETWORK_TRUST_MANAGER, wallet_address, new_score, get_corrected_time_ms())
 
 
-
 def simplify_transactions(cur,transactions):
+  global value_txns   
   simplified_transactions = []
   for transaction in transactions:
     print(transaction)
     if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
+      non_sc_txns = []
       #recursive method that iterates till there is no sc txn  
       try:  
         non_sc_txns = get_non_sc_txns(cur,transaction)
-        simplified_transactions.extend(non_sc_txns)
       except Exception:
+        value_txns = []
         logger.error(f"Exception during sc txn execution for txn : {transaction}")
         logger.error(traceback.format_exc())
+      simplified_transactions.extend(value_txns)
+      simplified_transactions.extend(non_sc_txns)
+      value_txns = []
     else:
       simplified_transactions.append(transaction)
   return simplified_transactions
@@ -198,7 +207,7 @@ def simplify_transactions(cur,transactions):
 
 def get_non_sc_txns(cur, transaction):
     child_transactions = execute_sc(cur, transaction)
-    _simplified_transactions = []
+    simplified_child_transactions = []
     for child_transaction in child_transactions:
         logger.info("Processing child transaction" + str(child_transaction))
         if not validate_sc_child_transaction(child_transaction, transaction['transaction']["specific_data"]["address"]):
@@ -206,11 +215,11 @@ def get_non_sc_txns(cur, transaction):
         if(child_transaction.transaction['type'] == TRANSACTION_SMART_CONTRACT):
             non_sc_child_txns = get_non_sc_txns(
                 cur, child_transaction.get_transaction_complete())
-            _simplified_transactions.extend(non_sc_child_txns)
+            simplified_child_transactions.extend(non_sc_child_txns)
         else:
-            _simplified_transactions.append(
+            simplified_child_transactions.append(
                 child_transaction.get_transaction_complete())
-    return _simplified_transactions
+    return simplified_child_transactions
 
 
 def execute_sc(cur, transaction_main):
@@ -219,6 +228,8 @@ def execute_sc(cur, transaction_main):
     transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
         'trans_code']
     transaction_signer = transaction_main['signatures']
+
+    global value_txns
 
     funct = transaction_data['function']
     if funct == "setup":  # sc is being set up
@@ -235,10 +246,10 @@ def execute_sc(cur, transaction_main):
     params_for_funct['function_caller'] = transaction_signer
     try:
         fetchRepository = FetchRepository(cur)
+        sc_value_txns = get_value_txns(transaction_signer, transaction_data)
+        value_txns.extend(sc_value_txns)
         child_transactions = funct(params_for_funct,fetchRepository)
         #if value is present then make a child txn 5 based on it (it will be validated as part of child sc validation)
-        value_txns = get_value_txns(transaction_signer,transaction_data)
-        child_transactions.extend(value_txns)
         return child_transactions
     except Exception as e:
         print(f"Exception during smart contract function execution for transaction {transaction_code} + {e}")
@@ -260,7 +271,7 @@ def get_value_txns(transaction_signer, transaction_data):
     value_details = transaction_data['params']['value']
     sender = transaction_signer[0]['wallet_address']
     receiver = transaction_data['address']
-    value_txns = []
+    value_txns_local = []
 
     for value in value_details:
         transfer_proposal_data = {
@@ -272,12 +283,11 @@ def get_value_txns(transaction_signer, transaction_data):
             "asset1_number": value['amount'],
             "asset2_number": 0,
             "additional_data": {
-                "is_type_value": True
             }
         }
         transfer_proposal = transaction_creator.transaction_type_5(
             transfer_proposal_data)
-        value_txns.append(transfer_proposal)
+        value_txns_local.append(transfer_proposal.get_transaction_complete())
 
-    return value_txns    
+    return value_txns_local
 

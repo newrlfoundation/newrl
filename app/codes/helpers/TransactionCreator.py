@@ -42,7 +42,7 @@ class TransactionCreator:
             "amount_created": data.get('amount_created', 0),
             "tokendecimal": data.get('tokendecimal', 0),
             "disallowed_origin": data.get('disallowed_origin', []),
-            "is_sc_token": data.get('is_sc_token', False),
+            "sc_flag": data.get('sc_flag', False),
             "tokenattributes": data.get('tokenattributes', {})
         }
         fulltrandata = {

@@ -55,9 +55,39 @@ class sc_test(ContractMaster):
             "params": sc_proposal1_params
         }
         sc_proposal1 = transaction_creator.transaction_type_3(sc_proposal1_data)
-        return [transfer_proposal, sc_proposal1]
+        return [sc_proposal1]
 
     def value_handle(self, params, fetFetchRepository: FetchRepository):
+        '''
+        Sample Method which validates value will be sent as part of txn and issues tokens
+        '''
+
+        child_transactions = []
+
         value = params["value"]
-        return []
+
+        required_value = {
+            "token_code": "NWRL",
+            "amount": 1
+        }
+
+        if required_value in value:
+            transaction_creator = TransactionCreator()
+            tokendata={
+                "tokenname": 'token_code',
+                "tokencode": 'token_code',
+                "tokentype": '1',
+                "tokenattributes": {},
+                "first_owner": "0x20513a419d5b11cd510ae518dc04ac1690afbed6",
+                "custodian": self.address,
+                "legaldochash": '',
+                "amount_created": 2,
+                "value_created": '',
+                "disallowed": {},
+                "sc_flag": False
+            }
+            child_transactions.append(
+                transaction_creator.transaction_type_two(tokendata))
+
+        return child_transactions
 
