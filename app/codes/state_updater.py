@@ -126,7 +126,10 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
         cr = CentralRepository(cur,cur)
         if(transaction_data['operation']== "save"):
             cr.save_private_sc_state(transaction_data['table_name'],transaction_data["data"])
-
+        if(transaction_data['operation'] == "update"):
+            cr.update_private_sc_state(transaction_data['table_name'], transaction_data["data"], transaction_data["unique_column"], transaction_data["unique_value"],transaction_data["contract_address"])
+        if(transaction_data['operation'] == "delete"):
+            cr.delete_private_sc_state(transaction_data['table_name'], transaction_data["unique_column"], transaction_data["unique_value"], transaction_data["contract_address"])
 
 def add_block_reward(cur, creator, blockindex):
     """Reward the minder by chaning their NWRL balance"""
