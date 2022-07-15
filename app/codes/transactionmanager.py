@@ -322,7 +322,16 @@ class Transactionmanager:
                 for wallet in self.transaction['specific_data']['params']['participants']:
                     if not is_wallet_valid(wallet):
                         self.validity = 0
-
+            if 'value' in self.transaction['specific_data']['params']:
+                for value in self.transaction['specific_data']['params']['value']:
+                    print(value)
+                    if not is_token_valid(value['token_code']):
+                        self.validity = 0
+                        break
+                    sender_balance = get_wallet_token_balance_tm(self.transaction['specific_data']['signers'][0], value['token_code'])
+                    if value['amount'] > sender_balance:
+                        self.validity = 0
+                        break  
     #	self.validity=0
         if self.transaction['type'] == TRANSACTION_TWO_WAY_TRANSFER or self.transaction['type'] == TRANSACTION_ONE_WAY_TRANSFER:
             ttype = self.transaction['type']
