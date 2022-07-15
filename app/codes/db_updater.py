@@ -264,9 +264,10 @@ def get_block_from_cursor(cur, block_index):
         'hash': block[1],
         'timestamp': block[2],
         'status': block[3],
-        'previous_hash': block[4],
-        'creator_wallet': block[5],
-        'transactions_hash': block[6],
+        'proof': block[4],
+        'previous_hash': block[5],
+        'creator_wallet': block[6],
+        'transactions_hash': block[7],
     }
 
 

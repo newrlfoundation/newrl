@@ -73,7 +73,7 @@ def update_network_trust_score_from_receipt(cur, receipt):
                 score = get_invalid_block_creation_score(existing_score)
         else:
             # Committee member vote
-            committee = get_committee_for_block
+            committee = get_committee_for_block(actual_block)
             if wallet_address not in committee:
                 score = get_invalid_receipt_score(existing_score)
             else:

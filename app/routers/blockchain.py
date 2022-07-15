@@ -96,7 +96,7 @@ def get_trust_score_api(
     trust_score = get_trust_score(src_person_id=source_person_id, dest_person_id=destination_person_id)
     if trust_score is None:
         raise HTTPException(status_code=400, detail="Trust score not available")
-    return trust_score
+    return {'trust_score': trust_score}
 
 @router.get("/download-chain", tags=[v2_tag])
 def download_chain_api():
