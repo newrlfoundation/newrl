@@ -10,6 +10,8 @@ import json
 import datetime
 import time
 import sqlite3
+
+from app.codes.helpers.TransactionCreator import TransactionCreator
 #import hashlib
 
 from ...constants import NEWRL_DB
@@ -42,7 +44,7 @@ class ContractMaster():
             contractparams['legalparams']={}
             self.contractparams=contractparams
 
-    def setup(self, cur, callparams):
+    def setup(self, callparams, fetchRepository):
         #this is called by a tx type 3 signed by the creator, it calls the function setp with parameters as params
         #setup implies a transaction for contract address creation
         contractparams= input_to_dict(callparams)
@@ -99,10 +101,36 @@ class ContractMaster():
                 cspecs,
                 legpars
                 )
-        cur.execute(f'''INSERT INTO contracts
-                (address, creator, ts_init, name, version, actmode, status, next_act_ts, signatories, parent, oracleids, selfdestruct, contractspecs, legalparams)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', qparams)
-        return []
+
+        contract_data = {
+            "address": (self.address).strip('\"'),
+            "creator": contractparams['creator'],
+            "ts_init": contractparams['ts_init'],
+            "name": contractparams['name'],
+            "version": contractparams['version'],
+            "actmode": contractparams['actmode'],
+            "status": cstatus,
+            "next_act_ts":  contractparams['next_act_ts'],
+            "signatories": signstr,
+            "parent": contractparams['parent'],
+            "oracleids": oraclestr,
+            "selfdestruct": sdestr,
+            "contractspecs": cspecs,
+            "legalparams": legpars
+        }
+        '''txn type 8 (sc-private state update)'''
+        sc_state_proposal1_data = {
+            "operation": "save",
+            "table_name": "contracts",
+            "sc_address": self.address,
+            "data": contract_data
+        }
+
+        transaction_creator = TransactionCreator()
+        add_contract_proposal = transaction_creator.transaction_type_8(
+            sc_state_proposal1_data)
+
+        return [add_contract_proposal]
     def loadcontract(self, cur, contractaddress):
         #this loads the contract from the state db
         #it should take as input contractaddress and output the contractparams as they are in the db as of the time of calling it
