@@ -2,6 +2,8 @@
 
 import sqlite3
 
+from app.codes.fs.temp_manager import remove_receipt_from_temp
+
 from ..constants import NEWRL_DB
 
 
@@ -35,7 +37,7 @@ def get_receipts_for_block_from_db(block_index):
     con.row_factory = sqlite3.Row
     cur = con.cursor()
     receipt_cursor = cur.execute(
-        'SELECT * FROM receipts where block_index=?', (block_index,))
+        'SELECT * FROM receipts where included_block_index=?', (block_index,))
     
     # if receipt_cursor is None:
     #     return []
@@ -57,7 +59,7 @@ def update_receipts_in_state(cur, block):
                 receipt['data']['block_index'],
                 receipt['data']['block_hash'],
                 receipt['data']['vote'],
-                receipt['timestamp'],
+                receipt['data']['timestamp'],
                 wallet_cursor[0],
             )
 
@@ -66,3 +68,5 @@ def update_receipts_in_state(cur, block):
                 (block_index, block_hash, vote, timestamp, wallet_address)
                 VALUES(?, ?, ?, ?, ?)
             ''', db_receipt_data)
+
+            remove_receipt_from_temp(receipt['data']['block_index'], receipt['data']['block_hash'])

@@ -141,12 +141,13 @@ def get_digest(file_path):
     return h.hexdigest()
 
 
-def get_walletdata_from_address(addressinput):
+def get_person_id_for_wallet_from_db(addressinput):
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
     wallet_cursor = cur.execute(
-        'SELECT * FROM person_wallet WHERE wallet_id=?', (addressinput, )).fetchone()
+        'SELECT person_id FROM person_wallet WHERE wallet_id=?', (addressinput, )).fetchone()
     if wallet_cursor is None:
-        return False
-    walletdata = dict(wallet_cursor)
-    return walletdata
+        return None
+    pid = wallet_cursor[0]
+    con.close()
+    return wallet_cursor[0]

@@ -2,6 +2,7 @@ mempool/
 statearchive/
 tmp/
 data/
+data_*/
 state.json
 chain.json
 tokennew.json

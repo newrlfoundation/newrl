@@ -5,11 +5,13 @@ import os
 import logging
 import sqlite3
 import threading
+from app.codes.fs.temp_manager import store_receipt_to_temp
 
-from app.codes.receiptmanager import get_receipts_for_block_from_db
+# from app.codes.receiptmanager import get_receipts_for_block_from_db
+from app.ntypes import BLOCK_VOTE_MINER
 
 from .clock.global_time import get_corrected_time_ms, get_time_difference
-from .fs.temp_manager import get_blocks_for_index_from_storage, get_receipts_from_storage, store_block_to_temp
+from .fs.temp_manager import get_all_receipts_from_storage, get_blocks_for_index_from_storage, get_receipts_from_storage, store_block_to_temp
 from .minermanager import am_i_in_current_committee, broadcast_miner_update, get_committee_for_current_block, get_miner_for_current_block, should_i_mine
 from ..nvalues import SENTINEL_NODE_WALLET, TREASURY_WALLET_ADDRESS
 from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, GLOBAL_INTERNAL_CLOCK_SECONDS, IS_TEST, NEWRL_DB, NEWRL_PORT, NO_BLOCK_TIMEOUT, NO_RECEIPT_COMMITTEE_TIMEOUT, REQUEST_TIMEOUT, MEMPOOL_PATH, TIME_BETWEEN_BLOCKS_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS
@@ -128,12 +130,20 @@ def run_updater(add_to_chain=False):
         logger.info(f"Time since last block: {time_diff} seconds")
         if time_diff < TIME_BETWEEN_BLOCKS_SECONDS * 1000:  # TODO - Change the block time limit
             logger.info("No new transactions, not enough time since last block. Exiting.")
-            return logger.get_logs()
+            return None
         else:
             logger.info(f"More than {TIME_BETWEEN_BLOCKS_SECONDS} seconds since the last block. Adding a new empty one.")
 
     previous_block = get_last_block(cur=cur)
-    transactionsdata['previous_block_receipts'] = get_receipts_from_storage(previous_block['index']) if previous_block is not None else []
+
+    # transactionsdata['previous_block_receipts'] = get_receipts_from_storage(previous_block['index'])
+    if previous_block is not None:
+        transactionsdata['previous_block_receipts'] = get_all_receipts_from_storage(exclude_block_index=previous_block['index'] + 1)
+        receipts_to_include_count = MAX_BLOCK_SIZE - len(textarray)
+        transactionsdata['previous_block_receipts'] = transactionsdata['previous_block_receipts'][:receipts_to_include_count]
+    else:
+        transactionsdata['previous_block_receipts'] = []
+    # transactionsdata['previous_block_proposals'] = get_proposals_for_block(previous_block['index'])
 
     if add_to_chain:
         block = blockchain.mine_block(cur, transactionsdata)
@@ -142,15 +152,16 @@ def run_updater(add_to_chain=False):
         con.close()
     else:
         block = blockchain.propose_block(cur, transactionsdata)
-    block_receipt = generate_block_receipt(block)
+    block_receipt = generate_block_receipt(block, vote=BLOCK_VOTE_MINER)
     block_payload = {
         'index': block['index'],
         'hash': calculate_hash(block),
         'data': block,
         'receipts': [block_receipt]
     }
-    store_block_to_temp(block_payload)
-    logger.info(f'Stored block to temp with payload {json.dumps(block_payload)}')
+    # store_block_to_temp(block_payload)
+    # store_receipt_to_temp(block_receipt)
+    # logger.info(f'Stored block to temp with payload {json.dumps(block_payload)}')
     if not IS_TEST:
         nodes = get_committee_for_current_block()
         if len(nodes) < COMMITTEE_SIZE:

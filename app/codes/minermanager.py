@@ -138,6 +138,12 @@ def get_committee_for_current_block(last_block=None):
     return committee
 
 
+def get_committee_wallet_addresses():
+    committee = get_committee_for_current_block()
+    wallets = map(lambda c: c['wallet_address'], committee)
+    return wallets
+
+
 def should_i_mine(last_block=None):
     my_wallet = get_wallet()
     miner = get_miner_for_current_block(last_block=last_block)

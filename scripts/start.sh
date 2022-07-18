@@ -1,9 +1,5 @@
+#!/bin/bash
 
-git pull
-# python3 -m venv venv
 source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-# python -m app.migrations.init
-# scripts/migrate_db.sh
+export NEWRL_ENV=$1
 python -m app.main
