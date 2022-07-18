@@ -1,4 +1,5 @@
 """Transaction management functions"""
+from re import A
 import time
 import ecdsa
 import os
@@ -8,10 +9,11 @@ import datetime
 import base64
 import sqlite3
 
+from app.codes.db_updater import get_wallet_token_balance
+
 
 from ..ntypes import TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
 
-from .chainscanner import get_wallet_token_balance
 from ..constants import ALLOWED_CUSTODIANS_FILE, MEMPOOL_PATH, NEWRL_DB
 from .utils import get_time_ms
 
@@ -320,7 +322,16 @@ class Transactionmanager:
                 for wallet in self.transaction['specific_data']['params']['participants']:
                     if not is_wallet_valid(wallet):
                         self.validity = 0
-
+            if 'value' in self.transaction['specific_data']['params']:
+                for value in self.transaction['specific_data']['params']['value']:
+                    print(value)
+                    if not is_token_valid(value['token_code']):
+                        self.validity = 0
+                        break
+                    sender_balance = get_wallet_token_balance_tm(self.transaction['specific_data']['signers'][0], value['token_code'])
+                    if value['amount'] > sender_balance:
+                        self.validity = 0
+                        break  
     #	self.validity=0
         if self.transaction['type'] == TRANSACTION_TWO_WAY_TRANSFER or self.transaction['type'] == TRANSACTION_ONE_WAY_TRANSFER:
             ttype = self.transaction['type']
@@ -344,6 +355,7 @@ class Transactionmanager:
                     self.transaction['specific_data']['asset2_number'], token2mp)
 
             # address validity applies to both senders in ttype 4 and 5; since sender2 is still receiving tokens
+            
             sender1valid = is_wallet_valid(sender1)
             sender2valid = is_wallet_valid(sender2)
             if not sender1valid:
@@ -385,9 +397,9 @@ class Transactionmanager:
             # resetting to check the balances being sufficient, in futures, make different functions
             self.validity = 0
 
-            startingbalance1 = get_wallet_token_balance(sender1, tokencode1)
+            startingbalance1 = get_wallet_token_balance_tm(sender1, tokencode1)
             if ttype == 4:
-                startingbalance2 = get_wallet_token_balance(
+                startingbalance2 = get_wallet_token_balance_tm(
                     sender2, tokencode2)
             if token1amt > startingbalance1:  # sender1 is trying to send more than she owns
                 print("sender1 is trying to send,", token1amt, "she owns,",
@@ -482,11 +494,15 @@ def is_token_valid(token_code):
 def is_wallet_valid(address):
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
+    if is_smart_contract(cur,address):
+        return True
+        
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
     wallet = wallet_cursor.fetchone()
     if wallet is None:
         return False
+
     return True
 
 
@@ -578,3 +594,31 @@ def get_valid_addresses(transaction):
     if transaction_type == TRANSACTION_MINER_ADDITION:
         valid_addresses.append(transaction['specific_data']['wallet_address'])
     return valid_addresses
+
+
+def get_wallet_token_balance_tm(wallet_address, token_code):
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
+    balance = get_wallet_token_balance(cur, wallet_address, token_code)
+    # balance_cursor = cur.execute('SELECT balance FROM balances WHERE wallet_address = :address AND tokencode = :tokencode', {
+    #     'address': wallet_address, 'tokencode': token_code})
+    # balance_row = balance_cursor.fetchone()
+    # balance = balance_row[0] if balance_row is not None else 0
+    cur.close()
+    return balance
+
+
+def is_smart_contract(cur,address):
+    if not address.startswith('ct'):
+        return False
+
+    sc_cursor = cur.execute(
+        'SELECT COUNT (*) FROM contracts WHERE address=?', (address, ))
+    sc_id = sc_cursor.fetchone()
+    if sc_id is None:
+        return False
+    else:
+        return True 
+
+def __str__(self):
+    return str(self.get_transaction_complete())

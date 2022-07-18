@@ -1,6 +1,8 @@
 """Chain and state queries"""
 import sqlite3
 
+from app.codes.db_updater import get_wallet_token_balance
+
 from ..constants import NEWRL_DB
 from .blockchain import Blockchain
 
@@ -47,16 +49,6 @@ class Chainscanner():
         for row in balance:
             return row[0]
 
-
-def get_wallet_token_balance(wallet_address, token_code):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
-    balance_cursor = cur.execute('SELECT balance FROM balances WHERE wallet_address = :address AND tokencode = :tokencode', {
-        'address': wallet_address, 'tokencode': token_code})
-    balance_row = balance_cursor.fetchone()
-    balance = balance_row[0] if balance_row is not None else 0
-    cur.close()
-    return balance
 
 
 def download_state():
