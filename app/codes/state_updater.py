@@ -12,13 +12,20 @@ from app.codes.transactionmanager import Transactionmanager
 from .helpers.SmartContractStateValidator import validate
 from app.codes.clock.global_time import get_corrected_time_ms
 from app.codes.helpers.CentralRespository import CentralRepository
-from app.nvalues import NETWORK_TRUST_MANAGER
-from ..constants import NEWRL_DB
 from .db_updater import *
-from ..ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
+from app.codes.networkscoremanager import get_invalid_block_creation_score, get_invalid_receipt_score, get_valid_block_creation_score, get_valid_receipt_score, update_network_trust_score_from_receipt
+from .p2p.utils import get_peers
+
+from app.nvalues import NETWORK_TRUST_MANAGER_PID
+
+
+from ..constants import COMMITTEE_SIZE, INITIAL_NETWORK_TRUST_SCORE, NEWRL_DB
+from ..ntypes import BLOCK_VOTE_MINER, NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
+
 logger = logging.getLogger(__name__)
 
 value_txns = []
+
 
 def update_db_states(cur, block):
     newblockindex = block['index'] if 'index' in block else block['block_index']
@@ -34,7 +41,6 @@ def update_db_states(cur, block):
 
     if 'creator_wallet' in block and block['creator_wallet'] is not None:
         add_block_reward(cur, block['creator_wallet'], newblockindex)
-
 
     collated_txns = simplify_transactions(cur, transactions)
     global simplified_transactions
@@ -123,13 +129,17 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
             transaction_data['broadcast_timestamp'],
         )
     if transaction_type == TRANSACTION_SC_UPDATE:
-        cr = CentralRepository(cur,cur)
-        if(transaction_data['operation']== "save"):
-            cr.save_private_sc_state(transaction_data['table_name'],transaction_data["data"])
+        cr = CentralRepository(cur, cur)
+        if(transaction_data['operation'] == "save"):
+            cr.save_private_sc_state(
+                transaction_data['table_name'], transaction_data["data"])
         if(transaction_data['operation'] == "update"):
-            cr.update_private_sc_state(transaction_data['table_name'], transaction_data["data"], transaction_data["unique_column"], transaction_data["unique_value"],transaction_data["contract_address"])
+            cr.update_private_sc_state(transaction_data['table_name'], transaction_data["data"],
+                                       transaction_data["unique_column"], transaction_data["unique_value"], transaction_data["contract_address"])
         if(transaction_data['operation'] == "delete"):
-            cr.delete_private_sc_state(transaction_data['table_name'], transaction_data["unique_column"], transaction_data["unique_value"], transaction_data["contract_address"])
+            cr.delete_private_sc_state(transaction_data['table_name'], transaction_data["unique_column"],
+                                       transaction_data["unique_value"], transaction_data["contract_address"])
+
 
 def add_block_reward(cur, creator, blockindex):
     """Reward the minder by chaning their NWRL balance"""
@@ -160,45 +170,23 @@ def update_trust_scores(cur, block):
     receipts = block['text']['previous_block_receipts']
 
     for receipt in receipts:
-        wallet_cursor = cur.execute(
-            'SELECT wallet_address FROM wallets where wallet_public=?',
-            (receipt['public_key'],)).fetchone()
-
-        if wallet_cursor is not None:
-            wallet_address = wallet_cursor[0]
-            vote = receipt['data']['vote']
-
-            trust_score_cursor = cur.execute('''
-                SELECT score FROM trust_scores where src_person_id=? and dest_person_id=?
-                ''', (NETWORK_TRUST_MANAGER, wallet_address)).fetchone()
-
-            if trust_score_cursor is None:
-                existing_score = 1
-            else:
-                existing_score = trust_score_cursor[0]
-
-            # TODO - This logic might need to change condisering all the persons in chain
-            if vote == 1:
-                new_score = (existing_score + 1) / 2
-            else:
-                new_score = (existing_score - 1) / 2
-
-            update_trust_score(cur, NETWORK_TRUST_MANAGER, wallet_address, new_score, get_corrected_time_ms())
+      update_network_trust_score_from_receipt(cur, receipt=receipt)
 
 
-def simplify_transactions(cur,transactions):
-  global value_txns   
+def simplify_transactions(cur, transactions):
+  global value_txns
   simplified_transactions = []
   for transaction in transactions:
     print(transaction)
     if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
       non_sc_txns = []
-      #recursive method that iterates till there is no sc txn  
-      try:  
-        non_sc_txns = get_non_sc_txns(cur,transaction)
+      #recursive method that iterates till there is no sc txn
+      try:
+        non_sc_txns = get_non_sc_txns(cur, transaction)
       except Exception:
         value_txns = []
-        logger.error(f"Exception during sc txn execution for txn : {transaction}")
+        logger.error(
+            f"Exception during sc txn execution for txn : {transaction}")
         logger.error(traceback.format_exc())
       simplified_transactions.extend(value_txns)
       simplified_transactions.extend(non_sc_txns)
@@ -251,18 +239,19 @@ def execute_sc(cur, transaction_main):
         fetchRepository = FetchRepository(cur)
         sc_value_txns = get_value_txns(transaction_signer, transaction_data)
         value_txns.extend(sc_value_txns)
-        child_transactions = funct(params_for_funct,fetchRepository)
+        child_transactions = funct(params_for_funct, fetchRepository)
         #if value is present then make a child txn 5 based on it (it will be validated as part of child sc validation)
         return child_transactions
     except Exception as e:
-        print(f"Exception during smart contract function execution for transaction {transaction_code} + {e}")
+        print(
+            f"Exception during smart contract function execution for transaction {transaction_code} + {e}")
         logger.error(e)
         raise Exception(e)
     pass
 
 
-def validate_sc_child_transaction(transaction: Transactionmanager, contract_address):    
-    return validate(transaction,contract_address)
+def validate_sc_child_transaction(transaction: Transactionmanager, contract_address):
+    return validate(transaction, contract_address)
 
 
 def get_value_txns(transaction_signer, transaction_data):
@@ -270,7 +259,7 @@ def get_value_txns(transaction_signer, transaction_data):
     if 'value' not in transaction_data['params']:
         return []
 
-    transaction_creator = TransactionCreator() 
+    transaction_creator = TransactionCreator()
     value_details = transaction_data['params']['value']
     sender = transaction_signer[0]['wallet_address']
     receiver = transaction_data['address']
@@ -291,9 +280,9 @@ def get_value_txns(transaction_signer, transaction_data):
         transfer_proposal = transaction_creator.transaction_type_5(
             transfer_proposal_data)
         if not transfer_proposal.econvalidator():
-            logger.error("SC-value txn economic validation failed for transaction")
+            logger.error(
+                "SC-value txn economic validation failed for transaction")
             raise Exception("SC-value txn validation failed for transaction")
         value_txns_local.append(transfer_proposal.get_transaction_complete())
 
     return value_txns_local
-

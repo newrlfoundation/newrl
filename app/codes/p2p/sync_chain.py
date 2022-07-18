@@ -10,6 +10,7 @@ from app.codes import blockchain
 from app.codes.crypto import calculate_hash
 from app.codes.minermanager import get_committee_for_current_block
 from app.codes.p2p.outgoing import broadcast_receipt, broadcast_block
+# from app.codes.utils import store_block_proposal
 from app.constants import NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
 from app.codes.p2p.peers import get_peers
 
@@ -67,7 +68,10 @@ def receive_block(block):
         accept_block(block, block['hash'])
         broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
     
+    # store_block_proposal(block)
+    
     if not validate_block_miner(block['data']):
+        # Store proposal to penalise false miner
         return False
 
     if not validate_block(block):
@@ -126,13 +130,13 @@ def sync_chain_from_node(url, block_index=None):
         #     failed_for_invalid_block = True
         #     time.sleep(5)
         for block in blocks_data:
-            block['index'] = block['block_index']
-            block['timestamp'] = int(block['timestamp'])
-            hash = block['hash']
+            # block['index'] = block['block_index']
+            # block['timestamp'] = int(block['timestamp'])
+            hash = block['hash']  # TODO - Use calculate hash
             # hash = calculate_hash(block)
-            block.pop('hash', None)
-            block.pop('transactions_hash', None)
-            block.pop('block_index', None)
+            # block.pop('hash', None)
+            # block.pop('transactions_hash', None)
+            # block.pop('block_index', None)
             for idx, tx in enumerate(block['text']['transactions']):
                 specific_data = tx['transaction']['specific_data']
                 while isinstance(specific_data, str):

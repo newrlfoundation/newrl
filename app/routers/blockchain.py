@@ -8,8 +8,10 @@ from fastapi.params import File
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 from starlette.responses import FileResponse
+from app.codes.scoremanager import get_trust_score
 
 from app.codes.transactionmanager import Transactionmanager
+from app.nvalues import NETWORK_TRUST_MANAGER_PID
 
 from .request_models import AddWalletRequest, BalanceRequest, BalanceType, CallSC, CreateTokenRequest, CreateWalletRequest, GetTokenRequest, RunSmartContractRequest, TransferRequest, CreateSCRequest, TscoreRequest
 from app.codes.chainscanner import Chainscanner, download_chain, download_state, get_block, get_contract, get_token, get_transaction, get_wallet
@@ -84,6 +86,17 @@ def get_contract_api(contract_address: str):
     if contract is None:
         raise HTTPException(status_code=400, detail="Contract not found")
     return contract
+
+
+@router.get("/get-trust-score", tags=[v2_tag])
+def get_trust_score_api(
+        destination_person_id: str,
+        source_person_id: str=NETWORK_TRUST_MANAGER_PID):
+    """Get a trust score. Default source_person_id is network trust manager"""
+    trust_score = get_trust_score(src_person_id=source_person_id, dest_person_id=destination_person_id)
+    if trust_score is None:
+        raise HTTPException(status_code=400, detail="Trust score not available")
+    return {'trust_score': trust_score}
 
 @router.get("/download-chain", tags=[v2_tag])
 def download_chain_api():
