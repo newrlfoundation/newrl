@@ -67,12 +67,14 @@ def init_db():
                     tokencode text,
                     balance integer, UNIQUE (wallet_address, tokencode))
                     ''')
-    cur.execute('''
-                    CREATE UNIQUE INDEX IF NOT EXISTS idx_balances_wallet_address ON balances (wallet_address)
-                ''')
-    cur.execute('''
-                    CREATE UNIQUE INDEX IF NOT EXISTS idx_balances_tokencode ON balances (tokencode)
-                ''')
+    # cur.execute('''
+    #                 CREATE UNIQUE INDEX IF NOT EXISTS idx_balances_wallet_address ON balances (wallet_address)
+    #             ''')
+    # cur.execute('''
+    #                 CREATE UNIQUE INDEX IF NOT EXISTS idx_balances_tokencode ON balances (tokencode)
+    #             ''')
+    cur.execute('DROP INDEX IF EXISTS idx_balances_wallet_address')
+    cur.execute('DROP INDEX IF EXISTS idx_balances_tokencode')
     cur.execute('''
                     CREATE UNIQUE INDEX IF NOT EXISTS idx_balances_wallet_address_tokencode
                      ON balances (wallet_address, tokencode)

@@ -27,21 +27,17 @@ def is_wallet_valid(cur, address):
 
 
 def transfer_tokens_and_update_balances(cur, sender, reciever, tokencode, amount):
+    if sender == reciever:
+        print('Sender and receiver cannot be the same')
+        return False
+
     sender_balance = get_wallet_token_balance(cur, sender, tokencode)
-    print("Sender is ", sender, " and their balance is ", sender_balance)
     reciever_balance = get_wallet_token_balance(cur, reciever, tokencode)
-    print("Receiver is ", reciever, " and their balance is ", reciever_balance)
     sender_balance = sender_balance - amount
     reciever_balance = reciever_balance + amount
-    print("Amount is ", amount)
-    print("Updating sender's balance with ", sender_balance)
-    print("Updating reciever's balance with ", reciever_balance)
     update_wallet_token_balance(cur, sender, tokencode, sender_balance)
     update_wallet_token_balance(cur, reciever, tokencode, reciever_balance)
-    sender_balance = get_wallet_token_balance(cur, sender, tokencode)
-    print("Sender is ", sender, " and their balance is ", sender_balance)
-    reciever_balance = get_wallet_token_balance(cur, reciever, tokencode)
-    print("Receiver is ", reciever, " and their balance is ", reciever_balance)
+    
 
 
 def update_wallet_token_balance(cur, wallet_address, token_code, balance):

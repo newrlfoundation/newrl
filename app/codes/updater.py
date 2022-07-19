@@ -105,7 +105,7 @@ def run_updater(add_to_chain=False):
             textarray.append(transaction_file_data)
             txcodes.append(trandata['transaction']['trans_code'])
 
-            transaction_fees += get_fees_for_transaction(trandata['transaction'])
+            # transaction_fees += get_fees_for_transaction(trandata['transaction'])
             # Delete the transaction from mempool at the stage of accepting
             # try:
             #     os.remove(file)
@@ -186,18 +186,18 @@ def pay_fee_for_transaction(cur, transaction):
     if currency not in ALLOWED_FEE_PAYMENT_TOKENS:
         return False
 
-    payees = get_valid_addresses(transaction)
+    payers = get_valid_addresses(transaction)
 
-    for payee in payees:
+    for payee in payers:
         balance = get_wallet_token_balance(payee, currency)
-        if balance < fee / len(payees):
+        if balance < fee / len(payers):
             return False
         transfer_tokens_and_update_balances(
             cur,
             payee,
             TREASURY_WALLET_ADDRESS,
             transaction['currency'],
-            fee / len(payees)
+            fee / len(payers)
         )
     return True
 
