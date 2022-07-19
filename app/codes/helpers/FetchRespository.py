@@ -1,5 +1,3 @@
-from typing import Final
-
 
 class FetchRepository:
     __escape_string = ["--", ";--", ";", "/*", "*/", "@@", "@", "char", "nchar", "varchar", "nvarchar", "alter",
