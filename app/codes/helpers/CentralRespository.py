@@ -1,11 +1,11 @@
-from typing import Final
+
 
 
 class CentralRepository:
-    escape_string: Final = ["--", ";--", ";", "/*", "*/", "@@", "@", "char", "nchar", "varchar", "nvarchar", "alter",
+    escape_string = ["--", ";--", ";", "/*", "*/", "@@", "@", "char", "nchar", "varchar", "nvarchar", "alter",
                             "begin", "cast", "create", "cursor", "declare", "delete", "drop", "end", "exec", "execute",
                             "fetch", "insert", "kill", "select", "sys", "sysobjects", "syscolumns", "table", "update"]
-    operation: Final = {1: "=", 2: "in", 3: "not in"}
+    operation = {1: "=", 2: "in", 3: "not in"}
 
     def __init__(self, cur, read_cur):
         self.cur = cur
