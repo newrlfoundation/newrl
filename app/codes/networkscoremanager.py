@@ -65,7 +65,6 @@ def update_network_trust_score_from_receipt(cur, receipt):
             if actual_block['creator_wallet'] == wallet_address:
                 if actual_block_hash == target_block_hash:
                     score = get_valid_block_creation_score(existing_score)
-                    slashing_tokens(cur,wallet_address,True)
                 else:
                     if actual_block['proof'] == 42:  # Empty block check
                         score = existing_score

@@ -23,6 +23,7 @@ def clear_db():
     cur.execute('DROP TABLE IF EXISTS miners')
     cur.execute('DROP TABLE IF EXISTS dao_main')
     cur.execute('DROP TABLE IF EXISTS dao_membership')
+    cur.execute('DROP TABLE IF EXISTS stake_ledger')
     con.commit()
     con.close()
 
@@ -252,6 +253,16 @@ def init_trust_db():
                     wallet_address text
                     )
                     ''')
+    cur.execute('''
+                    CREATE TABLE stake_ledger 
+                    (
+                    address text NOT NULL, 
+                    person_id text Not NULL, 
+                    wallet_address TEXT , 
+                    amount INT, 
+                    time_updated TIMESTAMP
+                    )
+                    ''')
 
     con.commit()
     con.close()
@@ -270,6 +281,7 @@ def revert_chain(block_index):
     cur.execute('DROP TABLE IF EXISTS transfers')
     cur.execute('DROP TABLE IF EXISTS contracts')
     cur.execute('DROP TABLE IF EXISTS miners')
+    cur.execute('DROP TABLE IF EXISTS stake_ledger')
     # TODO - Drop all trust tables too
     con.commit()
     con.close()

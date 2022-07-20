@@ -16,7 +16,7 @@ from .db_updater import *
 from app.codes.networkscoremanager import get_invalid_block_creation_score, get_invalid_receipt_score, get_valid_block_creation_score, get_valid_receipt_score, update_network_trust_score_from_receipt
 from .p2p.utils import get_peers
 
-from app.nvalues import NETWORK_TRUST_MANAGER_PID, MIN_STAKE_AMOUNT, STAKE_PENALTY_RATIO
+from app.nvalues import NETWORK_TRUST_MANAGER_PID, MIN_STAKE_AMOUNT, STAKE_PENALTY_RATIO, ZERO_ADDRESS
 
 from ..constants import COMMITTEE_SIZE, INITIAL_NETWORK_TRUST_SCORE, NEWRL_DB
 from ..ntypes import BLOCK_VOTE_MINER, NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
@@ -290,12 +290,17 @@ def get_value_txns(transaction_signer, transaction_data):
 def slashing_tokens(cur,address,is_block):
     balance = cur.execute(f'''select amount from stake_ledger where address=:address''',
                           {"address": address}).fetchone()
+    amount = 0
     if balance is not None:
         balance = balance[0]
         if is_block:
-            balance = balance-MIN_STAKE_AMOUNT
+            amount = MIN_STAKE_AMOUNT
         else:
-            balance = balance-int((MIN_STAKE_AMOUNT/STAKE_PENALTY_RATIO))
+            amount = int((MIN_STAKE_AMOUNT/STAKE_PENALTY_RATIO))
+        balance = balance-amount
+        # Transferring amount (i.e. penal amount to the zero address)
+        transfer_tokens_and_update_balances(cur,address,ZERO_ADDRESS,amount)
+        # updating stake_ledger table with the new updated address amount
         cur.execute(f'''UPDATE stake_ledger set amount=:amount where address=:address''', {"amount": balance,
                                                                                            "address": address})
         return True
