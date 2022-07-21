@@ -11,8 +11,6 @@ from app.codes.clock.global_time import get_time_stats
 from app.codes.p2p.peers import add_peer, clear_peers, get_peers, update_software
 from app.codes.p2p.sync_chain import get_blocks, get_last_block_index, receive_block, receive_receipt, sync_chain_from_peers
 from app.codes.p2p.sync_mempool import get_mempool_transactions, list_mempool_transactions, sync_mempool_transactions
-from app.constants import NEWRL_PORT
-from app.migrations.init_db import clear_db, init_db, revert_chain
 from app.codes.p2p.peers import call_api_on_peers
 from .request_models import BlockAdditionRequest, BlockRequest, ReceiptAdditionRequest, TransactionAdditionRequest, TransactionsRequest
 from app.codes.auth.auth import get_node_wallet_address, get_node_wallet_public
