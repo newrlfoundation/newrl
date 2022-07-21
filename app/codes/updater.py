@@ -23,8 +23,7 @@ from .transactionmanager import Transactionmanager, get_valid_addresses
 from .state_updater import update_db_states
 from .crypto import calculate_hash, sign_object, _private, _public
 from .consensus.consensus import generate_block_receipt
-from .chainscanner import get_wallet_token_balance
-from .db_updater import transfer_tokens_and_update_balances
+from .db_updater import transfer_tokens_and_update_balances, get_wallet_token_balance
 from .p2p.outgoing import broadcast_block, broadcast_receipt, send_request_in_thread
 from .auth.auth import get_wallet
 
