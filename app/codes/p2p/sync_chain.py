@@ -268,8 +268,8 @@ def receive_receipt(receipt):
     receipt_data = receipt['data']
     block_index = receipt_data['block_index']
 
-    if blockchain.block_exists(block_index):
-        return False
+    # if blockchain.block_exists(block_index):
+    #     return False
 
     blocks = get_blocks_for_index_from_storage(block_index)
     if len(blocks) == 0:
