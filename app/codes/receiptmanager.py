@@ -47,6 +47,8 @@ def get_receipts_for_block_from_db(block_index):
 
 
 def update_receipts_in_state(cur, block):
+    if 'previous_block_receipts' not in block['text']:
+        return
     receipts = block['text']['previous_block_receipts']
 
     for receipt in receipts:
