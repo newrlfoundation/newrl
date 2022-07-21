@@ -167,6 +167,8 @@ def add_block_reward(cur, creator, blockindex):
 
 
 def update_trust_scores(cur, block):
+    if 'previous_block_receipts' not in block['text']:
+        return
     receipts = block['text']['previous_block_receipts']
 
     for receipt in receipts:
