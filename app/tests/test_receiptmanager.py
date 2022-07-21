@@ -5,7 +5,7 @@ from app.codes.blockchain import get_last_block_index
 from app.codes.consensus.consensus import generate_block_receipt
 from app.codes.fs.temp_manager import store_receipt_to_temp
 from app.codes.p2p.sync_chain import accept_block
-from app.codes.receiptmanager import get_receipts_for_block_from_db, store_receipt_to_db
+from app.codes.receiptmanager import get_receipts_included_in_block_from_db, store_receipt_to_db
 from app.codes.updater import run_updater
 
 from ..migrations.init import init_newrl
@@ -19,11 +19,11 @@ init_newrl()
 
 def test_store_receipt_to_db():
     block_index = 345
-    existing_receipts = get_receipts_for_block_from_db(block_index)
+    existing_receipts = get_receipts_included_in_block_from_db(block_index)
     
     receipt = generate_block_receipt({'index': block_index})
     store_receipt_to_db(receipt)
-    new_receipts = get_receipts_for_block_from_db(block_index)
+    new_receipts = get_receipts_included_in_block_from_db(block_index)
     assert len(existing_receipts) + 1 == len(new_receipts)
 
 

@@ -118,7 +118,7 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
             funct(cur, params_for_funct)
         except Exception as e:
             print('Exception durint smart contract function run', e)
-            logger.e
+            # logger.log(e)
 
     if transaction_type == TRANSACTION_MINER_ADDITION:
         add_miner(

@@ -17,6 +17,7 @@ except:
     wallet_data = {
         'wallet': {'public': '', 'private': ''},
     }
+wallet_address = wallet_data['address']
 public_key = wallet_data['public']
 private_key = wallet_data['private']
 
@@ -31,6 +32,7 @@ def generate_block_receipt(block, vote=1):
     return {
         "data": receipt_data,
         "public_key": public_key,
+        "wallet_address": wallet_address,
         "signature": sign_object(private_key, receipt_data),
     }
 

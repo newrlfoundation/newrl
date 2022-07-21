@@ -19,7 +19,7 @@ from app.codes.p2p.sync_mempool import list_mempool_transactions, sync_mempool_t
 from app.codes.updater import TIMERS, get_timers
 from app.codes.utils import get_last_block_hash
 from app.constants import SOFTWARE_VERSION
-from app.migrations.init_db import clear_db, init_db, revert_chain
+from app.migrations.init_db import revert_chain
 from app.codes.p2p.peers import call_api_on_peers
 from app.codes.auth.auth import get_node_wallet_public
 from app.codes.minermanager import add_miners_as_peers, broadcast_miner_update, get_miner_info

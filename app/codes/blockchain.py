@@ -8,7 +8,7 @@ import sqlite3
 
 from app.codes.clock.global_time import get_corrected_time_ms
 # from app.codes.minermanager import get_committee_wallet_addresses
-from app.codes.receiptmanager import get_receipts_for_block_from_db, update_receipts_in_state
+from app.codes.receiptmanager import get_receipts_included_in_block_from_db, update_receipts_in_state
 
 from .fs.temp_manager import remove_block_from_temp
 from ..constants import BLOCK_TIME_INTERVAL_SECONDS, NEWRL_DB, NO_BLOCK_TIMEOUT
@@ -68,7 +68,7 @@ class Blockchain:
             transactions))
         block['text'] = {
             'transactions': transactions,
-            'previous_block_receipts': get_receipts_for_block_from_db(block_index)
+            'previous_block_receipts': get_receipts_included_in_block_from_db(block_index)
         }
 
         return block
