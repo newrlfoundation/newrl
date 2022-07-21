@@ -1,6 +1,6 @@
 import os
 from ..constants import INCOMING_PATH, MEMPOOL_PATH, TMP_PATH, DATA_PATH, LOG_FILE_PATH
-from ..migrations.init_db import init_db, init_trust_db
+from ..migrations.init_db import init_db
 from ..migrations.migrate_db import run_migrations
 
 
@@ -18,7 +18,6 @@ def init_newrl():
 
     # clear_db()
     init_db()
-    init_trust_db()
 
     # TODO - Run migrations
     run_migrations()

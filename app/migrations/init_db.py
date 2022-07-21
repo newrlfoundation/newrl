@@ -15,14 +15,19 @@ def clear_db():
     cur.execute('DROP TABLE IF EXISTS tokens')
     cur.execute('DROP TABLE IF EXISTS balances')
     cur.execute('DROP TABLE IF EXISTS blocks')
-    cur.execute('DROP TABLE IF EXISTS block_proposals')
+    cur.execute('DROP TABLE IF EXISTS receipts')
     cur.execute('DROP TABLE IF EXISTS transactions')
     cur.execute('DROP TABLE IF EXISTS transfers')
-    cur.execute('DROP TABLE IF EXISTS receipts')
     cur.execute('DROP TABLE IF EXISTS contracts')
     cur.execute('DROP TABLE IF EXISTS miners')
+    cur.execute('DROP TABLE IF EXISTS kyc')
+    cur.execute('DROP TABLE IF EXISTS person')
+    cur.execute('DROP TABLE IF EXISTS person_wallet')
+    cur.execute('DROP TABLE IF EXISTS trust_scores')
     cur.execute('DROP TABLE IF EXISTS dao_main')
     cur.execute('DROP TABLE IF EXISTS dao_membership')
+    cur.execute('DROP TABLE IF EXISTS proposal_data')
+    cur.execute('DROP TABLE IF EXISTS DAO_TOKEN_LOCK')
     con.commit()
     con.close()
 
@@ -102,6 +107,7 @@ def init_db():
                     vote integer,
                     wallet_address text,
                     included_block_index text,
+                    signature text,
                     timestamp integer)
                     ''')
     cur.execute('''
@@ -168,13 +174,7 @@ def init_db():
                      ON miners (wallet_address, last_broadcast_timestamp)
                 ''')
 
-    con.commit()
-    con.close()
-
-
-def init_trust_db():
-    con = sqlite3.connect(db_path)
-    cur = con.cursor()
+    
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS kyc
                     (id text NOT NULL PRIMARY KEY, 
@@ -193,10 +193,13 @@ def init_trust_db():
     
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS person_wallet
-                    (person_id text NOT NULL PRIMARY KEY, 
-                    wallet_id integer)
+                    (person_id text NOT NULL, 
+                    wallet_id text NOT NULL PRIMARY KEY)
                     ''')
-    # TODO - Add Indexes, set unique on src, dest
+    cur.execute('''
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_person_wallet_wallet_id
+                    ON person_wallet (wallet_id)
+                ''')
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS trust_scores
                     (src_person_id text NOT NULL, 
@@ -269,10 +272,20 @@ def revert_chain(block_index):
     cur.execute('DROP TABLE IF EXISTS wallets')
     cur.execute('DROP TABLE IF EXISTS tokens')
     cur.execute('DROP TABLE IF EXISTS balances')
+    # cur.execute('DROP TABLE IF EXISTS blocks')
+    cur.execute('DROP TABLE IF EXISTS receipts')  # TODO - Remove this
+    # cur.execute('DROP TABLE IF EXISTS transactions')
     cur.execute('DROP TABLE IF EXISTS transfers')
     cur.execute('DROP TABLE IF EXISTS contracts')
     cur.execute('DROP TABLE IF EXISTS miners')
-    # TODO - Drop all trust tables too
+    cur.execute('DROP TABLE IF EXISTS kyc')
+    cur.execute('DROP TABLE IF EXISTS person')
+    cur.execute('DROP TABLE IF EXISTS person_wallet')
+    cur.execute('DROP TABLE IF EXISTS trust_scores')
+    cur.execute('DROP TABLE IF EXISTS dao_main')
+    cur.execute('DROP TABLE IF EXISTS dao_membership')
+    cur.execute('DROP TABLE IF EXISTS proposal_data')
+    cur.execute('DROP TABLE IF EXISTS DAO_TOKEN_LOCK')
     con.commit()
     con.close()
 

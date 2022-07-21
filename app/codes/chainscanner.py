@@ -1,7 +1,6 @@
 """Chain and state queries"""
 import sqlite3
 
-from app.codes.db_updater import get_wallet_token_balance
 
 from ..constants import NEWRL_DB
 from .blockchain import Blockchain
@@ -95,11 +94,17 @@ def get_wallet(wallet_address):
     con = sqlite3.connect(NEWRL_DB)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
-    cur = cur.execute(
+    wallet_cursor = cur.execute(
         'SELECT * FROM wallets where wallet_address=?', (wallet_address,)).fetchone()
-    if cur is None:
+    if wallet_cursor is None:
         return None
-    return dict(cur)
+    wallet = dict(wallet_cursor)
+    pid_cursor = cur.execute(
+        'SELECT person_id FROM person_wallet WHERE wallet_id=?', (wallet['wallet_address'], ))
+    pid = pid_cursor.fetchone()
+    person_id = pid['person_id'] if pid is not None else ''
+    wallet['person_id'] = person_id
+    return wallet
 
 
 def get_token(token_code):
