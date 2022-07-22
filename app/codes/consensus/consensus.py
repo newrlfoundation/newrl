@@ -33,7 +33,6 @@ def generate_block_receipt(block, vote=1):
     return {
         "data": receipt_data,
         "public_key": public_key,
-        "wallet_address": wallet_address,
         "signature": sign_object(private_key, receipt_data),
     }
 
