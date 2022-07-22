@@ -46,13 +46,13 @@ def get_receipts_included_in_block_from_db(block_index):
             'block_index': _receipt['block_index'],
             'block_hash':_receipt['block_hash'],
             'vote': _receipt['vote'],
-            'timestamp': _receipt['timestamp']
+            'timestamp': _receipt['timestamp'],
+            "wallet_address": _receipt['wallet_address'],
         }
         wallet_public = get_public_key_from_wallet_address(_receipt['wallet_address'], con)
         receipt = {
             "data": receipt_data,
             "public_key": wallet_public,
-            "wallet_address": _receipt['wallet_address'],
             "signature": _receipt['signature'],
         }
         receipts.append(receipt)
