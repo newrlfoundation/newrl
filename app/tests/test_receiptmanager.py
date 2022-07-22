@@ -3,9 +3,9 @@ from fastapi.testclient import TestClient
 from app.codes.blockchain import get_last_block_index
 
 from app.codes.consensus.consensus import generate_block_receipt
-from app.codes.fs.temp_manager import check_receipt_exists, remove_receipt_from_temp, store_receipt_to_temp
+from app.codes.fs.temp_manager import check_receipt_exists_in_temp, remove_receipt_from_temp, store_receipt_to_temp
 from app.codes.p2p.sync_chain import accept_block
-from app.codes.receiptmanager import get_receipts_included_in_block_from_db, store_receipt_to_db
+from app.codes.receiptmanager import check_receipt_exists_in_db, get_receipts_included_in_block_from_db, store_receipt_to_db
 from app.codes.updater import run_updater
 
 from ..migrations.init import init_newrl
@@ -44,12 +44,29 @@ def test_receipt_exist_store_delete():
     wallet_address = receipt['data']['wallet_address']
     remove_receipt_from_temp(100, block_hash, wallet_address)
     
-    assert not check_receipt_exists(100, block_hash, wallet_address)
+    assert not check_receipt_exists_in_temp(100, block_hash, wallet_address)
     
     store_receipt_to_temp(receipt)
 
-    assert check_receipt_exists(100, block_hash, wallet_address)
+    assert check_receipt_exists_in_temp(100, block_hash, wallet_address)
 
     remove_receipt_from_temp(100, block_hash, wallet_address)
 
-    assert not check_receipt_exists(100, block_hash, wallet_address)
+    assert not check_receipt_exists_in_temp(100, block_hash, wallet_address)
+
+
+def test_check_receipt_exists_in_db():
+    receipts = get_receipts_included_in_block_from_db(37)
+    receipt = receipts[0]
+    
+    assert check_receipt_exists_in_db(
+        receipt['data']['block_index'],
+        receipt['data']['block_hash'],
+        receipt['data']['wallet_address']
+        )
+    
+    assert not check_receipt_exists_in_db(
+        receipt['data']['block_index'] + 1,
+        receipt['data']['block_hash'],
+        receipt['data']['wallet_address']
+        )

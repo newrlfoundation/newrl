@@ -92,3 +92,17 @@ def update_receipts_in_state(cur, block):
                 receipt['data']['block_index'],
                 receipt['data']['block_hash'],
                 wallet_address)
+
+
+def check_receipt_exists_in_db(block_index, block_hash, wallet_address):
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
+
+    receipt_cursor = cur.execute(
+        '''
+        SELECT vote FROM receipts where block_index=? and block_hash=? and wallet_address=?
+        '''
+        , (block_index, block_hash, wallet_address)).fetchone()
+    
+    receipt_exists = receipt_cursor is not None
+    return receipt_exists
