@@ -16,8 +16,7 @@ from .db_updater import *
 from app.codes.networkscoremanager import get_invalid_block_creation_score, get_invalid_receipt_score, get_valid_block_creation_score, get_valid_receipt_score, update_network_trust_score_from_receipt
 from .p2p.utils import get_peers
 
-from app.nvalues import NETWORK_TRUST_MANAGER_PID
-
+from app.nvalues import NETWORK_TRUST_MANAGER_PID, set_attr
 
 from ..constants import COMMITTEE_SIZE, INITIAL_NETWORK_TRUST_SCORE, NEWRL_DB
 from ..ntypes import BLOCK_VOTE_MINER, NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
@@ -67,6 +66,10 @@ def update_db_states(cur, block):
             signature
         )
     return True
+
+
+def update_constant_value(param):
+    pass
 
 
 def update_state_from_transaction(cur, transaction_type, transaction_data, transaction_code, transaction_timestamp,
@@ -136,9 +139,13 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
         if(transaction_data['operation'] == "update"):
             cr.update_private_sc_state(transaction_data['table_name'], transaction_data["data"],
                                        transaction_data["unique_column"], transaction_data["unique_value"], transaction_data["contract_address"])
+            if transaction_data['table_name']=='configuration':
+                # Call to update the constants
+                set_attr(transaction_data['unique_value'],transaction_data['data']['property_value'])
         if(transaction_data['operation'] == "delete"):
             cr.delete_private_sc_state(transaction_data['table_name'], transaction_data["unique_column"],
                                        transaction_data["unique_value"], transaction_data["contract_address"])
+
 
 
 def add_block_reward(cur, creator, blockindex):

@@ -151,7 +151,9 @@ class TransactionCreator:
             "table_name": data['table_name'],
             "operation": data['operation'],
             "data": data['data'],
-            "sc_address": data["sc_address"]
+            "sc_address": data["sc_address"],
+            "unique_column": data.get("unique_column", ""),
+            "unique_value": data.get("unique_value", "")
         }
 
         fulltrandata = {
