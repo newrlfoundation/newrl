@@ -59,6 +59,8 @@ def update_network_trust_score_from_receipt(cur, receipt):
         target_block_index = receipt['data']['block_index']
         target_block_hash = receipt['data']['block_hash']
         actual_block = get_block_from_cursor(cur, target_block_index)
+        if actual_block is None:
+            return
         actual_block_hash = actual_block['hash']
         if vote == BLOCK_VOTE_MINER:
             if actual_block['proof'] == 42:  # Empty block check

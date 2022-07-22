@@ -27,12 +27,12 @@ def generate_block_receipt(block, vote=1):
         'block_index': block['index'],
         'block_hash': calculate_hash(block),
         'vote': vote,
-        'timestamp': get_corrected_time_ms()
+        'timestamp': get_corrected_time_ms(),
+        "wallet_address": wallet_address,
     }
     return {
         "data": receipt_data,
         "public_key": public_key,
-        "wallet_address": wallet_address,
         "signature": sign_object(private_key, receipt_data),
     }
 
