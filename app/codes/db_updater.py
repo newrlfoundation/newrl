@@ -254,7 +254,8 @@ def get_block_from_cursor(cur, block_index):
         previous_hash, creator_wallet, transactions_hash
         FROM blocks where block_index=?'''
     , (block_index,)).fetchone()
-
+    if block is None:
+        return None
     return {
         'block_index': block[0],
         'hash': block[1],

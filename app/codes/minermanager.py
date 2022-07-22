@@ -1,6 +1,9 @@
 """Miner update functions"""
 import sqlite3
 import random
+import logging
+
+# from app.codes.scoremanager import get_scores_for_wallets
 
 from .p2p.peers import add_peer
 from .clock.global_time import get_corrected_time_ms, get_time_difference
@@ -8,13 +11,17 @@ from ..nvalues import SENTINEL_NODE_WALLET
 from .utils import get_last_block_hash
 # from .p2p.outgoing import propogate_transaction_to_peers
 from .p2p.utils import get_my_address
-from ..constants import COMMITTEE_SIZE, IS_TEST, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
+from ..constants import COMMITTEE_SIZE, IS_TEST, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
 from .auth.auth import get_wallet
 from .signmanager import sign_transaction
 from ..ntypes import TRANSACTION_MINER_ADDITION
 from .utils import get_time_ms
 from .transactionmanager import Transactionmanager
 from .validator import validate
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def miner_addition_transaction(wallet=None, my_address=None):
@@ -111,7 +118,8 @@ def get_miner_for_current_block(last_block=None):
 
     committee_list = get_committee_for_current_block()
 
-    if len(committee_list) == 0:
+    if len(committee_list) < MINIMUM_ACCEPTANCE_VOTES:
+        logger.info('Inadequate committee. Sentinel node is the miner.')
         return {'wallet_address': SENTINEL_NODE_WALLET}
 
     return random.choice(committee_list)
@@ -131,10 +139,14 @@ def get_committee_for_current_block(last_block=None):
     miners = get_eligible_miners()
 
     if len(miners) == 0:
+        logger.info("No committee for current block. Using sentinel node.")
         return [{'wallet_address': SENTINEL_NODE_WALLET}]
 
     committee_size = min(COMMITTEE_SIZE, len(miners))
     committee = random.sample(miners, k=committee_size)
+    # miner_wallets = list(map(lambda m: m['wallet_address'], miners))
+    # weights = get_scores_for_wallets(miner_wallets)
+    # committee = weighted_random_choices(miners, weights, committee_size)
     return committee
 
 
@@ -148,6 +160,7 @@ def should_i_mine(last_block=None):
     my_wallet = get_wallet()
     miner = get_miner_for_current_block(last_block=last_block)
     if miner['wallet_address'] == my_wallet['address']:
+        logger.info("I am the miner for this block")
         return True
     return False
 
@@ -175,3 +188,20 @@ def add_miners_as_peers():
 
     for miner in miners:
         add_peer(miner['network_address'])
+
+
+def weighted_random_choices(population, weights, k):
+    if len(population) < k:
+        raise Exception('Population less than selection count')
+    
+    selections = []
+
+    while len(selections) < k:
+        random.seed(0)
+        choice = random.choices(population, weights=weights)[0]
+        index = population.index(choice)
+        selections.append(choice)
+        del population[index]
+        del weights[index]
+    
+    return selections
