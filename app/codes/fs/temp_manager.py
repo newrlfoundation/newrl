@@ -39,7 +39,7 @@ def get_all_receipts_from_storage(exclude_block_index=None, folder=TMP_PATH):
 #     return blocks
 
 
-def check_receipt_exists(block_index, block_hash, wallet_address, folder=TMP_PATH):
+def check_receipt_exists_in_temp(block_index, block_hash, wallet_address, folder=TMP_PATH):
     """Check if a receipt exist for given block_index and hash"""
     receipt_filename = f'{folder}receipt_{block_index}_{block_hash}_{wallet_address}.json'
     return os.path.isfile(receipt_filename)
