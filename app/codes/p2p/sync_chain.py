@@ -294,8 +294,8 @@ def receive_receipt(receipt):
                 accept_block(block, block['hash'])
                 broadcast_block(original_block)
 
-    committee = get_committee_for_current_block()
-    broadcast_receipt(receipt, committee)
+    # committee = get_committee_for_current_block()
+    # broadcast_receipt(receipt, committee)
 
     return True
 
