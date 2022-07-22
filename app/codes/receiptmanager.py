@@ -88,4 +88,7 @@ def update_receipts_in_state(cur, block):
                 VALUES(?, ?, ?, ?, ?, ?, ?)
             ''', db_receipt_data)
 
-            remove_receipt_from_temp(receipt['data']['block_index'], receipt['data']['block_hash'])
+            remove_receipt_from_temp(
+                receipt['data']['block_index'],
+                receipt['data']['block_hash'],
+                wallet_address)
