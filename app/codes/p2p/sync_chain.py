@@ -93,7 +93,7 @@ def receive_block(block):
         if check_community_consensus(block):
             original_block = copy.deepcopy(block)
             if accept_block(block, block['hash']):
-                broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
+                broadcast_block(original_block)
         else:
             committee = get_committee_for_current_block()
             if (len(committee) < MINIMUM_ACCEPTANCE_VOTES and
