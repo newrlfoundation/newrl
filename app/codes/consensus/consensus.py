@@ -6,7 +6,7 @@ from ..signmanager import sign_object
 from ..blockchain import calculate_hash, get_last_block
 from ..validator import validate_block_receipts
 from ..fs.mempool_manager import append_receipt_to_block, get_receipts_from_storage
-from ...constants import BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_RATIO
+from ...constants import BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_RATIO, MINIMUM_ACCEPTANCE_VOTES
 from ..auth.auth import get_wallet
 from ..minermanager import get_committee_for_current_block, get_miner_for_current_block
 
@@ -93,7 +93,7 @@ def check_community_consensus(block):
             return True
         else:
             return False
-    if len(committee) < COMMITTEE_SIZE / 2 + 1:
+    if len(committee) < MINIMUM_ACCEPTANCE_VOTES:
         return False
 
     if receipt_counts['positive_receipt_count'] > MINIMUM_ACCEPTANCE_RATIO * COMMITTEE_SIZE:

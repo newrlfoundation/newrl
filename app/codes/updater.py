@@ -164,8 +164,10 @@ def run_updater(add_to_chain=False):
     if not IS_TEST:
         nodes = get_committee_for_current_block()
         if len(nodes) < MINIMUM_ACCEPTANCE_VOTES:
-            logger.info('Committee not adequate. Broadcasting block proposal to all peers.')
-            nodes = get_peers()
+            peers = get_peers()
+            if len(peers) > len(nodes):
+                logger.info('Committee not adequate. Broadcasting block proposal to all peers.')
+                nodes = peers
         broadcast_block(block_payload, nodes)
 
     return block_payload
