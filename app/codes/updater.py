@@ -182,6 +182,7 @@ def broadcast_block_proposal(block_payload, block_receipt=None):
             if len(peers) > len(nodes):
                 logger.info('Committee not adequate. Broadcasting block proposal to all peers.')
                 nodes = peers
+        broadcast_receipt(block_receipt, nodes)
         broadcast_block(block_payload, nodes)
         if block_receipt is not None:
             broadcast_receipt(block_receipt, nodes)
