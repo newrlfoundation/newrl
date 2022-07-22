@@ -168,6 +168,7 @@ def run_updater(add_to_chain=False):
             if len(peers) > len(nodes):
                 logger.info('Committee not adequate. Broadcasting block proposal to all peers.')
                 nodes = peers
+        broadcast_receipt(block_receipt, nodes)
         broadcast_block(block_payload, nodes)
 
     return block_payload

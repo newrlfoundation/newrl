@@ -96,7 +96,7 @@ def check_community_consensus(block):
     if len(committee) < MINIMUM_ACCEPTANCE_VOTES:
         return False
 
-    if receipt_counts['positive_receipt_count'] > MINIMUM_ACCEPTANCE_RATIO * COMMITTEE_SIZE:
+    if receipt_counts['positive_receipt_count'] + 1 > MINIMUM_ACCEPTANCE_RATIO * COMMITTEE_SIZE:
         # TODO - Check if time elapsed has exceeded receipt cut off. Do not accept otherwise
         # This is to give every node sometime to send their receipts for the block
         return True
