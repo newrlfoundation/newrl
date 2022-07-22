@@ -110,9 +110,10 @@ def init_db():
                     included_block_index text,
                     timestamp integer)
                     ''')
+    cur.execute('DROP INDEX IF EXISTS idx_receipts_block_index_hash')
     cur.execute('''
                     CREATE UNIQUE INDEX IF NOT EXISTS idx_receipts_block_index_hash
-                     ON receipts (block_index, block_hash)
+                     ON receipts (block_index, block_hash, wallet_address)
                 ''')
 
     cur.execute('''
