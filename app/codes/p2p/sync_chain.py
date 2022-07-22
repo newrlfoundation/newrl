@@ -12,7 +12,7 @@ from app.codes.minermanager import get_committee_for_current_block
 from app.codes.p2p.outgoing import broadcast_receipt, broadcast_block
 from app.codes.receiptmanager import check_receipt_exists_in_db
 # from app.codes.utils import store_block_proposal
-from app.constants import NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
+from app.constants import MINIMUM_ACCEPTANCE_VOTES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
 from app.codes.p2p.peers import get_peers
 
 from app.codes.validator import validate_block, validate_block_data, validate_block_transactions, validate_receipt_signature
@@ -21,6 +21,7 @@ from app.codes.fs.temp_manager import append_receipt_to_block_in_storage, check_
 from app.codes.consensus.consensus import check_community_consensus, is_timeout_block_from_sentinel_node, validate_block_miner, generate_block_receipt, \
     add_my_receipt_to_block
 from app.migrations.init_db import revert_chain
+from app.nvalues import SENTINEL_NODE_WALLET
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -64,10 +65,11 @@ def receive_block(block):
 
 
     broadcast_exclude_nodes = block['peers_already_broadcasted'] if 'peers_already_broadcasted' in block else None
+    original_block = copy.deepcopy(block)
     if is_timeout_block_from_sentinel_node(block['data']):
-        original_block = copy.deepcopy(block)
         accept_block(block, block['hash'])
         broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
+        return
     
     # store_block_proposal(block)
     
@@ -93,8 +95,13 @@ def receive_block(block):
             if accept_block(block, block['hash']):
                 broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
         else:
+            committee = get_committee_for_current_block()
+            if (len(committee) < MINIMUM_ACCEPTANCE_VOTES and
+                block['data']['creator_wallet'] == SENTINEL_NODE_WALLET):
+                    accept_block(block, block['hash'])
+                    broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
+                    return
             if my_receipt:
-                committee = get_committee_for_current_block()
                 broadcast_receipt(my_receipt, committee)
             store_block_to_temp(block)
     
