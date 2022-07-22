@@ -69,8 +69,8 @@ def update_receipts_in_state(cur, block):
         wallet_cursor = cur.execute(
         'SELECT wallet_address FROM wallets where wallet_public=?', 
         (receipt['public_key'],)).fetchone()
-        wallet_address = wallet_cursor[0]
         if wallet_cursor is not None:
+            wallet_address = wallet_cursor[0]
             db_receipt_data = (
                 receipt['data']['block_index'],
                 receipt['data']['block_hash'],
