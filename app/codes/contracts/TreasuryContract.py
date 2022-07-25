@@ -8,7 +8,7 @@ from ..helpers.FetchRespository import FetchRepository
 from ..helpers.TransactionCreator import TransactionCreator
 import logging
 
-from ...nvalues import STAKE_COOLDOWN_MS, ASQI_WALLET, FOUNDATION_WALLET
+from ...nvalues import STAKE_COOLDOWN_MS, ASQI_WALLET, FOUNDATION_WALLET, ZERO_ADDRESS
 
 
 class TreasuryContract(ContractMaster):
@@ -31,7 +31,7 @@ class TreasuryContract(ContractMaster):
                 "asset1_code": 'NWRL',
                 "asset2_code": "",
                 "wallet1": self.address,
-                "wallet2": "0x00000000000000000000",
+                "wallet2": ZERO_ADDRESS,
                 "asset1_number": int(amount),
                 "asset2_number": 0,
                 "additional_data": {}
