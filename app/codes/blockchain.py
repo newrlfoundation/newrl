@@ -227,7 +227,7 @@ def add_block(cur, block, block_hash):
         (block_index, timestamp, proof, previous_hash, hash, 
         creator_wallet, expected_miner, committee,
         transactions_hash) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', db_block_data)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', db_block_data)
     update_db_states(cur, block)
     update_trust_scores(cur, block)
     update_receipts_in_state(cur, block)
