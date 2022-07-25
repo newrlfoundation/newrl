@@ -37,9 +37,11 @@ class Blockchain:
             block['previous_hash'],
             block_hash,
             creator_wallet,
+            block['expected_miner'],
+            block['committee'],
             transactions_hash
         )
-        cur.execute('INSERT OR IGNORE INTO blocks (block_index, timestamp, proof, previous_hash, hash, creator_wallet, transactions_hash) VALUES (?, ?, ?, ?, ?, ?, ?)', db_block_data)
+        cur.execute('INSERT OR IGNORE INTO blocks (block_index, timestamp, proof, previous_hash, hash, creator_wallet, expected_miner, committee, transactions_hash) VALUES (?, ?, ?, ?, ?, ?, ?)', db_block_data)
         return block
 
     def get_block(self, block_index):
@@ -58,6 +60,8 @@ class Blockchain:
             'proof': block['proof'],
             'previous_hash': block['previous_hash'],
             'creator_wallet': block['creator_wallet'],
+            'expected_miner': block['expected_miner'],
+            'committee': block['committee'],
             'hash': block['hash'],
         }
 
@@ -156,6 +160,9 @@ class Blockchain:
         last_block_hash = last_block[1] if last_block is not None else 0
         last_block_timestamp = last_block[2] if last_block is not None else 0
 
+        expected_miner = get_miner_for_current_block()['wallet_address']
+        committee = list(map(lambda c: c['wallet_address'], get_committee_for_current_block()))
+
         EMPTY_BLOCK_NONCE = 42
 
         if new_block_timestamp is None:
@@ -167,6 +174,8 @@ class Blockchain:
             'proof': EMPTY_BLOCK_NONCE,
             'text': {"transactions": [], "signatures": []},
             'creator_wallet': None,
+            'expected_miner': expected_miner,
+            'committee': committee,
             'previous_hash': last_block_hash
         }
 
@@ -209,9 +218,16 @@ def add_block(cur, block, block_hash):
         block['previous_hash'],
         block_hash,
         block['creator_wallet'],
+        block['expected_miner'],
+        block['committee'],
         transactions_hash
     )
-    cur.execute('INSERT OR IGNORE INTO blocks (block_index, timestamp, proof, previous_hash, hash, creator_wallet, transactions_hash) VALUES (?, ?, ?, ?, ?, ?, ?)', db_block_data)
+    cur.execute('''
+        INSERT OR IGNORE INTO blocks 
+        (block_index, timestamp, proof, previous_hash, hash, 
+        creator_wallet, expected_miner, committee,
+        transactions_hash) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', db_block_data)
     update_db_states(cur, block)
     update_trust_scores(cur, block)
     update_receipts_in_state(cur, block)
