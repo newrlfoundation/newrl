@@ -11,7 +11,7 @@ from app.codes.fs.temp_manager import store_receipt_to_temp
 from app.ntypes import BLOCK_VOTE_MINER
 
 from .clock.global_time import get_corrected_time_ms, get_time_difference
-from .fs.temp_manager import get_all_receipts_from_storage, store_block_to_temp
+from .fs.temp_manager import get_all_receipts_from_storage, get_blocks_for_index_from_storage, store_block_to_temp
 from .minermanager import am_i_in_current_committee, broadcast_miner_update, get_committee_for_current_block, get_miner_for_current_block, should_i_mine
 from ..nvalues import SENTINEL_NODE_WALLET, TREASURY_WALLET_ADDRESS
 from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, GLOBAL_INTERNAL_CLOCK_SECONDS, IS_TEST, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, NEWRL_PORT, NO_BLOCK_TIMEOUT, NO_RECEIPT_COMMITTEE_TIMEOUT, REQUEST_TIMEOUT, MEMPOOL_PATH, TIME_BETWEEN_BLOCKS_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS
@@ -49,6 +49,13 @@ def run_updater(add_to_chain=False):
     block_time_limit = 1  # Number of hours of no transactions still prompting new block
     block_height = 0
     latest_ts = blockchain.get_latest_ts(cur)
+    previous_block = get_last_block(cur=cur)
+    new_block_index = previous_block['index'] + 1
+
+    existing_block_proposals = get_blocks_for_index_from_storage(new_block_index)
+    if len(existing_block_proposals) != 0:
+        logger.info(f"Existing block proposal exists with index {new_block_index}. Broadcasting existing one.")
+        broadcast_block_proposal(existing_block_proposals[0])
 
     filenames = os.listdir(MEMPOOL_PATH)  # this is the mempool
     logger.info(f"Files in mempool: {filenames}")
@@ -133,8 +140,6 @@ def run_updater(add_to_chain=False):
         else:
             logger.info(f"More than {TIME_BETWEEN_BLOCKS_SECONDS} seconds since the last block. Adding a new empty one.")
 
-    previous_block = get_last_block(cur=cur)
-
     # transactionsdata['previous_block_receipts'] = get_receipts_from_storage(previous_block['index'])
     if previous_block is not None:
         transactionsdata['previous_block_receipts'] = get_all_receipts_from_storage(exclude_block_index=previous_block['index'] + 1)
@@ -158,9 +163,15 @@ def run_updater(add_to_chain=False):
         'data': block,
         'receipts': [block_receipt]
     }
-    # store_block_to_temp(block_payload)
+    store_block_to_temp(block_payload)
     # store_receipt_to_temp(block_receipt)
-    # logger.info(f'Stored block to temp with payload {json.dumps(block_payload)}')
+    logger.info(f'Stored block to temp with payload {json.dumps(block_payload)}')
+    broadcast_block_proposal(block_payload, block_receipt)
+
+    return block_payload
+
+
+def broadcast_block_proposal(block_payload, block_receipt=None):
     if not IS_TEST:
         nodes = get_committee_for_current_block()
         if len(nodes) < MINIMUM_ACCEPTANCE_VOTES:
@@ -168,10 +179,9 @@ def run_updater(add_to_chain=False):
             if len(peers) > len(nodes):
                 logger.info('Committee not adequate. Broadcasting block proposal to all peers.')
                 nodes = peers
-        broadcast_receipt(block_receipt, nodes)
         broadcast_block(block_payload, nodes)
-
-    return block_payload
+        if block_receipt is not None:
+            broadcast_receipt(block_receipt, nodes)
 
 
 def get_fees_for_transaction(transaction):
