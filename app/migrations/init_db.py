@@ -94,7 +94,8 @@ def init_db():
                     previous_hash text,
                     hash text,
                     creator_wallet text,
-                    committee_list text,
+                    expected_miner text,
+                    committee text,
                     transactions_hash text)
                     ''')
     cur.execute('''
