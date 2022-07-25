@@ -1,4 +1,6 @@
 """Helper functions for network trust score updates"""
+import logging
+import json
 from math import sqrt
 from app.codes.clock.global_time import get_corrected_time_ms
 from app.codes.db_updater import get_block_from_cursor, get_pid_from_wallet, update_trust_score
@@ -7,6 +9,10 @@ from app.codes.state_updater import slashing_tokens
 from app.constants import INITIAL_NETWORK_TRUST_SCORE, MAX_NETWORK_TRUST_SCORE
 from app.ntypes import BLOCK_VOTE_MINER, BLOCK_VOTE_VALID
 from app.nvalues import NETWORK_TRUST_MANAGER_PID
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def get_valid_block_creation_score(current_score):
@@ -34,7 +40,12 @@ def get_invalid_receipt_score(current_score):
 
 
 def get_committee_for_block(block):
-    return [block['creator_wallet']]
+    try:
+        committee = json.loads(block['committee'])
+        return committee
+    except Exception as e:
+        logger.info(f'Committee not available in block {block["block_index"]}')
+        return []
 
 
 def update_network_trust_score_from_receipt(cur, receipt):

@@ -2,7 +2,8 @@ import sqlite3
 import json
 
 from ..codes.blockchain import Blockchain
-from ..codes.state_updater import add_block_reward, update_state_from_transaction
+from ..codes.state_updater import add_block_reward, update_state_from_transaction, update_trust_scores
+from ..codes.receiptmanager import update_receipts_in_state
 from .migrate_db import run_migrations
 from ..constants import NEWRL_DB, NEWRL_P2P_DB
 
@@ -284,11 +285,12 @@ def revert_chain(block_index):
     cur = con.cursor()
     cur.execute(f'DELETE FROM blocks WHERE block_index > {block_index}')
     cur.execute(f'DELETE FROM transactions WHERE block_index > {block_index}')
+    cur.execute(f'DELETE FROM receipts WHERE included_block_index > {block_index}')
     cur.execute('DROP TABLE IF EXISTS wallets')
     cur.execute('DROP TABLE IF EXISTS tokens')
     cur.execute('DROP TABLE IF EXISTS balances')
     # cur.execute('DROP TABLE IF EXISTS blocks')
-    cur.execute('DROP TABLE IF EXISTS receipts')  # TODO - Remove this
+    # cur.execute('DROP TABLE IF EXISTS receipts')  # TODO - Remove this
     # cur.execute('DROP TABLE IF EXISTS transactions')
     cur.execute('DROP TABLE IF EXISTS transfers')
     cur.execute('DROP TABLE IF EXISTS contracts')
@@ -332,6 +334,8 @@ def revert_chain(block_index):
                 specific_data = json.loads(specific_data)
 
             update_state_from_transaction(cur, transaction_type, specific_data, transaction_code, timestamp)
+            update_trust_scores(cur, block)
+            update_receipts_in_state(cur, block)
 
     con.commit()
     con.close()

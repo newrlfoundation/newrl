@@ -7,6 +7,7 @@ import json
 import sqlite3
 
 from app.codes.clock.global_time import get_corrected_time_ms
+from app.codes.committeemanager import get_committee_for_current_block, get_miner_for_current_block
 # from app.codes.minermanager import get_committee_wallet_addresses
 from app.codes.receiptmanager import get_receipts_included_in_block_from_db, update_receipts_in_state
 
@@ -110,22 +111,8 @@ class Blockchain:
     def mine_block(self, cur, text, fees=0):
         """Mine a new block"""
         print("Starting the mining step 1")
-        last_block_cursor = cur.execute(
-            'SELECT block_index, hash FROM blocks ORDER BY block_index DESC LIMIT 1')
-        last_block = last_block_cursor.fetchone()
-        last_block_index = last_block[0] if last_block is not None else 0
-        last_block_hash = last_block[1] if last_block is not None else 0
-
-        block = {
-            'index': last_block_index + 1,
-            'timestamp': get_corrected_time_ms(),
-            'proof': 0,
-            'text': text,
-            'creator_wallet': get_node_wallet_address(),
-            # 'committee': get_committee_wallet_addresses(),
-            'previous_hash': last_block_hash
-        }
-
+        block = self.propose_block(cur, text)
+        
         block_hash = self.proof_of_work(block)
         print("New block hash is ", block_hash)
 
@@ -141,13 +128,17 @@ class Blockchain:
         last_block_hash = last_block[1] if last_block is not None else 0
         print(f'Proposing a block with index {last_block_index + 1}')
 
+        expected_miner = get_miner_for_current_block()['wallet_address']
+        committee = list(map(lambda c: c['wallet_address'], get_committee_for_current_block()))
+
         block = {
             'index': last_block_index + 1,
             'timestamp': get_corrected_time_ms(),
             'proof': 0,
             'text': text,
             'creator_wallet': get_node_wallet_address(),
-            # 'committee': get_committee_wallet_addresses(),
+            'expected_miner': expected_miner,
+            'committee': committee,
             'previous_hash': last_block_hash
         }
         return block
