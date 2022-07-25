@@ -211,6 +211,8 @@ def add_block(cur, block, block_hash):
     # transactions_hash = block['transactions_hash'] if 'transactions_hash' in block else ''
     transactions_hash = calculate_hash(block['text']['transactions'])
     print('Adding block', block_index)
+    if not isinstance(block['committee'], str):
+        block['committee'] = json.dumps(block['committee'])
     db_block_data = (
         block_index,
         block['timestamp'],
@@ -227,7 +229,7 @@ def add_block(cur, block, block_hash):
         (block_index, timestamp, proof, previous_hash, hash, 
         creator_wallet, expected_miner, committee,
         transactions_hash) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', db_block_data)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', db_block_data)
     update_db_states(cur, block)
     update_trust_scores(cur, block)
     update_receipts_in_state(cur, block)
