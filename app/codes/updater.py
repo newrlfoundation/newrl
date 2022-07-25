@@ -50,7 +50,10 @@ def run_updater(add_to_chain=False):
     block_height = 0
     latest_ts = blockchain.get_latest_ts(cur)
     previous_block = get_last_block(cur=cur)
-    new_block_index = previous_block['index'] + 1
+    if previous_block is None:
+        new_block_index = 1
+    else:
+        new_block_index = previous_block['index'] + 1
 
     existing_block_proposals = get_blocks_for_index_from_storage(new_block_index)
     if len(existing_block_proposals) != 0:
