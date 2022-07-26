@@ -205,7 +205,7 @@ def pay_fee_for_transaction(cur, transaction):
     payers = get_valid_addresses(transaction)
 
     for payee in payers:
-        balance = get_wallet_token_balance(payee, currency)
+        balance = get_wallet_token_balance(cur, payee, currency)
         if balance < fee / len(payers):
             return False
         transfer_tokens_and_update_balances(
