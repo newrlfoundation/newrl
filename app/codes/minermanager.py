@@ -3,8 +3,6 @@ import sqlite3
 import random
 import logging
 
-# from app.codes.scoremanager import get_scores_for_wallets
-
 from .p2p.peers import add_peer
 
 from ..nvalues import SENTINEL_NODE_WALLET
@@ -121,18 +119,3 @@ def add_miners_as_peers():
         add_peer(miner['network_address'])
 
 
-def weighted_random_choices(population, weights, k):
-    if len(population) < k:
-        raise Exception('Population less than selection count')
-    
-    selections = []
-
-    while len(selections) < k:
-        random.seed(0)
-        choice = random.choices(population, weights=weights)[0]
-        index = population.index(choice)
-        selections.append(choice)
-        del population[index]
-        del weights[index]
-    
-    return selections
