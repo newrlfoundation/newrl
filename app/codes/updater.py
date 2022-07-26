@@ -187,37 +187,6 @@ def broadcast_block_proposal(block_payload, block_receipt=None):
             broadcast_receipt(block_receipt, nodes)
 
 
-def get_fees_for_transaction(transaction):
-    return transaction['fee']
-
-
-def pay_fee_for_transaction(cur, transaction):
-    fee = get_fees_for_transaction(transaction)
-
-    # Check for 0 fee transactions and deprioritize accordingly
-    if fee == 0:
-        return True
-
-    currency = transaction['currency']
-    if currency not in ALLOWED_FEE_PAYMENT_TOKENS:
-        return False
-
-    payers = get_valid_addresses(transaction)
-
-    for payee in payers:
-        balance = get_wallet_token_balance(cur, payee, currency)
-        if balance < fee / len(payers):
-            return False
-        transfer_tokens_and_update_balances(
-            cur,
-            payee,
-            TREASURY_WALLET_ADDRESS,
-            transaction['currency'],
-            fee / len(payers)
-        )
-    return True
-
-
 def create_empty_block_receipt_and_broadcast():
     logger.info('No block timeout. Mining empty block and sending receipts.')
     # block_index = get_last_block_index() + 1
