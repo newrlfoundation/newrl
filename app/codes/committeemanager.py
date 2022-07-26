@@ -100,7 +100,7 @@ def get_committee_for_current_block(last_block=None):
         return [{'wallet_address': SENTINEL_NODE_WALLET}]
 
     committee_size = min(COMMITTEE_SIZE, len(miners))
-    committee = random.sample(miners, k=committee_size)
+    # committee = random.sample(miners, k=committee_size)
     miner_wallets = list(map(lambda m: m['wallet_address'], miners))
     weights = get_scores_for_wallets(miner_wallets)
     committee = weighted_random_choices(miners, weights, committee_size)
