@@ -446,7 +446,7 @@ class Transactionmanager:
                         "One of the wallet addresses does not have a valid associated personids.")
                     self.validity = 0
                 else:
-                    if self.transaction['specific_data']['new_score'] < 0.0 or self.transaction['specific_data']['new_score'] > 3.0:
+                    if self.transaction['specific_data']['new_score'] < -1000000 or self.transaction['specific_data']['new_score'] > 1000000:
                         print("New_score is out of valid range.")
                         self.validity = 0
                     else:
