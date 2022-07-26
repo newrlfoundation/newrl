@@ -57,14 +57,18 @@ def update_db_states(cur, block):
         transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
             'trans_code']
 
-        update_state_from_transaction(
-            cur,
-            transaction['type'],
-            transaction_data,
-            transaction_code,
-            transaction['timestamp'],
-            signature
-        )
+        try:
+            update_state_from_transaction(
+                cur,
+                transaction['type'],
+                transaction_data,
+                transaction_code,
+                transaction['timestamp'],
+                signature
+            )
+        except Exception as e:
+            logger.error(f'Error in transaction: {str(transaction)}')
+            logger.error(str(e))
     return True
 
 
@@ -76,7 +80,7 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
     if transaction_type == TRANSACTION_TOKEN_CREATION:  # this is a token creation or addition transaction
         add_token(cur, transaction_data, transaction_code)
 
-    if transaction_type == TRANSACTION_TWO_WAY_TRANSFER or transaction_type == TRANSACTION_ONE_WAY_TRANSFER:  # this is a transfer tx
+    if transaction_type == TRANSACTION_TWO_WAY_TRANSFER:  # this is a transfer tx
         sender1 = transaction_data['wallet1']
         sender2 = transaction_data['wallet2']
 
@@ -89,6 +93,15 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
         amount2 = int(transaction_data['asset2_number'] or 0)
         transfer_tokens_and_update_balances(
             cur, sender2, sender1, tokencode2, amount2)
+
+    if transaction_type == TRANSACTION_ONE_WAY_TRANSFER:
+        sender = transaction_data['wallet1']
+        receiver = transaction_data['wallet2']
+        token_code = transaction_data['asset1_code']
+        amount = int(transaction_data['asset1_number'] or 0)
+
+        transfer_tokens_and_update_balances(
+            cur, sender, receiver, token_code, amount)
 
     if transaction_type == TRANSACTION_TRUST_SCORE_CHANGE:  # score update transaction
         personid1 = get_pid_from_wallet(cur, transaction_data['address1'])
