@@ -20,7 +20,7 @@ from .p2p.utils import is_my_address
 from .utils import BufferedLog, get_time_ms
 from .blockchain import Blockchain, get_last_block, get_last_block_index
 from .transactionmanager import Transactionmanager, get_valid_addresses
-from .state_updater import update_db_states
+from .state_updater import pay_fee_for_transaction, update_db_states
 from .crypto import calculate_hash, sign_object, _private, _public
 from .consensus.consensus import generate_block_receipt
 from .db_updater import transfer_tokens_and_update_balances, get_wallet_token_balance
