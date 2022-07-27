@@ -261,6 +261,15 @@ def init_db():
                     )
                     ''')
 
+    cur.execute('''
+                    CREATE TABLE IF NOT EXISTS sample_template
+                    (
+                    address text NOT NULL,
+                    wallet_address text NOT NULL,
+                    name text    
+                    )
+    ''')
+
     con.commit()
     con.close()
 
