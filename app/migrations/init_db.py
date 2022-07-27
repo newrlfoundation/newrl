@@ -178,13 +178,7 @@ def init_db():
                      ON miners (wallet_address, last_broadcast_timestamp)
                 ''')
 
-    con.commit()
-    con.close()
 
-
-def init_trust_db():
-    con = sqlite3.connect(db_path)
-    cur = con.cursor()
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS kyc
                     (id text NOT NULL PRIMARY KEY, 
@@ -308,6 +302,8 @@ def revert_chain(block_index):
     cur.execute('DROP TABLE IF EXISTS dao_membership')
     cur.execute('DROP TABLE IF EXISTS proposal_data')
     cur.execute('DROP TABLE IF EXISTS DAO_TOKEN_LOCK')
+    cur.execute('DROP TABLE IF EXISTS stake_ledger')
+    # TODO - Drop all trust tables too
     con.commit()
     con.close()
 
