@@ -260,7 +260,8 @@ def init_trust_db():
                     person_id text Not NULL, 
                     wallet_address TEXT , 
                     amount INT, 
-                    time_updated TIMESTAMP
+                    time_updated TIMESTAMP,
+                    staker_wallet_address text
                     )
                     ''')
 

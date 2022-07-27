@@ -134,10 +134,10 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
                 transaction_data['table_name'], transaction_data["data"])
         if(transaction_data['operation'] == "update"):
             cr.update_private_sc_state(transaction_data['table_name'], transaction_data["data"],
-                                       transaction_data["unique_column"], transaction_data["unique_value"], transaction_data["contract_address"])
+                                       transaction_data["unique_column"], transaction_data["unique_value"], transaction_data["address"])
         if(transaction_data['operation'] == "delete"):
             cr.delete_private_sc_state(transaction_data['table_name'], transaction_data["unique_column"],
-                                       transaction_data["unique_value"], transaction_data["contract_address"])
+                                       transaction_data["unique_value"], transaction_data["address"])
 
 
 def add_block_reward(cur, creator, blockindex):
@@ -286,24 +286,3 @@ def get_value_txns(transaction_signer, transaction_data):
 
     return value_txns_local
 
-
-def slashing_tokens(cur,address,is_block):
-    balance = cur.execute(f'''select amount from stake_ledger where address=:address''',
-                          {"address": address}).fetchone()
-    amount = 0
-    if balance is not None:
-        balance = balance[0]
-        if is_block:
-            amount = MIN_STAKE_AMOUNT
-        else:
-            amount = int((MIN_STAKE_AMOUNT/STAKE_PENALTY_RATIO))
-        balance = balance-amount
-        # Transferring amount (i.e. penal amount to the zero address)
-        transfer_tokens_and_update_balances(cur,address,ZERO_ADDRESS,amount)
-        # updating stake_ledger table with the new updated address amount
-        cur.execute(f'''UPDATE stake_ledger set amount=:amount where address=:address''', {"amount": balance,
-                                                                                           "address": address})
-        return True
-    else:
-        logger.info("No entry found for this address while slashing %s", address)
-        return False
