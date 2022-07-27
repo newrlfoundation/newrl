@@ -60,14 +60,17 @@ def update_db_states(cur, block):
             'trans_code']
 
         try:
-            update_state_from_transaction(
-                cur,
-                transaction['type'],
-                transaction_data,
-                transaction_code,
-                transaction['timestamp'],
-                signature
-            )
+            if pay_fee_for_transaction(cur, transaction):
+                update_state_from_transaction(
+                    cur,
+                    transaction['type'],
+                    transaction_data,
+                    transaction_code,
+                    transaction['timestamp'],
+                    signature
+                )
+            else:
+                logger.info(f'Fee payment failed for transaction {transaction_code}')
         except Exception as e:
             logger.error(f'Error in transaction: {str(transaction)}')
             logger.error(str(e))
