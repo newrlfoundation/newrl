@@ -96,6 +96,7 @@ def update_network_trust_score_from_receipt(cur, receipt):
                     if vote == BLOCK_VOTE_VALID:
                         score = get_invalid_receipt_score(existing_score)
                         slashing_tokens(cur, wallet_address, False)
+
                     else:
                         score = get_valid_receipt_score(existing_score)
                 else:
@@ -109,10 +110,9 @@ def update_network_trust_score_from_receipt(cur, receipt):
                     else:
                         score = get_invalid_receipt_score(existing_score)
                         slashing_tokens(cur, wallet_address, False)
-
-
             if wallet_address not in committee:
                 score = get_invalid_receipt_score(existing_score)
                 slashing_tokens(cur, wallet_address, False)
+
 
         update_trust_score(cur, NETWORK_TRUST_MANAGER_PID, person_id, score, get_corrected_time_ms())

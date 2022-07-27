@@ -178,7 +178,6 @@ def init_db():
                      ON miners (wallet_address, last_broadcast_timestamp)
                 ''')
 
-
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS kyc
                     (id text NOT NULL PRIMARY KEY, 

@@ -306,8 +306,6 @@ def get_value_txns(transaction_signer, transaction_data):
 
     return value_txns_local
 
-
-
 def get_fees_for_transaction(transaction):
     if 'fee' in transaction:
         return transaction['fee']
@@ -340,4 +338,3 @@ def pay_fee_for_transaction(cur, transaction):
             fee / len(payers)
         )
     return True
-
