@@ -12,8 +12,11 @@ import hashlib
 
 from ..constants import NEWRL_DB
 from .utils import get_person_id_for_wallet_address, get_time_ms
+from ..nvalues import MIN_STAKE_AMOUNT, STAKE_PENALTY_RATIO, ZERO_ADDRESS
+import logging
 
-
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 def is_wallet_valid(cur, address):
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
@@ -316,3 +319,32 @@ def add_pid_contract_add(cur,ct_add):
                     (person_id, wallet_id)
                     VALUES (?, ?)''', query_params)
     return pid
+
+def slashing_tokens(cur,address,is_block):
+    data = cur.execute(f'''select amount,staker_wallet_address from stake_ledger where wallet_address=:address''',
+                          {"address": address}).fetchone()
+    amount = 0
+    if data is not None:
+        balance = data[0]
+        if is_block:
+            amount = MIN_STAKE_AMOUNT
+        else:
+            amount = int((MIN_STAKE_AMOUNT/STAKE_PENALTY_RATIO))
+        actual_balance=balance
+        balance = balance-amount
+        deducted_amount=0
+        # Transferring amount (i.e. penal amount to the zero address)
+        data_json=json.loads(data[1])
+        for index, value in enumerate(data_json[1]):
+            for i in value.keys():
+                burn_amount=data_json[index][i]-(data_json[index][i]/actual_balance)*balance
+                data_json[index][i]=(data_json[index][i]/actual_balance)*balance
+                transfer_tokens_and_update_balances(cur,i,ZERO_ADDRESS,math.ceil(burn_amount))
+                deducted_amount=deducted_amount+math.ceil(burn_amount)
+        # updating stake_ledger table with the new updated address amount
+        cur.execute(f'''UPDATE stake_ledger set amount=:amount, staker_wallet_address=:staker_wallet_address where wallet_address=:address''', {"amount": actual_balance-deducted_amount,
+                                                                                           "address": address,"staker_wallet_address":json.dumps(data_json)})
+        return True
+    else:
+        logger.info("No entry found for this address while slashing %s", address)
+        return False

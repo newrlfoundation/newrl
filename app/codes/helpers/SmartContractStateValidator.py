@@ -25,7 +25,7 @@ def validate(transaction: Transactionmanager, contract_address: str):
     if type == TRANSACTION_MINER_ADDITION:
         return False
     if type == TRANSACTION_SC_UPDATE:
-        if transaction.transaction['specific_data']['sc_address'] != contract_address:
+        if transaction.transaction['specific_data']['address'] != contract_address:
             return False   
     if type != TRANSACTION_SC_UPDATE:
         return transaction.econvalidator()

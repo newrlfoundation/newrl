@@ -68,14 +68,16 @@ class CentralRepository:
         values = tuple(queryParam.values())
         return self.cur.execute('INSERT INTO ' + table_name + ' (' + keys + ') VALUES (' + question_marks + ')', values)
 
-    def update_private_sc_state(self, table_name: str, queryParam: dict, unique_column: str, unique_value: str,
+    def update_private_sc_state(self, table_name: str, query_param: dict, unique_column: str, unique_value: str,
                                 address: str):
-        keys = ','.join(queryParam.keys())
-        question_marks = ','.join(list('?' * len(queryParam)))
-        for x in queryParam:
+        keys = []
+        for i in query_param.keys():
+            keys.append(i+' =:'+i)
+        keys = ','.join(keys)
+        for x in query_param:
             if not self.queryCheck(x):
                 return False
-            if not self.queryCheck(queryParam[x]):
+            if not self.queryCheck(query_param[x]):
                 return False
         if not self.queryCheck(unique_column):
             return False
@@ -83,11 +85,13 @@ class CentralRepository:
             return False
         if not self.queryCheck(address):
             return False
-        values = tuple(queryParam.values())
-        values.append(unique_value, address)
+        values = tuple(query_param.values())
+        values = values + (unique_value, address)
+        print('UPDATE  ' + table_name + ' set ' + keys + ' WHERE ' + unique_column + '=? AND address=?')
         return self.cur.execute(
-            'UPDATE INTO ' + table_name + ' (' + keys + ') VALUES (' + question_marks + ') WHERE ' + unique_column + '=? AND address=?',
+            'UPDATE  ' + table_name + ' set ' + keys + ' WHERE ' + unique_column + '=? AND address=?',
             values)
+
     def delete_private_sc_state(self, table_name: str,  unique_column: str, unique_value: str,
                                 address: str):
 
