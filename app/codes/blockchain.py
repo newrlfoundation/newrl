@@ -41,7 +41,13 @@ class Blockchain:
             block['committee'],
             transactions_hash
         )
-        cur.execute('INSERT OR IGNORE INTO blocks (block_index, timestamp, proof, previous_hash, hash, creator_wallet, expected_miner, committee, transactions_hash) VALUES (?, ?, ?, ?, ?, ?, ?)', db_block_data)
+        cur.execute('''
+            INSERT OR IGNORE INTO blocks 
+            (block_index, timestamp, proof, previous_hash, 
+            hash, creator_wallet, expected_miner, committee, 
+            transactions_hash) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'''
+        , db_block_data)
         return block
 
     def get_block(self, block_index):
