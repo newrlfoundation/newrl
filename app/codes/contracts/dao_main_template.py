@@ -409,7 +409,7 @@ class DaoMainTemplate(ContractMaster):
             pid = self.__get_pid_from_wallet_using_repo(repo,i)
             callparams = input_to_dict(callparamsip)
             dao_pid = self.__get_pid_from_wallet_using_repo(repo, self.address)
-            qparam = {"dao_person_id": dao_pid, "member_person_id": callparams['member_person_id']}
+            qparam = {"dao_person_id": dao_pid, "member_person_id": pid}
             is_dao_exist = repo.select_count().add_table_name("dao_membership").where_clause("dao_person_id",
                                                                                              qparam['dao_person_id'],
                                                                                              4).and_clause(
