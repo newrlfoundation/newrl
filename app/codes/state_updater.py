@@ -102,6 +102,15 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
         transfer_tokens_and_update_balances(
             cur, sender2, sender1, tokencode2, amount2)
 
+    if transaction_type == TRANSACTION_ONE_WAY_TRANSFER:
+        sender = transaction_data['wallet1']
+        receiver = transaction_data['wallet2']
+        token_code = transaction_data['asset1_code']
+        amount = int(transaction_data['asset1_number'] or 0)
+
+        transfer_tokens_and_update_balances(
+            cur, sender, receiver, token_code, amount)
+
     if transaction_type == TRANSACTION_TRUST_SCORE_CHANGE:  # score update transaction
         personid1 = get_pid_from_wallet(cur, transaction_data['address1'])
         personid2 = get_pid_from_wallet(cur, transaction_data['address2'])
@@ -130,7 +139,7 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
             funct(cur, params_for_funct)
         except Exception as e:
             print('Exception durint smart contract function run', e)
-            logger.e
+            # logger.log(e)
 
     if transaction_type == TRANSACTION_MINER_ADDITION:
         add_miner(
@@ -182,6 +191,8 @@ def add_block_reward(cur, creator, blockindex):
 
 
 def update_trust_scores(cur, block):
+    if 'previous_block_receipts' not in block['text']:
+        return
     receipts = block['text']['previous_block_receipts']
 
     for receipt in receipts:
