@@ -29,6 +29,7 @@ def clear_db():
     cur.execute('DROP TABLE IF EXISTS dao_membership')
     cur.execute('DROP TABLE IF EXISTS proposal_data')
     cur.execute('DROP TABLE IF EXISTS DAO_TOKEN_LOCK')
+    cur.execute('DROP TABLE IF EXISTS stake_ledger')
     con.commit()
     con.close()
 
@@ -177,7 +178,6 @@ def init_db():
                      ON miners (wallet_address, last_broadcast_timestamp)
                 ''')
 
-    
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS kyc
                     (id text NOT NULL PRIMARY KEY, 
@@ -260,6 +260,17 @@ def init_db():
                     wallet_address text
                     )
                     ''')
+    cur.execute('''
+                    CREATE TABLE stake_ledger 
+                    (
+                    address text NOT NULL, 
+                    person_id text Not NULL, 
+                    wallet_address TEXT , 
+                    amount INT, 
+                    time_updated TIMESTAMP,
+                    staker_wallet_address text
+                    )
+                    ''')
 
     con.commit()
     con.close()
@@ -290,6 +301,8 @@ def revert_chain(block_index):
     cur.execute('DROP TABLE IF EXISTS dao_membership')
     cur.execute('DROP TABLE IF EXISTS proposal_data')
     cur.execute('DROP TABLE IF EXISTS DAO_TOKEN_LOCK')
+    cur.execute('DROP TABLE IF EXISTS stake_ledger')
+    # TODO - Drop all trust tables too
     con.commit()
     con.close()
 

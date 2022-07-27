@@ -6,12 +6,11 @@ from app.routers.request_models import CreateTokenRequest, CreateWalletRequest
 
 
 class TransactionCreator:
-    def transaction_type_one(self,data:dict):
-
+    def transaction_type_one(self, data: dict):
         add_wallet_request = {
-            "custodian_address": data['custodian_address'],
+            "custodian_wallet": data['custodian_address'],
             "ownertype": data['ownertype'],
-            "jurisd ": data['jurisdiction'],
+            "jurisd": data['jurisdiction'],
             "kyc_docs": data['kyc_docs'],
             "specific_data": data['specific_data'],
             'wallet_address': data['address'],
@@ -19,7 +18,8 @@ class TransactionCreator:
         }
 
         return create_add_wallet_transaction(add_wallet_request)
-    def transaction_type_one_modal(self,data:CreateWalletRequest,wallet):
+
+    def transaction_type_one_modal(self, data: CreateWalletRequest, wallet):
         add_wallet_request = {
             "custodian_address": data.custodian_address,
             "ownertype": data.ownertype,
@@ -30,7 +30,7 @@ class TransactionCreator:
         }
         return add_wallet_request
 
-    def transaction_type_two(self,data:dict):
+    def transaction_type_two(self, data: dict):
         add_token_request = {
             "tokenname": data['tokenname'],
             "tokencode": data['tokencode'],
@@ -62,11 +62,9 @@ class TransactionCreator:
         newtx = Transactionmanager()
         newtx.transactioncreator(fulltrandata)
         return newtx
-        #return create_token_transaction(add_token_request)
+        # return create_token_transaction(add_token_request)
 
-
-
-    def transaction_type_3(self,data:dict):
+    def transaction_type_3(self, data: dict):
         txspecdata = {
             "address": data['address'],
             "function": data['function'],
@@ -91,12 +89,11 @@ class TransactionCreator:
         newtx.transactioncreator(fulltrandata)
         return newtx
 
-
-    def transaction_type_5(self,data:dict):
+    def transaction_type_5(self, data: dict):
         trandata = {
             "transfer_type": 5,
             "asset1_code": str(data['asset1_code']),
-            "asset2_code": str(data.get('asset2_code',"")),
+            "asset2_code": str(data.get('asset2_code', "")),
             "wallet1": data['wallet1'],
             "wallet2": data['wallet2'],
             "asset1_number": data['asset1_number'],
@@ -110,7 +107,7 @@ class TransactionCreator:
                 "type": 5,
                 "currency": "NWRL",
                 "fee": 0.0,
-                "descr": data.get('description',""),
+                "descr": data.get('description', ""),
                 "valid": 1,
                 "block_index": 0,
                 "specific_data": trandata
@@ -121,7 +118,7 @@ class TransactionCreator:
         newtx.transactioncreator(fulltrandata)
         return newtx
 
-    def transaction_type_6(self,data:dict):
+    def transaction_type_6(self, data: dict):
         txspecdata = {
             "address1": data['source_address'],
             "address2": data['destination_address'],
@@ -146,12 +143,14 @@ class TransactionCreator:
         tdatanew = newtx.transactioncreator(fulltrandata)
         return tdatanew
 
-    def transaction_type_8(self,data:dict):
+    def transaction_type_8(self, data: dict):
         txspecdata = {
             "table_name": data['table_name'],
             "operation": data['operation'],
             "data": data['data'],
-            "sc_address": data["sc_address"]
+            "address": data["sc_address"],
+            "unique_column": data.get("unique_column",""),
+            "unique_value": data.get("unique_value","")
         }
 
         fulltrandata = {
