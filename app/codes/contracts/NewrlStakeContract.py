@@ -1,4 +1,6 @@
 # class to stake token from user
+import math
+
 from .contract_master import ContractMaster
 from ..clock.global_time import get_corrected_time_ms
 from ..db_updater import *

@@ -110,6 +110,7 @@ def init_db():
                     vote integer,
                     wallet_address text,
                     included_block_index text,
+                    signature text,
                     timestamp integer)
                     ''')
     cur.execute('DROP INDEX IF EXISTS idx_receipts_block_index_hash')
@@ -202,10 +203,13 @@ def init_trust_db():
     
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS person_wallet
-                    (person_id text NOT NULL PRIMARY KEY, 
-                    wallet_id integer)
+                    (person_id text NOT NULL, 
+                    wallet_id text NOT NULL PRIMARY KEY)
                     ''')
-    # TODO - Add Indexes, set unique on src, dest
+    cur.execute('''
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_person_wallet_wallet_id
+                    ON person_wallet (wallet_id)
+                ''')
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS trust_scores
                     (src_person_id text NOT NULL, 
@@ -304,8 +308,6 @@ def revert_chain(block_index):
     cur.execute('DROP TABLE IF EXISTS dao_membership')
     cur.execute('DROP TABLE IF EXISTS proposal_data')
     cur.execute('DROP TABLE IF EXISTS DAO_TOKEN_LOCK')
-    cur.execute('DROP TABLE IF EXISTS stake_ledger')
-    # TODO - Drop all trust tables too
     con.commit()
     con.close()
 
