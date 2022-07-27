@@ -100,17 +100,9 @@ def update_network_trust_score_from_receipt(cur, receipt):
                         score = get_valid_receipt_score(existing_score)
                 else:
                     score = existing_score
-            if wallet_address not in committee:
-                score = get_invalid_receipt_score(existing_score)
-                slashing_tokens(cur, wallet_address, False)
             else:
                 if actual_block_hash != target_block_hash:
                     score = existing_score
-                    if actual_block['proof'] != 42:  # Empty block check
-                        score = get_invalid_receipt_score(existing_score)
-                        slashing_tokens(cur, wallet_address, False)
-                    else:
-                        score = existing_score
                 else:
                     if vote == BLOCK_VOTE_VALID:
                         score = get_valid_receipt_score(existing_score)
