@@ -404,8 +404,10 @@ class DaoMainTemplate(ContractMaster):
         return trxn
 
     def initialize_membership(self, callparamsip, repo: FetchRepository):
-        dao_params = input_to_dict(self.contractparams)
-        for i in dao_params['founders']:
+        dao_params=repo.select_Query('founder_personid').add_table_name('dao_main').where_clause('dao_sc_address',self.address,1).execute_query_single_result({'dao_sc_address':self.address})
+        if dao_params is None:
+            return []
+        for i in json.loads(dao_params[0]):
             pid = self.__get_pid_from_wallet_using_repo(repo,i)
             callparams = input_to_dict(callparamsip)
             dao_pid = self.__get_pid_from_wallet_using_repo(repo, self.address)

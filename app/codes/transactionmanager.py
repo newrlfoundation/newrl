@@ -235,7 +235,7 @@ class Transactionmanager:
                     else:
                         self.validity = 0  # other custodian cannot sign someone's linked wallet address
                 else:   # this is a new wallet and person
-                    if is_wallet_valid(walletaddress):
+                    if is_wallet_valid(walletaddress) and not is_smart_contract(walletaddress):
                         print("Wallet with address",
                               walletaddress, " already exists.")
                         self.validity = 0
@@ -494,7 +494,7 @@ def is_token_valid(token_code):
 def is_wallet_valid(address):
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
-    if is_smart_contract(cur,address):
+    if is_smart_contract(address):
         return True
         
     wallet_cursor = cur.execute(
@@ -608,7 +608,9 @@ def get_wallet_token_balance_tm(wallet_address, token_code):
     return balance
 
 
-def is_smart_contract(cur,address):
+def is_smart_contract(address):
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
     if not address.startswith('ct'):
         return False
 
