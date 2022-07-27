@@ -15,6 +15,64 @@ class dex(ContractMaster):
         ContractMaster.__init__(self, self.template,
                                 self.version, contractaddress)
     
+
+    def initialise_liquidity(self,callparamsip, repo: FetchRepository):
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
+        
+        #transfer amount to liquidity
+        callparams = input_to_dict(callparamsip)
+        #dex liquidity shouldnt be initalised already
+
+        liquidity_initialized = cspecs['liquidity_initialized']
+        
+        if not liquidity_initialized:
+            raise Exception("Liquidity for this contract is already initialized, can't initialise it again")
+
+        token_1_amount = callparams['token_1_amount'] 
+        token_2_amount  = callparams['token_2_amount']
+        recipient_address = callparams['recipient_address']
+
+        pool_token1_code = cspecs['pool_token1_code']
+        pool_token2_code = cspecs['pool_token2_code']
+
+        required_value_token1 = {
+            "token_code": pool_token1_code,
+            "amount": token_1_amount
+        }
+
+        required_value_token2 = {
+            "token_code": pool_token2_code,
+            "amount": token_2_amount
+        }
+
+        ot_token_code = cspecs['ot_token_code']
+        ot_token_name = cspecs['ot_token_name']
+
+        ot_to_issue = min(token_1_amount,token_2_amount)
+
+        value = callparams['value']
+        if required_value_token1 in value and required_value_token2 in value:
+            tokendata = {
+                "tokenname": ot_token_name,
+                "tokencode": ot_token_code,
+                "tokentype": '1',
+                "tokenattributes": {},
+                "first_owner": recipient_address,
+                "custodian": self.address,
+                "legaldochash": '',
+                "amount_created": ot_to_issue,
+                "value_created": '',
+                "disallowed": {},
+                "sc_flag": False
+            }
+            
+            transacation_creator = TransactionCreator()
+            transaction = transacation_creator.transaction_type_two(tokendata)
+            return [transaction]
+        else:
+            raise Exception("Value sent is invalid") 
+        pass
+
     def provide_liquidity(self, callparamsip, repo: FetchRepository):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
 
