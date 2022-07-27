@@ -8,9 +8,9 @@ from app.routers.request_models import CreateTokenRequest, CreateWalletRequest
 class TransactionCreator:
     def transaction_type_one(self, data: dict):
         add_wallet_request = {
-            "custodian_address": data['custodian_address'],
+            "custodian_wallet": data['custodian_address'],
             "ownertype": data['ownertype'],
-            "jurisd ": data['jurisdiction'],
+            "jurisd": data['jurisdiction'],
             "kyc_docs": data['kyc_docs'],
             "specific_data": data['specific_data'],
             'wallet_address': data['address'],
@@ -149,8 +149,8 @@ class TransactionCreator:
             "operation": data['operation'],
             "data": data['data'],
             "address": data["sc_address"],
-            "unique_column": data["unique_column"],
-            "unique_value": data["unique_value"]
+            "unique_column": data.get("unique_column",""),
+            "unique_value": data.get("unique_value","")
         }
 
         fulltrandata = {

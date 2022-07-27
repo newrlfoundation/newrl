@@ -17,6 +17,17 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+def __is_smart_contract(cur,address):
+    if not address.startswith('ct'):
+        return False
+
+    sc_cursor = cur.execute(
+        'SELECT COUNT (*) FROM contracts WHERE address=?', (address, ))
+    sc_id = sc_cursor.fetchone()
+    if sc_id is None:
+        return False
+    else:
+        return True
 def is_wallet_valid(cur, address):
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
@@ -82,7 +93,8 @@ def add_wallet_pid(cur, wallet):
                     wallet['jurisd'],
                     data_json
                     )
-    cur.execute(f'''INSERT OR IGNORE INTO wallets
+    if not __is_smart_contract(cur,wallet['wallet_address']):
+        cur.execute(f'''INSERT OR IGNORE INTO wallets
             (wallet_address, wallet_public, custodian_wallet, kyc_docs, owner_type, jurisdiction, specific_data)
             VALUES (?, ?, ?, ?, ?, ?, ?)''', query_params)
 
