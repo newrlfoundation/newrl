@@ -30,6 +30,9 @@ class Blockchain:
     def create_block(self, cur, block, block_hash, creator_wallet=None):
         """Create a block and store to db"""
         transactions_hash = self.calculate_hash(block['text']['transactions'])
+        committee = block['committee']
+        if not isinstance(committee, str):
+            committee = json.dumps(committee)
         db_block_data = (
             block['index'],
             block['timestamp'],
@@ -38,7 +41,7 @@ class Blockchain:
             block_hash,
             creator_wallet,
             block['expected_miner'],
-            block['committee'],
+            committee,
             transactions_hash
         )
         cur.execute('''
