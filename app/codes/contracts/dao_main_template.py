@@ -431,7 +431,7 @@ class DaoMainTemplate(ContractMaster):
                 transaction_creator = TransactionCreator()
                 return transaction_creator.transaction_type_8(sc_state_proposal1_data)
             else:
-                return False
+                return []
 
     # def update_token_proposal_data(self, cur, callparamsip):
     #     #
