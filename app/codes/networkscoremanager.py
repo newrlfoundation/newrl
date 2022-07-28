@@ -48,12 +48,7 @@ def get_committee_for_block(block):
 
 
 def update_network_trust_score_from_receipt(cur, receipt):
-    wallet_cursor = cur.execute(
-        'SELECT wallet_address FROM wallets where wallet_public=?', 
-        (receipt['public_key'],)).fetchone()
-    
-    if wallet_cursor is not None:
-        wallet_address = wallet_cursor[0]
+        wallet_address = receipt['data']['wallet_address']
         person_id = get_pid_from_wallet(cur, wallet_address)
         vote = receipt['data']['vote']
 

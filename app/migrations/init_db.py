@@ -333,7 +333,7 @@ def revert_chain(block_index):
             try:
                 update_state_from_transaction(cur, transaction_type, specific_data, transaction_code, timestamp)
                 update_trust_scores(cur, block)
-                update_receipts_in_state(cur, block)
+                # update_receipts_in_state(cur, block)
             except Exception as e:
                 logger.error(f'Error adding transaction: {str(transaction)} {str(e)}')
 
