@@ -3,7 +3,8 @@ import json
 import logging
 
 from ..codes.blockchain import Blockchain
-from ..codes.state_updater import add_block_reward, update_state_from_transaction, update_trust_scores
+from ..codes.state_updater import add_block_reward, update_state_from_transaction, update_trust_scores, \
+    executing_transactions
 from ..codes.receiptmanager import update_receipts_in_state
 from .migrate_db import run_migrations
 from ..constants import NEWRL_DB, NEWRL_P2P_DB
@@ -344,7 +345,9 @@ def revert_chain(block_index):
             while isinstance(specific_data, str):
                 specific_data = json.loads(specific_data)
             try:
-                update_state_from_transaction(cur, transaction_type, specific_data, transaction_code, timestamp)
+                # update_state_from_transaction(cur, transaction_type, specific_data, transaction_code, timestamp)
+                executing_transactions(cur,transaction)
+                # update_db_state
                 update_trust_scores(cur, block)
                 update_receipts_in_state(cur, block)
             except Exception as e:

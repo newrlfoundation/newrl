@@ -43,10 +43,14 @@ def update_db_states(cur, block):
     if 'creator_wallet' in block and block['creator_wallet'] is not None:
         add_block_reward(cur, block['creator_wallet'], newblockindex)
 
+    executing_transactions(cur, transactions)
+    return True
+
+
+def executing_transactions(cur, transactions):
     collated_txns = simplify_transactions(cur, transactions)
     global simplified_transactions
     simplified_transactions = []
-
     for transaction in collated_txns:
 
         signature = transaction['signatures']
@@ -74,7 +78,6 @@ def update_db_states(cur, block):
         except Exception as e:
             logger.error(f'Error in transaction: {str(transaction)}')
             logger.error(str(e))
-    return True
 
 
 def update_state_from_transaction(cur, transaction_type, transaction_data, transaction_code, transaction_timestamp,
