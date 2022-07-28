@@ -147,7 +147,7 @@ class TransactionCreator:
         txspecdata = {
             "table_name": data['table_name'],
             "operation": data['operation'],
-            "data": data['data'],
+            "data": data.get('data',""),
             "address": data["sc_address"],
             "unique_column": data.get("unique_column",""),
             "unique_value": data.get("unique_value","")

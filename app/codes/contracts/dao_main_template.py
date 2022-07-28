@@ -40,6 +40,7 @@ class DaoMainTemplate(ContractMaster):
             "table_name": "PROPOSAL_DATA",
             "sc_address": self.address,
             "data": {
+                "address":self.address,
                 "dao_person_id": dao_pid,
                 "function_called": callparams['function_called'],
                 "params": json.dumps(callparams['params']),
@@ -163,7 +164,7 @@ class DaoMainTemplate(ContractMaster):
                 }
                 # cur.execute('''update proposal_data set status = ? where proposal_id= ?''',("accepted",callparamsip['proposal_id']))
                 trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
-                return trxn.append(self.execute(callparamsip))
+                trxn.extend(self.execute(callparamsip,repo))
             if (voting_result == -1):
                 sc_state_proposal1_data = {
                     "operation": "update",
