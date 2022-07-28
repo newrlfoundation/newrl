@@ -113,15 +113,17 @@ class DaoMainTemplate(ContractMaster):
                         "yes_votes": yes_votes,
                         "no_votes": no_votes,
                         "abstain_votes": abstain_votes,
-
                     },
-                    "unique_column": "proposal_id",
-                    "unique_value": proposal_id
+                    "where": {
+                        "proposal_id": proposal_id
+                    }
                 }
                 trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
                 # cur.execute(f'''update proposal_data set voter_data=?,yes_votes=?,no_votes=?,abstain_votes=?  where proposal_id = ?''',(json.dumps(voter_data),yes_votes,no_votes,abstain_votes,proposal_id))
+
+                return trxn
             else:
-                return []
+                return False
 
             # get voting scheme params from dao params
             cspecs = input_to_dict(self.contractparams['contractspecs'])
@@ -154,30 +156,32 @@ class DaoMainTemplate(ContractMaster):
                     "table_name": "proposal_data",
                     "sc_address": self.address,
                     "data": {
-                        "status": "accepted",
+                        "status": "accepted"
                     },
-                    "unique_column": "proposal_id",
-                    "unique_value": proposal_id
+                    "where": {
+                        "proposal_id": proposal_id
+                    }
                 }
                 # cur.execute('''update proposal_data set status = ? where proposal_id= ?''',("accepted",callparamsip['proposal_id']))
                 trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
-                trxn.append(self.execute(callparamsip,repo))
+                trxn.extend(self.execute(callparamsip,repo))
             if (voting_result == -1):
                 sc_state_proposal1_data = {
                     "operation": "update",
                     "table_name": "proposal_data",
                     "sc_address": self.address,
                     "data": {
-                        "status": "rejected",
+                        "status": "rejected"
                     },
-                    "unique_column": "proposal_id",
-                    "unique_value": proposal_id
+                    "where": {
+                        "proposal_id": proposal_id
+                    }
                 }
                 trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
                 return trxn
                 # cur.execute('''update proposal_data set status = ? where proposal_id= ?''',("rejected",callparamsip['proposal_id']))
 
-        return trxn
+        return False
 
     def execute(self, callparamsip, repo: FetchRepository):
         # proposal ( funct , paramsip) - votes status
@@ -186,16 +190,16 @@ class DaoMainTemplate(ContractMaster):
         # proposal = cur.execute('''select function_called,params from proposal_data where  proposal_id=?''',
         #                        ("".join(str(callparams['proposal_id'])),))
         proposal = repo.select_Query("function_called,params").add_table_name("proposal_data").where_clause(
-            "proposal_id", callparams['proposal_id'],1).execute_query_single_result(
+            "proposal_id", callparams['proposal_id']).execute_query_single_result(
             {"proposal_id": callparams['proposal_id']})
         # proposal=proposal.fetchone()
         if (proposal is None):
             return False
-        if self.check_status(callparamsip,repo):
+        if self.check_status(callparamsip):
             funct = getattr(self, proposal[0])
-            return funct(proposal[1],repo)
+            return funct(proposal[1])
         else:
-            return []
+            return False
 
     def add_member(self, callparamsip, repo: FetchRepository):
         callparams = input_to_dict(callparamsip)
@@ -215,7 +219,6 @@ class DaoMainTemplate(ContractMaster):
                 "table_name": "dao_membership",
                 "sc_address": self.address,
                 "data": {
-                    "address": self.address,
                     "dao_person_id": dao_pid,
                     "member_person_id": callparams['member_person_id'],
                 }
@@ -223,7 +226,7 @@ class DaoMainTemplate(ContractMaster):
             transaction_creator = TransactionCreator()
             return transaction_creator.transaction_type_8(sc_state_proposal1_data)
         else:
-            return []
+            return False
 
     def delete_member(self, callparamsip, repo: FetchRepository):
         callparams = input_to_dict(callparamsip)
@@ -233,8 +236,9 @@ class DaoMainTemplate(ContractMaster):
             "operation": "delete",
             "table_name": "dao_membership",
             "sc_address": self.address,
-            "unique_column": "member_person_id",
-            "unique_value": callparams['member_person_id']
+            "where": {
+                "member_person_id": callparams['member_person_id']
+            }
         }
         transaction_creator = TransactionCreator()
         return transaction_creator.transaction_type_8(sc_state_proposal1_data)
@@ -256,6 +260,7 @@ class DaoMainTemplate(ContractMaster):
         proposal = repo.select_count().add_table_name("dao_membership").where_clause("member_person_id", member_pid,
                                                                                      4).execute_query_single_result(
             qparam)
+        proposal = proposal.fetchone()
         if (proposal[0] == 0):
             return False
         return True
@@ -373,7 +378,6 @@ class DaoMainTemplate(ContractMaster):
                 "table_name": "DAO_TOKEN_LOCK",
                 "sc_address": self.address,
                 "data": {
-                    "address":self.address,
                     "dao_id": dao_id,
                     "person_id": person_id,
                     "amount_locked": amount,
@@ -391,16 +395,16 @@ class DaoMainTemplate(ContractMaster):
                 "table_name": "DAO_TOKEN_LOCK",
                 "sc_address": self.address,
                 "data": {
-                    "amount_locked": amount
+                    "amount_locked": amount,
                 },
-                "unique_column": "person_id",
-                "unique_value": person_id
+                "where": {
+                    "person_id": person_id
+                }
             }
             trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
         return trxn
 
     def initialize_membership(self, callparamsip, repo: FetchRepository):
-        trxn=[]
         dao_params=repo.select_Query('founder_personid').add_table_name('dao_main').where_clause('dao_sc_address',self.address,1).execute_query_single_result({'dao_sc_address':self.address})
         if dao_params is None:
             return []
@@ -423,16 +427,14 @@ class DaoMainTemplate(ContractMaster):
                     "table_name": "dao_membership",
                     "sc_address": self.address,
                     "data": {
-                        "address":self.address,
                         "dao_person_id": dao_pid,
                         "member_person_id": pid,
                     }
                 }
                 transaction_creator = TransactionCreator()
-                trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
+                return transaction_creator.transaction_type_8(sc_state_proposal1_data)
             else:
-                return trxn
-        return trxn
+                return []
 
     # def update_token_proposal_data(self, cur, callparamsip):
     #     #
@@ -464,13 +466,12 @@ class DaoMainTemplate(ContractMaster):
     #
     #     pass
     def __get_pid_from_wallet_using_repo(self, repo: FetchRepository, address):
-        if not address.startswith('ct'):
-            spec = repo.select_Query('specific_data').add_table_name('wallets').where_clause('wallet_address', address,
-                                                                                             1).execute_query_single_result(
-                {'wallet_address': address})
-            spec = input_to_dict(spec[0])
-            if 'linked_wallet' in spec:
-                address = spec['parentaddress']
+        spec = repo.select_Query('specific_data').add_table_name('wallets').where_clause('wallet_address', address,
+                                                                                         1).execute_query_single_result(
+            {'wallet_address': address})
+        spec = input_to_dict(spec[0])
+        if 'linked_wallet' in spec:
+            address = spec['parentaddress']
         pid = repo.select_Query("person_id").add_table_name("person_wallet").where_clause("wallet_id", address,
                                                                                           1).execute_query_single_result(
             {"wallet_id": address})
