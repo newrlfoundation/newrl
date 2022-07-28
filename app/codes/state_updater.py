@@ -8,7 +8,7 @@ import traceback
 from app.codes.helpers.FetchRespository import FetchRepository
 from app.codes.helpers.TransactionCreator import TransactionCreator
 
-from app.codes.transactionmanager import Transactionmanager
+from .transactionmanager import Transactionmanager, get_valid_addresses
 from .helpers.SmartContractStateValidator import validate
 from app.codes.clock.global_time import get_corrected_time_ms
 from app.codes.helpers.CentralRespository import CentralRepository
@@ -16,10 +16,11 @@ from .db_updater import *
 from app.codes.networkscoremanager import get_invalid_block_creation_score, get_invalid_receipt_score, get_valid_block_creation_score, get_valid_receipt_score, update_network_trust_score_from_receipt
 from .p2p.utils import get_peers
 
-from app.nvalues import NETWORK_TRUST_MANAGER_PID
+from ..nvalues import NETWORK_TRUST_MANAGER_PID, TREASURY_WALLET_ADDRESS
 
+from app.nvalues import NETWORK_TRUST_MANAGER_PID, MIN_STAKE_AMOUNT, STAKE_PENALTY_RATIO, ZERO_ADDRESS
 
-from ..constants import COMMITTEE_SIZE, INITIAL_NETWORK_TRUST_SCORE, NEWRL_DB
+from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, COMMITTEE_SIZE, INITIAL_NETWORK_TRUST_SCORE, NEWRL_DB
 from ..ntypes import BLOCK_VOTE_MINER, NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
 
 logger = logging.getLogger(__name__)
@@ -58,14 +59,21 @@ def update_db_states(cur, block):
         transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
             'trans_code']
 
-        update_state_from_transaction(
-            cur,
-            transaction['type'],
-            transaction_data,
-            transaction_code,
-            transaction['timestamp'],
-            signature
-        )
+        try:
+            if pay_fee_for_transaction(cur, transaction):
+                update_state_from_transaction(
+                    cur,
+                    transaction['type'],
+                    transaction_data,
+                    transaction_code,
+                    transaction['timestamp'],
+                    signature
+                )
+            else:
+                logger.info(f'Fee payment failed for transaction {transaction_code}')
+        except Exception as e:
+            logger.error(f'Error in transaction: {str(transaction)}')
+            logger.error(str(e))
     return True
 
 
@@ -77,7 +85,7 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
     if transaction_type == TRANSACTION_TOKEN_CREATION:  # this is a token creation or addition transaction
         add_token(cur, transaction_data, transaction_code)
 
-    if transaction_type == TRANSACTION_TWO_WAY_TRANSFER or transaction_type == TRANSACTION_ONE_WAY_TRANSFER:  # this is a transfer tx
+    if transaction_type == TRANSACTION_TWO_WAY_TRANSFER:  # this is a transfer tx
         sender1 = transaction_data['wallet1']
         sender2 = transaction_data['wallet2']
 
@@ -90,6 +98,15 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
         amount2 = int(transaction_data['asset2_number'] or 0)
         transfer_tokens_and_update_balances(
             cur, sender2, sender1, tokencode2, amount2)
+
+    if transaction_type == TRANSACTION_ONE_WAY_TRANSFER:
+        sender = transaction_data['wallet1']
+        receiver = transaction_data['wallet2']
+        token_code = transaction_data['asset1_code']
+        amount = int(transaction_data['asset1_number'] or 0)
+
+        transfer_tokens_and_update_balances(
+            cur, sender, receiver, token_code, amount)
 
     if transaction_type == TRANSACTION_TRUST_SCORE_CHANGE:  # score update transaction
         personid1 = get_pid_from_wallet(cur, transaction_data['address1'])
@@ -119,7 +136,7 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
             funct(cur, params_for_funct)
         except Exception as e:
             print('Exception durint smart contract function run', e)
-            logger.e
+            # logger.log(e)
 
     if transaction_type == TRANSACTION_MINER_ADDITION:
         add_miner(
@@ -135,10 +152,10 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
                 transaction_data['table_name'], transaction_data["data"])
         if(transaction_data['operation'] == "update"):
             cr.update_private_sc_state(transaction_data['table_name'], transaction_data["data"],
-                                       transaction_data["unique_column"], transaction_data["unique_value"], transaction_data["contract_address"])
+                                       transaction_data["unique_column"], transaction_data["unique_value"], transaction_data["address"])
         if(transaction_data['operation'] == "delete"):
             cr.delete_private_sc_state(transaction_data['table_name'], transaction_data["unique_column"],
-                                       transaction_data["unique_value"], transaction_data["contract_address"])
+                                       transaction_data["unique_value"], transaction_data["address"])
 
 
 def add_block_reward(cur, creator, blockindex):
@@ -167,6 +184,8 @@ def add_block_reward(cur, creator, blockindex):
 
 
 def update_trust_scores(cur, block):
+    if 'previous_block_receipts' not in block['text']:
+        return
     receipts = block['text']['previous_block_receipts']
 
     for receipt in receipts:
@@ -286,3 +305,36 @@ def get_value_txns(transaction_signer, transaction_data):
         value_txns_local.append(transfer_proposal.get_transaction_complete())
 
     return value_txns_local
+
+def get_fees_for_transaction(transaction):
+    if 'fee' in transaction:
+        return transaction['fee']
+    else:
+        return 0
+
+
+def pay_fee_for_transaction(cur, transaction):
+    fee = get_fees_for_transaction(transaction)
+
+    # Check for 0 fee transactions and deprioritize accordingly
+    if fee == 0:
+        return True
+
+    currency = transaction['currency']
+    if currency not in ALLOWED_FEE_PAYMENT_TOKENS:
+        return False
+
+    payers = get_valid_addresses(transaction)
+
+    for payee in payers:
+        balance = get_wallet_token_balance(cur, payee, currency)
+        if balance < fee / len(payers):
+            return False
+        transfer_tokens_and_update_balances(
+            cur,
+            payee,
+            TREASURY_WALLET_ADDRESS,
+            transaction['currency'],
+            fee / len(payers)
+        )
+    return True

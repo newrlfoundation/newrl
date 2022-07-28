@@ -11,20 +11,19 @@ from app.codes.fs.temp_manager import store_receipt_to_temp
 from app.ntypes import BLOCK_VOTE_MINER
 
 from .clock.global_time import get_corrected_time_ms, get_time_difference
-from .fs.temp_manager import get_all_receipts_from_storage, get_blocks_for_index_from_storage, get_receipts_from_storage, store_block_to_temp
+from .fs.temp_manager import get_all_receipts_from_storage, get_blocks_for_index_from_storage, store_block_to_temp
 from .minermanager import am_i_in_current_committee, broadcast_miner_update, get_committee_for_current_block, get_miner_for_current_block, should_i_mine
 from ..nvalues import SENTINEL_NODE_WALLET, TREASURY_WALLET_ADDRESS
-from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, GLOBAL_INTERNAL_CLOCK_SECONDS, IS_TEST, NEWRL_DB, NEWRL_PORT, NO_BLOCK_TIMEOUT, NO_RECEIPT_COMMITTEE_TIMEOUT, REQUEST_TIMEOUT, MEMPOOL_PATH, TIME_BETWEEN_BLOCKS_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS
+from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, GLOBAL_INTERNAL_CLOCK_SECONDS, IS_TEST, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, NEWRL_PORT, NO_BLOCK_TIMEOUT, NO_RECEIPT_COMMITTEE_TIMEOUT, REQUEST_TIMEOUT, MEMPOOL_PATH, TIME_BETWEEN_BLOCKS_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS
 from .p2p.peers import get_peers
 from .p2p.utils import is_my_address
 from .utils import BufferedLog, get_time_ms
 from .blockchain import Blockchain, get_last_block, get_last_block_index
 from .transactionmanager import Transactionmanager, get_valid_addresses
-from .state_updater import update_db_states
+from .state_updater import pay_fee_for_transaction, update_db_states
 from .crypto import calculate_hash, sign_object, _private, _public
 from .consensus.consensus import generate_block_receipt
-from .chainscanner import get_wallet_token_balance
-from .db_updater import transfer_tokens_and_update_balances
+from .db_updater import transfer_tokens_and_update_balances, get_wallet_token_balance
 from .p2p.outgoing import broadcast_block, broadcast_receipt, send_request_in_thread
 from .auth.auth import get_wallet
 
@@ -50,6 +49,16 @@ def run_updater(add_to_chain=False):
     block_time_limit = 1  # Number of hours of no transactions still prompting new block
     block_height = 0
     latest_ts = blockchain.get_latest_ts(cur)
+    previous_block = get_last_block(cur=cur)
+    if previous_block is None:
+        new_block_index = 1
+    else:
+        new_block_index = previous_block['index'] + 1
+
+    existing_block_proposals = get_blocks_for_index_from_storage(new_block_index)
+    if len(existing_block_proposals) != 0:
+        logger.info(f"Existing block proposal exists with index {new_block_index}. Broadcasting existing one.")
+        broadcast_block_proposal(existing_block_proposals[0])
 
     filenames = os.listdir(MEMPOOL_PATH)  # this is the mempool
     logger.info(f"Files in mempool: {filenames}")
@@ -105,7 +114,7 @@ def run_updater(add_to_chain=False):
             textarray.append(transaction_file_data)
             txcodes.append(trandata['transaction']['trans_code'])
 
-            transaction_fees += get_fees_for_transaction(trandata['transaction'])
+            # transaction_fees += get_fees_for_transaction(trandata['transaction'])
             # Delete the transaction from mempool at the stage of accepting
             # try:
             #     os.remove(file)
@@ -134,8 +143,6 @@ def run_updater(add_to_chain=False):
         else:
             logger.info(f"More than {TIME_BETWEEN_BLOCKS_SECONDS} seconds since the last block. Adding a new empty one.")
 
-    previous_block = get_last_block(cur=cur)
-
     # transactionsdata['previous_block_receipts'] = get_receipts_from_storage(previous_block['index'])
     if previous_block is not None:
         transactionsdata['previous_block_receipts'] = get_all_receipts_from_storage(exclude_block_index=previous_block['index'] + 1)
@@ -159,47 +166,25 @@ def run_updater(add_to_chain=False):
         'data': block,
         'receipts': [block_receipt]
     }
-    # store_block_to_temp(block_payload)
+    store_block_to_temp(block_payload)
     # store_receipt_to_temp(block_receipt)
-    # logger.info(f'Stored block to temp with payload {json.dumps(block_payload)}')
-    if not IS_TEST:
-        nodes = get_committee_for_current_block()
-        if len(nodes) < COMMITTEE_SIZE:
-            nodes = get_peers()
-        broadcast_block(block_payload, nodes)
+    logger.info(f'Stored block to temp with payload {json.dumps(block_payload)}')
+    broadcast_block_proposal(block_payload, block_receipt)
 
     return block_payload
 
 
-def get_fees_for_transaction(transaction):
-    return transaction['fee']
-
-
-def pay_fee_for_transaction(cur, transaction):
-    fee = get_fees_for_transaction(transaction)
-
-    # Check for 0 fee transactions and deprioritize accordingly
-    if fee == 0:
-        return True
-
-    currency = transaction['currency']
-    if currency not in ALLOWED_FEE_PAYMENT_TOKENS:
-        return False
-
-    payees = get_valid_addresses(transaction)
-
-    for payee in payees:
-        balance = get_wallet_token_balance(payee, currency)
-        if balance < fee / len(payees):
-            return False
-        transfer_tokens_and_update_balances(
-            cur,
-            payee,
-            TREASURY_WALLET_ADDRESS,
-            transaction['currency'],
-            fee / len(payees)
-        )
-    return True
+def broadcast_block_proposal(block_payload, block_receipt=None):
+    if not IS_TEST:
+        nodes = get_committee_for_current_block()
+        if len(nodes) < MINIMUM_ACCEPTANCE_VOTES:
+            peers = get_peers()
+            if len(peers) > len(nodes):
+                logger.info('Committee not adequate. Broadcasting block proposal to all peers.')
+                nodes = peers
+        broadcast_block(block_payload, nodes)
+        if block_receipt is not None:
+            broadcast_receipt(block_receipt, nodes)
 
 
 def create_empty_block_receipt_and_broadcast():
@@ -292,13 +277,14 @@ def global_internal_clock():
             last_block_ts = int(last_block['timestamp'])
             time_elapsed_seconds = (current_ts - last_block_ts) / 1000
 
-            if time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 2:
-                if am_i_sentinel_node():
-                    logger.info('I am sentitnel node. Mining empty block')
-                    sentitnel_node_mine_empty()
             if should_i_mine(last_block):
                 if TIMERS['mining_timer'] is None or not TIMERS['mining_timer'].is_alive():
                     start_mining_clock(last_block_ts)
+            elif time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 2:
+                if am_i_sentinel_node():
+                    logger.info('I am sentitnel node. Mining empty block')
+                    sentitnel_node_mine_empty()
+            
             # elif am_i_in_current_committee(last_block):
             #     if TIMERS['block_receive_timeout'] is None or not TIMERS['block_receive_timeout'].is_alive():
             #         start_empty_block_mining_clock(last_block_ts)

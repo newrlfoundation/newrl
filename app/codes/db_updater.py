@@ -12,8 +12,22 @@ import hashlib
 
 from ..constants import NEWRL_DB
 from .utils import get_person_id_for_wallet_address, get_time_ms
+from ..nvalues import MIN_STAKE_AMOUNT, STAKE_PENALTY_RATIO, ZERO_ADDRESS
+import logging
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+def __is_smart_contract(cur,address):
+    if not address.startswith('ct'):
+        return False
 
+    sc_cursor = cur.execute(
+        'SELECT COUNT (*) FROM contracts WHERE address=?', (address, ))
+    sc_id = sc_cursor.fetchone()
+    if sc_id is None:
+        return False
+    else:
+        return True
 def is_wallet_valid(cur, address):
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
@@ -24,21 +38,17 @@ def is_wallet_valid(cur, address):
 
 
 def transfer_tokens_and_update_balances(cur, sender, reciever, tokencode, amount):
+    if sender == reciever:
+        print('Sender and receiver cannot be the same')
+        return False
+
     sender_balance = get_wallet_token_balance(cur, sender, tokencode)
-    print("Sender is ", sender, " and their balance is ", sender_balance)
     reciever_balance = get_wallet_token_balance(cur, reciever, tokencode)
-    print("Receiver is ", reciever, " and their balance is ", reciever_balance)
     sender_balance = sender_balance - amount
     reciever_balance = reciever_balance + amount
-    print("Amount is ", amount)
-    print("Updating sender's balance with ", sender_balance)
-    print("Updating reciever's balance with ", reciever_balance)
     update_wallet_token_balance(cur, sender, tokencode, sender_balance)
     update_wallet_token_balance(cur, reciever, tokencode, reciever_balance)
-    sender_balance = get_wallet_token_balance(cur, sender, tokencode)
-    print("Sender is ", sender, " and their balance is ", sender_balance)
-    reciever_balance = get_wallet_token_balance(cur, reciever, tokencode)
-    print("Receiver is ", reciever, " and their balance is ", reciever_balance)
+    
 
 
 def update_wallet_token_balance(cur, wallet_address, token_code, balance):
@@ -83,7 +93,8 @@ def add_wallet_pid(cur, wallet):
                     wallet['jurisd'],
                     data_json
                     )
-    cur.execute(f'''INSERT OR IGNORE INTO wallets
+    if not __is_smart_contract(cur,wallet['wallet_address']):
+        cur.execute(f'''INSERT OR IGNORE INTO wallets
             (wallet_address, wallet_public, custodian_wallet, kyc_docs, owner_type, jurisdiction, specific_data)
             VALUES (?, ?, ?, ?, ?, ?, ?)''', query_params)
 
@@ -255,10 +266,12 @@ def get_block_from_cursor(cur, block_index):
     block = cur.execute(
         '''SELECT 
         block_index, hash, timestamp, status, proof,
-        previous_hash, creator_wallet, transactions_hash
+        previous_hash, creator_wallet, 
+        expected_miner, committee, transactions_hash
         FROM blocks where block_index=?'''
     , (block_index,)).fetchone()
-
+    if block is None:
+        return None
     return {
         'block_index': block[0],
         'hash': block[1],
@@ -267,7 +280,9 @@ def get_block_from_cursor(cur, block_index):
         'proof': block[4],
         'previous_hash': block[5],
         'creator_wallet': block[6],
-        'transactions_hash': block[7],
+        'expected_miner': block[7],
+        'committee': block[8],
+        'transactions_hash': block[9],
     }
 
 
@@ -316,3 +331,32 @@ def add_pid_contract_add(cur,ct_add):
                     (person_id, wallet_id)
                     VALUES (?, ?)''', query_params)
     return pid
+
+def slashing_tokens(cur,address,is_block):
+    data = cur.execute(f'''select amount,staker_wallet_address from stake_ledger where wallet_address=:address''',
+                          {"address": address}).fetchone()
+    amount = 0
+    if data is not None:
+        balance = data[0]
+        if is_block:
+            amount = MIN_STAKE_AMOUNT
+        else:
+            amount = int((MIN_STAKE_AMOUNT/STAKE_PENALTY_RATIO))
+        actual_balance=balance
+        balance = balance-amount
+        deducted_amount=0
+        # Transferring amount (i.e. penal amount to the zero address)
+        data_json=json.loads(data[1])
+        for index, value in enumerate(data_json[1]):
+            for i in value.keys():
+                burn_amount=data_json[index][i]-(data_json[index][i]/actual_balance)*balance
+                data_json[index][i]=(data_json[index][i]/actual_balance)*balance
+                transfer_tokens_and_update_balances(cur,i,ZERO_ADDRESS,math.ceil(burn_amount))
+                deducted_amount=deducted_amount+math.ceil(burn_amount)
+        # updating stake_ledger table with the new updated address amount
+        cur.execute(f'''UPDATE stake_ledger set amount=:amount, staker_wallet_address=:staker_wallet_address where wallet_address=:address''', {"amount": actual_balance-deducted_amount,
+                                                                                           "address": address,"staker_wallet_address":json.dumps(data_json)})
+        return True
+    else:
+        logger.info("No entry found for this address while slashing %s", address)
+        return False

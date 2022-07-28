@@ -1,12 +1,17 @@
 import sqlite3
 import json
+import logging
 
-from ..codes.blockchain import Blockchain
-from ..codes.state_updater import add_block_reward, update_state_from_transaction
+from ..codes.blockchain import Blockchain, add_block
+from ..codes.state_updater import add_block_reward, update_state_from_transaction, update_trust_scores
+from ..codes.receiptmanager import update_receipts_in_state
 from .migrate_db import run_migrations
 from ..constants import NEWRL_DB, NEWRL_P2P_DB
 
 db_path = NEWRL_DB
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def clear_db():
     con = sqlite3.connect(db_path)
@@ -15,14 +20,20 @@ def clear_db():
     cur.execute('DROP TABLE IF EXISTS tokens')
     cur.execute('DROP TABLE IF EXISTS balances')
     cur.execute('DROP TABLE IF EXISTS blocks')
-    cur.execute('DROP TABLE IF EXISTS block_proposals')
+    cur.execute('DROP TABLE IF EXISTS receipts')
     cur.execute('DROP TABLE IF EXISTS transactions')
     cur.execute('DROP TABLE IF EXISTS transfers')
-    cur.execute('DROP TABLE IF EXISTS receipts')
     cur.execute('DROP TABLE IF EXISTS contracts')
     cur.execute('DROP TABLE IF EXISTS miners')
+    cur.execute('DROP TABLE IF EXISTS kyc')
+    cur.execute('DROP TABLE IF EXISTS person')
+    cur.execute('DROP TABLE IF EXISTS person_wallet')
+    cur.execute('DROP TABLE IF EXISTS trust_scores')
     cur.execute('DROP TABLE IF EXISTS dao_main')
     cur.execute('DROP TABLE IF EXISTS dao_membership')
+    cur.execute('DROP TABLE IF EXISTS proposal_data')
+    cur.execute('DROP TABLE IF EXISTS DAO_TOKEN_LOCK')
+    cur.execute('DROP TABLE IF EXISTS stake_ledger')
     con.commit()
     con.close()
 
@@ -66,12 +77,14 @@ def init_db():
                     tokencode text,
                     balance integer, UNIQUE (wallet_address, tokencode))
                     ''')
-    cur.execute('''
-                    CREATE UNIQUE INDEX IF NOT EXISTS idx_balances_wallet_address ON balances (wallet_address)
-                ''')
-    cur.execute('''
-                    CREATE UNIQUE INDEX IF NOT EXISTS idx_balances_tokencode ON balances (tokencode)
-                ''')
+    # cur.execute('''
+    #                 CREATE UNIQUE INDEX IF NOT EXISTS idx_balances_wallet_address ON balances (wallet_address)
+    #             ''')
+    # cur.execute('''
+    #                 CREATE UNIQUE INDEX IF NOT EXISTS idx_balances_tokencode ON balances (tokencode)
+    #             ''')
+    cur.execute('DROP INDEX IF EXISTS idx_balances_wallet_address')
+    cur.execute('DROP INDEX IF EXISTS idx_balances_tokencode')
     cur.execute('''
                     CREATE UNIQUE INDEX IF NOT EXISTS idx_balances_wallet_address_tokencode
                      ON balances (wallet_address, tokencode)
@@ -86,7 +99,8 @@ def init_db():
                     previous_hash text,
                     hash text,
                     creator_wallet text,
-                    committee_list text,
+                    expected_miner text,
+                    committee text,
                     transactions_hash text)
                     ''')
     cur.execute('''
@@ -100,11 +114,13 @@ def init_db():
                     vote integer,
                     wallet_address text,
                     included_block_index text,
+                    signature text,
                     timestamp integer)
                     ''')
+    cur.execute('DROP INDEX IF EXISTS idx_receipts_block_index_hash')
     cur.execute('''
                     CREATE UNIQUE INDEX IF NOT EXISTS idx_receipts_block_index_hash
-                     ON receipts (block_index, block_hash)
+                     ON receipts (block_index, block_hash, wallet_address)
                 ''')
 
     cur.execute('''
@@ -166,13 +182,6 @@ def init_db():
                      ON miners (wallet_address, last_broadcast_timestamp)
                 ''')
 
-    con.commit()
-    con.close()
-
-
-def init_trust_db():
-    con = sqlite3.connect(db_path)
-    cur = con.cursor()
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS kyc
                     (id text NOT NULL PRIMARY KEY, 
@@ -191,10 +200,13 @@ def init_trust_db():
     
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS person_wallet
-                    (person_id text NOT NULL PRIMARY KEY, 
-                    wallet_id integer)
+                    (person_id text NOT NULL, 
+                    wallet_id text NOT NULL PRIMARY KEY)
                     ''')
-    # TODO - Add Indexes, set unique on src, dest
+    cur.execute('''
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_person_wallet_wallet_id
+                    ON person_wallet (wallet_id)
+                ''')
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS trust_scores
                     (src_person_id text NOT NULL, 
@@ -252,6 +264,26 @@ def init_trust_db():
                     wallet_address text
                     )
                     ''')
+    cur.execute('''
+                    CREATE TABLE stake_ledger 
+                    (
+                    address text NOT NULL, 
+                    person_id text Not NULL, 
+                    wallet_address TEXT , 
+                    amount INT, 
+                    time_updated TIMESTAMP,
+                    staker_wallet_address text
+                    )
+                    ''')
+
+    cur.execute('''
+                    CREATE TABLE IF NOT EXISTS sample_template
+                    (
+                    address text NOT NULL,
+                    wallet_address text NOT NULL,
+                    name text    
+                    )
+    ''')
 
     con.commit()
     con.close()
@@ -264,12 +296,25 @@ def revert_chain(block_index):
     cur = con.cursor()
     cur.execute(f'DELETE FROM blocks WHERE block_index > {block_index}')
     cur.execute(f'DELETE FROM transactions WHERE block_index > {block_index}')
+    cur.execute(f'DELETE FROM receipts WHERE included_block_index > {block_index}')
     cur.execute('DROP TABLE IF EXISTS wallets')
     cur.execute('DROP TABLE IF EXISTS tokens')
     cur.execute('DROP TABLE IF EXISTS balances')
+    # cur.execute('DROP TABLE IF EXISTS blocks')
+    # cur.execute('DROP TABLE IF EXISTS receipts')  # TODO - Remove this
+    # cur.execute('DROP TABLE IF EXISTS transactions')
     cur.execute('DROP TABLE IF EXISTS transfers')
     cur.execute('DROP TABLE IF EXISTS contracts')
     cur.execute('DROP TABLE IF EXISTS miners')
+    cur.execute('DROP TABLE IF EXISTS kyc')
+    cur.execute('DROP TABLE IF EXISTS person')
+    cur.execute('DROP TABLE IF EXISTS person_wallet')
+    cur.execute('DROP TABLE IF EXISTS trust_scores')
+    cur.execute('DROP TABLE IF EXISTS dao_main')
+    cur.execute('DROP TABLE IF EXISTS dao_membership')
+    cur.execute('DROP TABLE IF EXISTS proposal_data')
+    cur.execute('DROP TABLE IF EXISTS DAO_TOKEN_LOCK')
+    cur.execute('DROP TABLE IF EXISTS stake_ledger')
     # TODO - Drop all trust tables too
     con.commit()
     con.close()
@@ -283,23 +328,7 @@ def revert_chain(block_index):
     chain = Blockchain()
     for _block_index in range(1, block_index):
         block = chain.get_block(_block_index)
-        add_block_reward(cur=cur, creator=block['creator_wallet'], blockindex=_block_index)
-    
-        transactions_cursor = cur.execute(f'''
-            SELECT 
-            transaction_code, block_index, type, timestamp, specific_data FROM transactions 
-            WHERE block_index = {_block_index}
-            ''').fetchall()
-        for transaction in transactions_cursor:
-            transaction_code = transaction[0]
-            block_index = transaction[1]
-            transaction_type = transaction[2]
-            timestamp = transaction[3]
-            specific_data = transaction[4]
-            while isinstance(specific_data, str):
-                specific_data = json.loads(specific_data)
-
-            update_state_from_transaction(cur, transaction_type, specific_data, transaction_code, timestamp)
+        add_block(cur, block, block['hash'], is_state_reconstruction=True)
 
     con.commit()
     con.close()

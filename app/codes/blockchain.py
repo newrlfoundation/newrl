@@ -7,8 +7,9 @@ import json
 import sqlite3
 
 from app.codes.clock.global_time import get_corrected_time_ms
+from app.codes.committeemanager import get_committee_for_current_block, get_miner_for_current_block
 # from app.codes.minermanager import get_committee_wallet_addresses
-from app.codes.receiptmanager import get_receipts_for_block_from_db, update_receipts_in_state
+from app.codes.receiptmanager import get_receipts_included_in_block_from_db, update_receipts_in_state
 
 from .fs.temp_manager import remove_block_from_temp
 from ..constants import BLOCK_TIME_INTERVAL_SECONDS, NEWRL_DB, NO_BLOCK_TIMEOUT
@@ -29,6 +30,9 @@ class Blockchain:
     def create_block(self, cur, block, block_hash, creator_wallet=None):
         """Create a block and store to db"""
         transactions_hash = self.calculate_hash(block['text']['transactions'])
+        committee = block['committee']
+        if not isinstance(committee, str):
+            committee = json.dumps(committee)
         db_block_data = (
             block['index'],
             block['timestamp'],
@@ -36,9 +40,17 @@ class Blockchain:
             block['previous_hash'],
             block_hash,
             creator_wallet,
+            block['expected_miner'],
+            committee,
             transactions_hash
         )
-        cur.execute('INSERT OR IGNORE INTO blocks (block_index, timestamp, proof, previous_hash, hash, creator_wallet, transactions_hash) VALUES (?, ?, ?, ?, ?, ?, ?)', db_block_data)
+        cur.execute('''
+            INSERT OR IGNORE INTO blocks 
+            (block_index, timestamp, proof, previous_hash, 
+            hash, creator_wallet, expected_miner, committee, 
+            transactions_hash) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'''
+        , db_block_data)
         return block
 
     def get_block(self, block_index):
@@ -57,6 +69,8 @@ class Blockchain:
             'proof': block['proof'],
             'previous_hash': block['previous_hash'],
             'creator_wallet': block['creator_wallet'],
+            'expected_miner': block['expected_miner'],
+            'committee': block['committee'],
             'hash': block['hash'],
         }
 
@@ -68,7 +82,7 @@ class Blockchain:
             transactions))
         block['text'] = {
             'transactions': transactions,
-            'previous_block_receipts': get_receipts_for_block_from_db(block_index)
+            'previous_block_receipts': get_receipts_included_in_block_from_db(block_index)
         }
 
         return block
@@ -110,22 +124,8 @@ class Blockchain:
     def mine_block(self, cur, text, fees=0):
         """Mine a new block"""
         print("Starting the mining step 1")
-        last_block_cursor = cur.execute(
-            'SELECT block_index, hash FROM blocks ORDER BY block_index DESC LIMIT 1')
-        last_block = last_block_cursor.fetchone()
-        last_block_index = last_block[0] if last_block is not None else 0
-        last_block_hash = last_block[1] if last_block is not None else 0
-
-        block = {
-            'index': last_block_index + 1,
-            'timestamp': get_corrected_time_ms(),
-            'proof': 0,
-            'text': text,
-            'creator_wallet': get_node_wallet_address(),
-            # 'committee': get_committee_wallet_addresses(),
-            'previous_hash': last_block_hash
-        }
-
+        block = self.propose_block(cur, text)
+        
         block_hash = self.proof_of_work(block)
         print("New block hash is ", block_hash)
 
@@ -141,13 +141,17 @@ class Blockchain:
         last_block_hash = last_block[1] if last_block is not None else 0
         print(f'Proposing a block with index {last_block_index + 1}')
 
+        expected_miner = get_miner_for_current_block()['wallet_address']
+        committee = list(map(lambda c: c['wallet_address'], get_committee_for_current_block()))
+
         block = {
             'index': last_block_index + 1,
             'timestamp': get_corrected_time_ms(),
             'proof': 0,
             'text': text,
             'creator_wallet': get_node_wallet_address(),
-            # 'committee': get_committee_wallet_addresses(),
+            'expected_miner': expected_miner,
+            'committee': committee,
             'previous_hash': last_block_hash
         }
         return block
@@ -165,6 +169,9 @@ class Blockchain:
         last_block_hash = last_block[1] if last_block is not None else 0
         last_block_timestamp = last_block[2] if last_block is not None else 0
 
+        expected_miner = get_miner_for_current_block()['wallet_address']
+        committee = list(map(lambda c: c['wallet_address'], get_committee_for_current_block()))
+
         EMPTY_BLOCK_NONCE = 42
 
         if new_block_timestamp is None:
@@ -176,6 +183,8 @@ class Blockchain:
             'proof': EMPTY_BLOCK_NONCE,
             'text': {"transactions": [], "signatures": []},
             'creator_wallet': None,
+            'expected_miner': expected_miner,
+            'committee': committee,
             'previous_hash': last_block_hash
         }
 
@@ -200,17 +209,20 @@ class Blockchain:
         return ts
 
 
-def add_block(cur, block, block_hash):
+def add_block(cur, block, block_hash, is_state_reconstruction=False):
     """Add a block to db, add transactions and update states"""
-    last_block = get_last_block(cur)
-    if last_block is not None and last_block['hash'] != block['previous_hash']:
-        print('Previous block hash does not match current block data')
-        return
+    if not is_state_reconstruction:
+        last_block = get_last_block(cur)
+        if last_block is not None and last_block['hash'] != block['previous_hash']:
+            print('Previous block hash does not match current block data')
+            return
     # Needed for backward compatibility of blocks
     block_index = block['block_index'] if 'block_index' in block else block['index']
     # transactions_hash = block['transactions_hash'] if 'transactions_hash' in block else ''
     transactions_hash = calculate_hash(block['text']['transactions'])
     print('Adding block', block_index)
+    if not isinstance(block['committee'], str):
+        block['committee'] = json.dumps(block['committee'])
     db_block_data = (
         block_index,
         block['timestamp'],
@@ -218,9 +230,16 @@ def add_block(cur, block, block_hash):
         block['previous_hash'],
         block_hash,
         block['creator_wallet'],
+        block['expected_miner'],
+        block['committee'],
         transactions_hash
     )
-    cur.execute('INSERT OR IGNORE INTO blocks (block_index, timestamp, proof, previous_hash, hash, creator_wallet, transactions_hash) VALUES (?, ?, ?, ?, ?, ?, ?)', db_block_data)
+    cur.execute('''
+        INSERT OR IGNORE INTO blocks 
+        (block_index, timestamp, proof, previous_hash, hash, 
+        creator_wallet, expected_miner, committee,
+        transactions_hash) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', db_block_data)
     update_db_states(cur, block)
     update_trust_scores(cur, block)
     update_receipts_in_state(cur, block)

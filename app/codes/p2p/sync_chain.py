@@ -10,16 +10,18 @@ from app.codes import blockchain
 from app.codes.crypto import calculate_hash
 from app.codes.minermanager import get_committee_for_current_block
 from app.codes.p2p.outgoing import broadcast_receipt, broadcast_block
+from app.codes.receiptmanager import check_receipt_exists_in_db
 # from app.codes.utils import store_block_proposal
-from app.constants import NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
+from app.constants import MINIMUM_ACCEPTANCE_VOTES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
 from app.codes.p2p.peers import get_peers
 
 from app.codes.validator import validate_block, validate_block_data, validate_block_transactions, validate_receipt_signature
 from app.codes.updater import TIMERS, start_mining_clock
-from app.codes.fs.temp_manager import append_receipt_to_block_in_storage, get_blocks_for_index_from_storage, store_block_to_temp, store_receipt_to_temp
+from app.codes.fs.temp_manager import append_receipt_to_block_in_storage, check_receipt_exists_in_temp, get_blocks_for_index_from_storage, store_block_to_temp, store_receipt_to_temp
 from app.codes.consensus.consensus import check_community_consensus, is_timeout_block_from_sentinel_node, validate_block_miner, generate_block_receipt, \
     add_my_receipt_to_block
 from app.migrations.init_db import revert_chain
+from app.nvalues import SENTINEL_NODE_WALLET
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -63,10 +65,11 @@ def receive_block(block):
 
 
     broadcast_exclude_nodes = block['peers_already_broadcasted'] if 'peers_already_broadcasted' in block else None
+    original_block = copy.deepcopy(block)
     if is_timeout_block_from_sentinel_node(block['data']):
-        original_block = copy.deepcopy(block)
         accept_block(block, block['hash'])
         broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
+        return
     
     # store_block_proposal(block)
     
@@ -90,10 +93,15 @@ def receive_block(block):
         if check_community_consensus(block):
             original_block = copy.deepcopy(block)
             if accept_block(block, block['hash']):
-                broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
+                broadcast_block(original_block)
         else:
+            committee = get_committee_for_current_block()
+            if (len(committee) < MINIMUM_ACCEPTANCE_VOTES and
+                block['data']['creator_wallet'] == SENTINEL_NODE_WALLET):
+                    accept_block(block, block['hash'])
+                    broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
+                    return
             if my_receipt:
-                committee = get_committee_for_current_block()
                 broadcast_receipt(my_receipt, committee)
             store_block_to_temp(block)
     
@@ -268,23 +276,33 @@ def receive_receipt(receipt):
     receipt_data = receipt['data']
     block_index = receipt_data['block_index']
 
-    if blockchain.block_exists(block_index):
+    if check_receipt_exists_in_temp(
+            receipt_data['block_index'],
+            receipt_data['block_hash'],
+            receipt_data['wallet_address']
+        ) or check_receipt_exists_in_db(
+            receipt_data['block_index'],
+            receipt_data['block_hash'],
+            receipt_data['wallet_address']
+        ):
+        logger.info('Receipt already exists')
         return False
 
+    # if blockchain.block_exists(block_index):
+    #     return False
+
+    store_receipt_to_temp(receipt)
     blocks = get_blocks_for_index_from_storage(block_index)
-    if len(blocks) == 0:
-        store_receipt_to_temp(receipt)
-        # block = ask_peers_for_block(block_index)
-        # if block is not None:
-        #     append_receipt_to_block(block, receipt)
-        #     store_block_to_temp(block)
-    else:
+    if len(blocks) != 0:
         blocks_appended = append_receipt_to_block_in_storage(receipt)
         for block in blocks_appended:
             if check_community_consensus(block):
                 original_block = copy.deepcopy(block)
                 accept_block(block, block['hash'])
                 broadcast_block(original_block)
+
+    # committee = get_committee_for_current_block()
+    # broadcast_receipt(receipt, committee)
 
     return True
 

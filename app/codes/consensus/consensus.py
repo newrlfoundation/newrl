@@ -6,7 +6,7 @@ from ..signmanager import sign_object
 from ..blockchain import calculate_hash, get_last_block
 from ..validator import validate_block_receipts
 from ..fs.mempool_manager import append_receipt_to_block, get_receipts_from_storage
-from ...constants import BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_RATIO
+from ...constants import BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_RATIO, MINIMUM_ACCEPTANCE_VOTES
 from ..auth.auth import get_wallet
 from ..minermanager import get_committee_for_current_block, get_miner_for_current_block
 
@@ -17,6 +17,7 @@ except:
     wallet_data = {
         'wallet': {'public': '', 'private': ''},
     }
+wallet_address = wallet_data['address']
 public_key = wallet_data['public']
 private_key = wallet_data['private']
 
@@ -26,7 +27,8 @@ def generate_block_receipt(block, vote=1):
         'block_index': block['index'],
         'block_hash': calculate_hash(block),
         'vote': vote,
-        'timestamp': get_corrected_time_ms()
+        'timestamp': get_corrected_time_ms(),
+        "wallet_address": wallet_address,
     }
     return {
         "data": receipt_data,
@@ -91,10 +93,10 @@ def check_community_consensus(block):
             return True
         else:
             return False
-    if len(committee) < COMMITTEE_SIZE / 2 + 1:
+    if len(committee) < MINIMUM_ACCEPTANCE_VOTES:
         return False
 
-    if receipt_counts['positive_receipt_count'] > MINIMUM_ACCEPTANCE_RATIO * COMMITTEE_SIZE:
+    if receipt_counts['positive_receipt_count'] + 1 > MINIMUM_ACCEPTANCE_RATIO * COMMITTEE_SIZE:
         # TODO - Check if time elapsed has exceeded receipt cut off. Do not accept otherwise
         # This is to give every node sometime to send their receipts for the block
         return True
