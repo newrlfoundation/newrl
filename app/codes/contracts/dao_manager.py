@@ -54,6 +54,7 @@ class dao_manager(ContractMaster):
                 "dao_name": dao_name,
                 "founder_personid": json.dumps(founders_personid),
                 "dao_sc_address": dao_sc_address,
+                "address":self.address
             }
         }
         txn_1=transaction_creator.transaction_type_8(sc_state_proposal1_data)

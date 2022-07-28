@@ -24,7 +24,7 @@ class FetchRepository:
         self.__query = self.__query + ' ' + table_name + ' '
         return self
 
-    def where_clause(self, column, value, operation):
+    def where_clause(self, column, value, operation=1):
         if self.queryCheck(column) and self.queryCheck(value):
             self.__query = self.__query + ' where ' + column + ' ' + self.__operation[operation] + ' :' + column
         return self
