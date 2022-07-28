@@ -2,7 +2,7 @@ import sqlite3
 import json
 import logging
 
-from ..codes.blockchain import Blockchain
+from ..codes.blockchain import Blockchain, add_block
 from ..codes.state_updater import add_block_reward, update_state_from_transaction, update_trust_scores
 from ..codes.receiptmanager import update_receipts_in_state
 from .migrate_db import run_migrations
@@ -328,27 +328,7 @@ def revert_chain(block_index):
     chain = Blockchain()
     for _block_index in range(1, block_index):
         block = chain.get_block(_block_index)
-        add_block_reward(cur=cur, creator=block['creator_wallet'], blockindex=_block_index)
-    
-        transactions_cursor = cur.execute(f'''
-            SELECT 
-            transaction_code, block_index, type, timestamp, specific_data FROM transactions 
-            WHERE block_index = {_block_index}
-            ''').fetchall()
-        for transaction in transactions_cursor:
-            transaction_code = transaction[0]
-            block_index = transaction[1]
-            transaction_type = transaction[2]
-            timestamp = transaction[3]
-            specific_data = transaction[4]
-            while isinstance(specific_data, str):
-                specific_data = json.loads(specific_data)
-            try:
-                update_state_from_transaction(cur, transaction_type, specific_data, transaction_code, timestamp)
-                update_trust_scores(cur, block)
-                # update_receipts_in_state(cur, block)
-            except Exception as e:
-                logger.error(f'Error adding transaction: {str(transaction)} {str(e)}')
+        add_block(cur, block, block['hash'], is_state_reconstruction=True)
 
     con.commit()
     con.close()
