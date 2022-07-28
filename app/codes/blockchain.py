@@ -209,12 +209,13 @@ class Blockchain:
         return ts
 
 
-def add_block(cur, block, block_hash):
+def add_block(cur, block, block_hash, is_state_reconstruction=False):
     """Add a block to db, add transactions and update states"""
-    last_block = get_last_block(cur)
-    if last_block is not None and last_block['hash'] != block['previous_hash']:
-        print('Previous block hash does not match current block data')
-        return
+    if not is_state_reconstruction:
+        last_block = get_last_block(cur)
+        if last_block is not None and last_block['hash'] != block['previous_hash']:
+            print('Previous block hash does not match current block data')
+            return
     # Needed for backward compatibility of blocks
     block_index = block['block_index'] if 'block_index' in block else block['index']
     # transactions_hash = block['transactions_hash'] if 'transactions_hash' in block else ''
