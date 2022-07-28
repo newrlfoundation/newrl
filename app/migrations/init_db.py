@@ -1,5 +1,6 @@
 import sqlite3
 import json
+import logging
 
 from ..codes.blockchain import Blockchain
 from ..codes.state_updater import add_block_reward, update_state_from_transaction, update_trust_scores
@@ -8,6 +9,9 @@ from .migrate_db import run_migrations
 from ..constants import NEWRL_DB, NEWRL_P2P_DB
 
 db_path = NEWRL_DB
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def clear_db():
     con = sqlite3.connect(db_path)
@@ -339,10 +343,12 @@ def revert_chain(block_index):
             specific_data = transaction[4]
             while isinstance(specific_data, str):
                 specific_data = json.loads(specific_data)
-
-            update_state_from_transaction(cur, transaction_type, specific_data, transaction_code, timestamp)
-            update_trust_scores(cur, block)
-            update_receipts_in_state(cur, block)
+            try:
+                update_state_from_transaction(cur, transaction_type, specific_data, transaction_code, timestamp)
+                update_trust_scores(cur, block)
+                update_receipts_in_state(cur, block)
+            except Exception as e:
+                logger.error(f'Error adding transaction: {str(transaction)} {str(e)}')
 
     con.commit()
     con.close()
