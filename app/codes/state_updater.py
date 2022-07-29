@@ -55,6 +55,7 @@ def update_db_states(cur, block):
 
         while isinstance(transaction_data, str):
             transaction_data = json.loads(transaction_data)
+            transaction['specific_data']=transaction_data
 
         transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
             'trans_code']
@@ -235,6 +236,9 @@ def get_non_sc_txns(cur, transaction):
 def execute_sc(cur, transaction_main):
     transaction = transaction_main["transaction"]
     transaction_data = transaction['specific_data']
+    while isinstance(transaction_data, str):
+        transaction_data = json.loads(transaction_data)
+        transaction['specific_data'] = transaction_data
     transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
         'trans_code']
     transaction_signer = transaction_main['signatures']
