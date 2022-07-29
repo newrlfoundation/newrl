@@ -16,7 +16,7 @@ from app.constants import MINIMUM_ACCEPTANCE_VOTES, NEWRL_PORT, REQUEST_TIMEOUT,
 from app.codes.p2p.peers import get_peers
 
 from app.codes.validator import validate_block, validate_block_data, validate_block_transactions, validate_receipt_signature
-from app.codes.updater import TIMERS, start_mining_clock
+from app.codes.timers import TIMERS
 from app.codes.fs.temp_manager import append_receipt_to_block_in_storage, check_receipt_exists_in_temp, get_blocks_for_index_from_storage, store_block_to_temp, store_receipt_to_temp
 from app.codes.consensus.consensus import check_community_consensus, is_timeout_block_from_sentinel_node, validate_block_miner, generate_block_receipt, \
     add_my_receipt_to_block
@@ -160,7 +160,7 @@ def sync_chain_from_node(url, block_index=None):
             if not validate_block_data(block):
                 logger.info('Invalid block. Reverting by one block to retry')
                 failed_for_invalid_block = True
-                revert_chain(get_last_block_index() - 1)
+                # revert_chain(get_last_block_index() - 1)
                 break
             con = sqlite3.connect(NEWRL_DB)
             cur = con.cursor()
