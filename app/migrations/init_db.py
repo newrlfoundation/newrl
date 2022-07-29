@@ -291,48 +291,51 @@ def init_db():
 
 def revert_chain(block_index):
     """Revert chain to given index"""
-    print('Reverting chain to index ', block_index)
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
-    cur.execute(f'DELETE FROM blocks WHERE block_index > {block_index}')
-    cur.execute(f'DELETE FROM transactions WHERE block_index > {block_index}')
-    cur.execute(f'DELETE FROM receipts WHERE included_block_index > {block_index}')
-    cur.execute('DROP TABLE IF EXISTS wallets')
-    cur.execute('DROP TABLE IF EXISTS tokens')
-    cur.execute('DROP TABLE IF EXISTS balances')
-    # cur.execute('DROP TABLE IF EXISTS blocks')
-    # cur.execute('DROP TABLE IF EXISTS receipts')  # TODO - Remove this
-    # cur.execute('DROP TABLE IF EXISTS transactions')
-    cur.execute('DROP TABLE IF EXISTS transfers')
-    cur.execute('DROP TABLE IF EXISTS contracts')
-    cur.execute('DROP TABLE IF EXISTS miners')
-    cur.execute('DROP TABLE IF EXISTS kyc')
-    cur.execute('DROP TABLE IF EXISTS person')
-    cur.execute('DROP TABLE IF EXISTS person_wallet')
-    cur.execute('DROP TABLE IF EXISTS trust_scores')
-    cur.execute('DROP TABLE IF EXISTS dao_main')
-    cur.execute('DROP TABLE IF EXISTS dao_membership')
-    cur.execute('DROP TABLE IF EXISTS proposal_data')
-    cur.execute('DROP TABLE IF EXISTS DAO_TOKEN_LOCK')
-    cur.execute('DROP TABLE IF EXISTS stake_ledger')
-    # TODO - Drop all trust tables too
-    con.commit()
-    con.close()
+    logger.info('Reverting chain to index ', block_index)
+    try:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cur.execute(f'DELETE FROM blocks WHERE block_index > {block_index}')
+        cur.execute(f'DELETE FROM transactions WHERE block_index > {block_index}')
+        cur.execute(f'DELETE FROM receipts WHERE included_block_index > {block_index}')
+        cur.execute('DROP TABLE IF EXISTS wallets')
+        cur.execute('DROP TABLE IF EXISTS tokens')
+        cur.execute('DROP TABLE IF EXISTS balances')
+        # cur.execute('DROP TABLE IF EXISTS blocks')
+        # cur.execute('DROP TABLE IF EXISTS receipts')  # TODO - Remove this
+        # cur.execute('DROP TABLE IF EXISTS transactions')
+        cur.execute('DROP TABLE IF EXISTS transfers')
+        cur.execute('DROP TABLE IF EXISTS contracts')
+        cur.execute('DROP TABLE IF EXISTS miners')
+        cur.execute('DROP TABLE IF EXISTS kyc')
+        cur.execute('DROP TABLE IF EXISTS person')
+        cur.execute('DROP TABLE IF EXISTS person_wallet')
+        cur.execute('DROP TABLE IF EXISTS trust_scores')
+        cur.execute('DROP TABLE IF EXISTS dao_main')
+        cur.execute('DROP TABLE IF EXISTS dao_membership')
+        cur.execute('DROP TABLE IF EXISTS proposal_data')
+        cur.execute('DROP TABLE IF EXISTS DAO_TOKEN_LOCK')
+        cur.execute('DROP TABLE IF EXISTS stake_ledger')
+        # TODO - Drop all trust tables too
+        con.commit()
+        con.close()
 
-    init_db()
-    run_migrations()
-    
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
-    
-    chain = Blockchain()
-    for _block_index in range(1, block_index):
-        block = chain.get_block(_block_index)
-        add_block(cur, block, block['hash'], is_state_reconstruction=True)
+        init_db()
+        run_migrations()
+        
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        
+        chain = Blockchain()
+        for _block_index in range(1, block_index):
+            block = chain.get_block(_block_index)
+            add_block(cur, block, block['hash'], is_state_reconstruction=True)
 
-    con.commit()
-    con.close()
-    return {'status': 'SUCCESS'}
+        con.commit()
+        con.close()
+        return {'status': 'SUCCESS'}
+    except Exception as e:
+        logger.error(f'Error reverting {str(e)}')
 
 
 def init_peer_db():
