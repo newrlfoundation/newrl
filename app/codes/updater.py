@@ -6,6 +6,7 @@ import logging
 import sqlite3
 import threading
 from app.codes.fs.temp_manager import store_receipt_to_temp
+from app.codes.p2p.sync_chain import sync_chain_from_peers
 
 # from app.codes.receiptmanager import get_receipts_for_block_from_db
 from app.ntypes import BLOCK_VOTE_MINER
@@ -26,18 +27,13 @@ from .consensus.consensus import generate_block_receipt
 from .db_updater import transfer_tokens_and_update_balances, get_wallet_token_balance
 from .p2p.outgoing import broadcast_block, broadcast_receipt, send_request_in_thread
 from .auth.auth import get_wallet
-
+from .timers import TIMERS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 MAX_BLOCK_SIZE = 1000
-
-TIMERS = {
-    'mining_timer': None,
-    'block_receive_timeout': None,
-}
 
 
 def run_updater(add_to_chain=False):
@@ -277,6 +273,9 @@ def global_internal_clock():
             last_block_ts = int(last_block['timestamp'])
             time_elapsed_seconds = (current_ts - last_block_ts) / 1000
 
+            if am_i_sentinel_node() and time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 4:
+                logger.info('I am sentinel node and catching up with the network')
+                sync_chain_from_peers()
             if should_i_mine(last_block):
                 if TIMERS['mining_timer'] is None or not TIMERS['mining_timer'].is_alive():
                     start_mining_clock(last_block_ts)
