@@ -1,5 +1,6 @@
 import json
 import logging
+import sqlite3
 from types import new_class
 
 from fastapi import APIRouter
@@ -8,9 +9,11 @@ from fastapi.params import File
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 from starlette.responses import FileResponse
+from app.codes.helpers.FetchRespository import FetchRepository
 from app.codes.scoremanager import get_trust_score
 
 from app.codes.transactionmanager import Transactionmanager
+from app.constants import NEWRL_DB
 from app.nvalues import NETWORK_TRUST_MANAGER_PID
 
 from .request_models import AddWalletRequest, BalanceRequest, BalanceType, CallSC, CreateTokenRequest, CreateWalletRequest, GetTokenRequest, RunSmartContractRequest, TransferRequest, CreateSCRequest, TscoreRequest
@@ -371,3 +374,19 @@ def run_updater(add_to_chain_before_consensus: bool = False):
         raise HTTPException(status_code=500, detail=str(e))
     # HTMLResponse(content=log, status_code=200)
     # return log
+
+@router.get("/sc-state",tags=[system])
+def get_sc_state(table_name, contract_address, unique_column, unique_value):
+    try:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        repo = FetchRepository(cur)
+    
+        data = repo.select_Query().add_table_name(table_name).where_clause(unique_column, unique_value, 1).and_clause(
+            "address", contract_address,1).execute_query_single_result({unique_column: unique_value, "address": contract_address})
+        
+        con.close()
+        return {"status": "SUCCESS", 'data' : data}
+    except Exception as e:        
+        logger.exception(e)
+        raise HTTPException(status_code=500, detail=str(e))
