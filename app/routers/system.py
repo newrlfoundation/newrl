@@ -87,7 +87,7 @@ def initiate_peer_api(address: str):
 @router.post("/update-software", tags=[p2p_tag])
 def update_software_api(propogate: bool = False):
     # update_software(propogate)
-    timer = threading.Timer(randint(30, 60), update_software, [propogate])
+    timer = threading.Timer(randint(30, 120), update_software, [propogate])
     timer.start()
     return {'status': 'SUCCESS'}
 
