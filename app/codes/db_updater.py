@@ -10,9 +10,11 @@ import time
 import sqlite3
 import hashlib
 
-from ..constants import NEWRL_DB
+from app.codes.clock.global_time import get_corrected_time_ms
+
+from ..constants import INITIAL_NETWORK_TRUST_SCORE, NEWRL_DB
 from .utils import get_person_id_for_wallet_address, get_time_ms
-from ..nvalues import MIN_STAKE_AMOUNT, STAKE_PENALTY_RATIO, ZERO_ADDRESS
+from ..nvalues import MIN_STAKE_AMOUNT, NETWORK_TRUST_MANAGER_PID, STAKE_PENALTY_RATIO, ZERO_ADDRESS
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -319,6 +321,15 @@ def add_miner(cur, wallet_address, network_address, broadcast_timestamp):
 				(id, wallet_address, network_address, last_broadcast_timestamp)
 				 VALUES (?, ?, ?, ?)''', 
                  (wallet_address, wallet_address, network_address, broadcast_timestamp))
+    
+    person_id = get_pid_from_wallet(cur, wallet_address)
+    if person_id is not None:
+        cur.execute(f'''
+        INSERT INTO trust_scores
+        (src_person_id, dest_person_id, score, last_time)
+        VALUES (?, ?, ?, ?)''', 
+        (NETWORK_TRUST_MANAGER_PID, person_id, 
+        INITIAL_NETWORK_TRUST_SCORE, get_corrected_time_ms()))
 
 def add_pid_contract_add(cur,ct_add):
     pid = get_person_id_for_wallet_address(ct_add)
