@@ -55,7 +55,9 @@ def run_updater(add_to_chain=False):
     if len(existing_block_proposals) != 0:
         logger.info(f"Existing block proposal exists with index {new_block_index}. Broadcasting existing one.")
         broadcast_block_proposal(existing_block_proposals[0])
+        return existing_block_proposals[0]
 
+    logger.info(f'Proposing new block {new_block_index}')
     filenames = os.listdir(MEMPOOL_PATH)  # this is the mempool
     logger.info(f"Files in mempool: {filenames}")
     textarray = []
