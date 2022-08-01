@@ -325,7 +325,7 @@ def add_miner(cur, wallet_address, network_address, broadcast_timestamp):
     person_id = get_pid_from_wallet(cur, wallet_address)
     if person_id is not None:
         cur.execute(f'''
-        INSERT INTO trust_scores
+        INSERT OR IGNORE INTO trust_scores
         (src_person_id, dest_person_id, score, last_time)
         VALUES (?, ?, ?, ?)''', 
         (NETWORK_TRUST_MANAGER_PID, person_id, 
