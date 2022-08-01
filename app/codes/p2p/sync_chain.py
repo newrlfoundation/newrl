@@ -54,7 +54,8 @@ def get_last_block_index():
 def receive_block(block):
     block_index = block['index']
     if block_index > get_last_block_index() + 1:
-        sync_chain_from_peers()
+        logger.info('Node not in sync. Cannot add block')
+        # sync_chain_from_peers()
         return
 
     if blockchain.block_exists(block_index):
