@@ -25,7 +25,7 @@ class dex(ContractMaster):
 
         liquidity_initialized = cspecs['liquidity_initialized']
         
-        if not liquidity_initialized:
+        if liquidity_initialized:
             raise Exception("Liquidity for this contract is already initialized, can't initialise it again")
 
         token_1_amount = callparams['token_1_amount'] 
@@ -48,9 +48,15 @@ class dex(ContractMaster):
         ot_token_code = cspecs['ot_token_code']
         ot_token_name = cspecs['ot_token_name']
 
+        token_ratio = cspecs['token_ratio']
+        #issue min of tokens that will be issued? as this is the amount that will be in circulation later on
         ot_to_issue = min(token_1_amount,token_2_amount)
 
         value = callparams['value']
+        provided_ratio = token_1_amount/token_2_amount
+        if not provided_ratio == token_ratio:
+         raise Exception(f"Provided token ratio is not correct, should be of ratio {token_ratio}")
+
         if required_value_token1 in value and required_value_token2 in value:
             tokendata = {
                 "tokenname": ot_token_name,
@@ -71,7 +77,6 @@ class dex(ContractMaster):
             return [transaction]
         else:
             raise Exception("Value sent is invalid") 
-        pass
 
     def provide_liquidity(self, callparamsip, repo: FetchRepository):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
@@ -81,20 +86,22 @@ class dex(ContractMaster):
         token_2_amount  = callparams['token_2_amount']
         recipient_address = callparams['recipient_address']
 
+        token_ratio = cspecs['token_ratio']
+        provided_ratio = token_1_amount/token_2_amount
+        if not provided_ratio == token_ratio:
+         raise Exception(
+             f"Provided token ratio is not correct, should be of ratio {token_ratio}")
+
         ot_token_code = cspecs['ot_token_code']
         ot_token_name = cspecs['ot_token_name']
 
         pool_token1_code = cspecs['pool_token1_code']
         pool_token2_code = cspecs['pool_token2_code']
 
-        #TODO check if tokens sent is part of pool
-
         #fetch token balance 1
         pool_token1_balance = self._fetch_token_balance(pool_token1_code, repo)
         #fetch token balance 2
         pool_token2_balance = self._fetch_token_balance(pool_token2_code, repo)
-        #ratio
-        ratio = pool_token1_balance / pool_token2_balance
 
         ot_outstanding = self._fetch_token_balance(ot_token_code, repo)
         ot_to_issue = ot_outstanding * (token_1_amount/pool_token1_balance)
