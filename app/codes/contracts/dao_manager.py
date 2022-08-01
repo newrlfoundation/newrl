@@ -40,7 +40,7 @@ class dao_manager(ContractMaster):
         # person table and person_wallet table
         # update dao db
         dao_name = dao_params['dao_name']
-        dao_token_name=dao_params['token_name']
+        # dao_token_name=dao_params['token_name']
         founders_personid = dao_params['founders']
         if(len(founders_personid)<3):
             logger.info("Founders size less than 3")
