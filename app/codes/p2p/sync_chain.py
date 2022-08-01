@@ -68,6 +68,7 @@ def receive_block(block):
     broadcast_exclude_nodes = block['peers_already_broadcasted'] if 'peers_already_broadcasted' in block else None
     original_block = copy.deepcopy(block)
     if is_timeout_block_from_sentinel_node(block['data']):
+        logger.log('Accepting timeout block from sentinel node')
         accept_block(block, block['hash'])
         broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
         return
@@ -86,12 +87,14 @@ def receive_block(block):
         return False
 
     if check_community_consensus(block):
+        logger.info('Received block is after consensus. Accepting and broadcasting.')
         original_block = copy.deepcopy(block)
         accept_block(block, block['hash'])
         broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
     else:
         my_receipt = add_my_receipt_to_block(block)
         if check_community_consensus(block):
+            logger.info('Block satisfies consensus after adding my receipt. Accepting and broadcasting.')
             original_block = copy.deepcopy(block)
             if accept_block(block, block['hash']):
                 broadcast_block(original_block)
@@ -99,11 +102,14 @@ def receive_block(block):
             committee = get_committee_for_current_block()
             if (len(committee) < MINIMUM_ACCEPTANCE_VOTES and
                 block['data']['creator_wallet'] == SENTINEL_NODE_WALLET):
+                    logger.info('Inadequate committee for block. Accepting from sentinel node.')
                     accept_block(block, block['hash'])
                     broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
                     return
             if my_receipt:
+                logger.info('Broadcasting my receipt')
                 broadcast_receipt(my_receipt, committee)
+            logger.info('Stored block to temp')
             store_block_to_temp(block)
     
     return True

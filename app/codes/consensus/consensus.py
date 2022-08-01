@@ -1,5 +1,6 @@
 """Consensus related functions"""
 
+import logging
 from app.nvalues import SENTINEL_NODE_WALLET
 from ..clock.global_time import get_corrected_time_ms
 from ..signmanager import sign_object
@@ -10,6 +11,8 @@ from ...constants import BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECO
 from ..auth.auth import get_wallet
 from ..minermanager import get_committee_for_current_block, get_miner_for_current_block
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 try:
     wallet_data = get_wallet()
@@ -111,9 +114,8 @@ def validate_block_miner(block):
     if expected_miner is None:
         return True
 
-    print(block)
     if miner_address != expected_miner:
-        print(f"Invalid miner {miner_address} for block. Expected {expected_miner}")
+        logger.info(f"Invalid miner {miner_address} for block. Expected {expected_miner}")
         return False
     return True
 
