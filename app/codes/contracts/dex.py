@@ -1,5 +1,6 @@
 
 
+from re import T
 from app.codes.db_updater import input_to_dict
 from app.codes.helpers.FetchRespository import FetchRepository
 from app.codes.helpers.TransactionCreator import TransactionCreator
@@ -50,8 +51,7 @@ class dex(ContractMaster):
 
         token_ratio = cspecs['token_ratio']
         #issue min of tokens that will be issued? as this is the amount that will be in circulation later on
-        ot_to_issue = min(token_1_amount,token_2_amount)
-
+        initial_ot_to_issue = cspecs['initial_ot_to_issue']
         value = callparams['value']
         provided_ratio = token_1_amount/token_2_amount
         if not provided_ratio == token_ratio:
@@ -66,7 +66,7 @@ class dex(ContractMaster):
                 "first_owner": recipient_address,
                 "custodian": self.address,
                 "legaldochash": '',
-                "amount_created": ot_to_issue,
+                "amount_created": initial_ot_to_issue,
                 "value_created": '',
                 "disallowed": {},
                 "sc_flag": False
@@ -78,6 +78,8 @@ class dex(ContractMaster):
         else:
             raise Exception("Value sent is invalid") 
 
+
+
     def provide_liquidity(self, callparamsip, repo: FetchRepository):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
 
@@ -86,12 +88,8 @@ class dex(ContractMaster):
         token_2_amount  = callparams['token_2_amount']
         recipient_address = callparams['recipient_address']
 
-        token_ratio = cspecs['token_ratio']
         provided_ratio = token_1_amount/token_2_amount
-        if not provided_ratio == token_ratio:
-         raise Exception(
-             f"Provided token ratio is not correct, should be of ratio {token_ratio}")
-
+ 
         ot_token_code = cspecs['ot_token_code']
         ot_token_name = cspecs['ot_token_name']
 
@@ -103,17 +101,22 @@ class dex(ContractMaster):
         #fetch token balance 2
         pool_token2_balance = self._fetch_token_balance(pool_token2_code, repo)
 
-        ot_outstanding = self._fetch_token_balance(ot_token_code, repo)
-        ot_to_issue = ot_outstanding * (token_1_amount/pool_token1_balance)
+        token_ratio = pool_token1_balance/pool_token2_balance
+        if not provided_ratio == token_ratio:
+            raise Exception(
+                f"Provided token ratio is not correct, should be of ratio {token_ratio}")
+
+        ot_outstanding = self._get_outstanding_ot(ot_token_code, repo)
+        ot_to_issue = self._get_ot_issue(ot_outstanding, token_1_amount, token_2_amount, pool_token1_balance,pool_token2_balance)
 
         required_value_token1 = {
             "token_code": pool_token1_code,
-            "amount": 1
+            "amount": token_1_amount
         }
 
         required_value_token2 = {
             "token_code": pool_token2_code,
-            "amount": 1
+            "amount": token_2_amount
         }
         value = callparams['value']
         if required_value_token1 in value and required_value_token2 in value:
@@ -138,24 +141,9 @@ class dex(ContractMaster):
             raise Exception("Value sent is invalid")    
 
 
-# 10 10
-# OTO = 0
-# T1a = 10
-# T2a = 10
-# T1PB = 0
 
-# 0*(10/O)
-
-
-
-# 10 10 
-# OTO = 20
-# T1a = 10
-# T2a = 10
-# T1PB = 0
-
-# 0*(10/O)
     def swap(self, callparamsip, repo: FetchRepository):
+        
         pass
 
     def exit_pool(self, callparamsip, repo: FetchRepository):
@@ -171,6 +159,15 @@ class dex(ContractMaster):
         
         balance = repo.select_Query("balance").add_table_name("balances").where_clause("wallet_address", self.address, 1).and_clause(
             "tokencode", token_code).execute_query_single_result({"wallet_address": self.address,"tokencode":token_code})
-                
         return balance    
         
+    def _get_ot_issue(self,ot_outstanding, token_1_amount, token_2_amount, pool_token1_balance, pool_token2_balance):
+        t1 = token_1_amount / (pool_token1_balance)
+        t2 = token_2_amount / (pool_token2_balance)
+        ot_to_issue = ot_outstanding * min(t1, t2)
+        return ot_to_issue
+
+    def _get_outstanding_ot(self,token_code,repo: FetchRepository):
+        balance = repo.select_count("balance").add_table_name("balances").where_clause("token_code", token_code, 1).execute_query_single_result({"token_code":token_code})
+        return balance
+
