@@ -12,7 +12,7 @@ from app.codes.minermanager import get_committee_for_current_block
 from app.codes.p2p.outgoing import broadcast_receipt, broadcast_block
 from app.codes.receiptmanager import check_receipt_exists_in_db
 # from app.codes.utils import store_block_proposal
-from app.constants import MINIMUM_ACCEPTANCE_VOTES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
+from app.constants import COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
 from app.codes.p2p.peers import get_peers
 
 from app.codes.validator import validate_block, validate_block_data, validate_block_transactions, validate_receipt_signature
@@ -167,7 +167,8 @@ def sync_chain_from_node(url, block_index=None):
             if not validate_block_data(block):
                 logger.info('Invalid block. Reverting by one block to retry')
                 failed_for_invalid_block = True
-                # revert_chain(get_last_block_index() - 1)
+                revert_chain(find_forking_block(url))
+                sync_chain_from_node(url)
                 break
             con = sqlite3.connect(NEWRL_DB)
             cur = con.cursor()
@@ -193,8 +194,10 @@ def sync_chain_from_peers(force_sync=False):
         return
     SYNC_STATUS['IS_SYNCING'] = True
     try:
-        peers = get_peers()
-        url, block_index = get_best_peer_to_sync(peers)
+        # peers = get_peers()
+        # url, block_index = get_best_peer_to_sync(peers)
+        url = get_majority_random_node()
+        block_index = None
 
         if url:
             logger.info(f'Syncing from peer {url}')
@@ -329,3 +332,69 @@ def get_block_from_url_retry(url, blocks_request):
             time.sleep(5)
     blocks_data = response.json()
     return blocks_data
+
+
+def get_block_tree_from_url_retry(url, start_index, end_index):
+    response = None
+    while response is None or response.status_code != 200:
+        try:
+            response = requests.post(
+                    url + f'/get-block-tree?start_index={start_index}&end_index={end_index}'
+                )
+        except Exception as err:
+            logger.info(f'Retrying block get {err}')
+            failed_for_invalid_block = True
+            time.sleep(1)
+    blocks_data = response.json()
+    return blocks_data
+
+
+def get_last_block_hash_from_url_retry(url):
+    response = None
+    # while response is None or response.status_code != 200:
+    try:
+        response = requests.get(
+                url + '/get-last-block-hash',
+                timeout=0.5
+            )
+        return response.json()
+    except Exception as err:
+        logger.info(f'Error getting block hash {err}')
+    
+    return None
+
+
+def get_majority_random_node():
+    """Return a random node from the majority fork"""
+    logger.info('Finding a majority node')
+    peers = get_peers()
+    hashes = []
+    candidate_hash = ''
+    candidate_hash_count = 0
+    candidate_node_url = ''
+
+    peers = random.sample(peers, k=min(len(peers), COMMITTEE_SIZE))
+    for peer in peers:
+        url = 'http://' + peer['address'] + ':' + str(NEWRL_PORT)
+        logger.info(f"Querying {url} for block hash")
+
+        hash = get_last_block_hash_from_url_retry(url)
+        if hash:
+            hashes.append(hash)
+            if hash['hash'] == candidate_hash:
+                candidate_hash_count += 1
+            else:
+                candidate_hash_count -= 1
+            if candidate_hash_count < 0:
+                candidate_hash = hash['hash']
+                candidate_hash_count = 0
+                candidate_node_url = url
+    
+    logger.info(f'Majority hash is {candidate_hash} and a random url is {candidate_node_url}')
+    return candidate_node_url
+    # revert_chain(find_forking_block(candidate_node_url))
+    # sync_chain_from_node(candidate_node_url)
+
+
+def find_forking_block(node_url):
+    return 0
