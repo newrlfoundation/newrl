@@ -4,6 +4,7 @@ from re import T
 from app.codes.db_updater import input_to_dict
 from app.codes.helpers.FetchRespository import FetchRepository
 from app.codes.helpers.TransactionCreator import TransactionCreator
+from app.nvalues import ZERO_ADDRESS
 from .contract_master import ContractMaster
 
 
@@ -90,21 +91,21 @@ class dex(ContractMaster):
 
         provided_ratio = token_1_amount/token_2_amount
  
-        ot_token_code = cspecs['ot_token_code']
-        ot_token_name = cspecs['ot_token_name']
-
         pool_token1_code = cspecs['pool_token1_code']
         pool_token2_code = cspecs['pool_token2_code']
+        token_ratio = pool_token1_balance/pool_token2_balance
 
         #fetch token balance 1
         pool_token1_balance = self._fetch_token_balance(pool_token1_code, repo)
         #fetch token balance 2
         pool_token2_balance = self._fetch_token_balance(pool_token2_code, repo)
 
-        token_ratio = pool_token1_balance/pool_token2_balance
         if not provided_ratio == token_ratio:
             raise Exception(
                 f"Provided token ratio is not correct, should be of ratio {token_ratio}")
+
+        ot_token_code = cspecs['ot_token_code']
+        ot_token_name = cspecs['ot_token_name']
 
         ot_outstanding = self._get_outstanding_ot(ot_token_code, repo)
         ot_to_issue = self._get_ot_issue(ot_outstanding, token_1_amount, token_2_amount, pool_token1_balance,pool_token2_balance)
@@ -143,17 +144,141 @@ class dex(ContractMaster):
 
 
     def swap(self, callparamsip, repo: FetchRepository):
-        
-        pass
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
 
-    def exit_pool(self, callparamsip, repo: FetchRepository):
-        pass
+        callparams = input_to_dict(callparamsip)
+        recipient_address = callparams['recipient_address']
 
-    def provide_liquidity(self, callparamsip, repo: FetchRepository):
-        pass
+        pool_token1_code = cspecs['pool_token1_code']
+        pool_token2_code = cspecs['pool_token2_code']
 
-    def validate(self, callparamsip, repo: FetchRepository):
-        pass
+        #fetch token balance 1
+        pool_token1_balance = self._fetch_token_balance(pool_token1_code, repo)
+        #fetch token balance 2
+        pool_token2_balance = self._fetch_token_balance(pool_token2_code, repo)
+
+        fee = cspecs['fee']
+        product = pool_token1_balance * pool_token2_balance
+        token_sent = callparams['token_sent']
+        token_asked = callparams['token_asked']
+        recipient_address = callparams['recipient_address']
+
+        if token_sent["token_code"] == pool_token1_code:
+            new_token1_balance = pool_token1_balance + token_sent["amount"]
+            new_token2_balance = product / new_token1_balance
+            token_amount_to_send = pool_token2_balance - new_token2_balance
+        else:    
+            new_token2_balance = pool_token2_balance + token_sent["amount"]
+            new_token1_balance = product / new_token2_balance
+            token_amount_to_send = pool_token1_balance - new_token1_balance
+
+        #add fee    
+        tokens_to_send = (1 - fee )*token_amount_to_send
+
+        required_value = {
+            "token_code": token_sent["token_code"],
+            "amount": token_sent["amount"]
+        }
+
+        value = callparams['value']
+        if not required_value in value:
+            raise Exception("Invalid value sent")        
+
+        '''txn type 5 '''
+        transaction_creator = TransactionCreator()
+        transfer_proposal_data = {
+            "transfer_type": 1,
+            "asset1_code": token_asked["token_code"],
+            "asset2_code": "",
+            "wallet1": self.address,
+            "wallet2": recipient_address,
+            "asset1_number": tokens_to_send,
+            "asset2_number": 0,
+            "additional_data": {}
+        }
+        transfer_proposal = transaction_creator.transaction_type_5(transfer_proposal_data)
+        return [transfer_proposal]
+
+    def withdraw(self, callparamsip, repo: FetchRepository):
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
+        callparams = input_to_dict(callparamsip)
+        withdraw_amount = callparamsip['exit_amount']
+        recipient_address = callparams['recipient_address']
+
+        ot_token_code = cspecs['ot_token_code']
+        ot_token_name = cspecs['ot_token_name']
+        ot_outstanding = self._get_outstanding_ot(ot_token_code, repo)
+
+        pool_token1_code = cspecs['pool_token1_code']
+        pool_token2_code = cspecs['pool_token2_code']
+
+        #fetch token balance 1
+        pool_token1_balance = self._fetch_token_balance(pool_token1_code, repo)
+        #fetch token balance 2
+        pool_token2_balance = self._fetch_token_balance(pool_token2_code, repo)
+
+        token1_withdraw_amount = (pool_token1_balance * withdraw_amount ) / ot_outstanding
+        token2_withdraw_amount = (pool_token2_balance * withdraw_amount) / ot_outstanding
+
+        required_value = {
+            "token_code": ot_token_code,
+            "amount" : withdraw_amount
+        }
+
+        value = callparams['value']
+        if not required_value in value:
+            raise Exception("Value sent is invalid")
+
+        #A txn 5 to send tokens to address 0 to burn (assuming value txn happens before this)
+        '''txn type 5 (burn)'''
+        transaction_creator = TransactionCreator()
+        transfer_proposal_data = {
+            "transfer_type": 1,
+            "asset1_code": ot_token_code,
+            "asset2_code": "",
+            "wallet1": self.address,
+            "wallet2": ZERO_ADDRESS,
+            "asset1_number": withdraw_amount,
+            "asset2_number": 0,
+            "additional_data": {}
+        }
+        transfer_proposal_burn = transaction_creator.transaction_type_5(
+            transfer_proposal_data)
+
+        #A txn 5 to send pool token1 to recipient 
+        '''txn type 5 (burn)'''
+        transaction_creator = TransactionCreator()
+        transfer_proposal_data = {
+            "transfer_type": 1,
+            "asset1_code": pool_token1_code,
+            "asset2_code": "",
+            "wallet1": self.address,
+            "wallet2": recipient_address,
+            "asset1_number": token1_withdraw_amount,
+            "asset2_number": 0,
+            "additional_data": {}
+        }
+        transfer_proposal_token1 = transaction_creator.transaction_type_5(
+            transfer_proposal_data)
+
+        #A txn 5 to send pool token2 to recipient
+        '''txn type 5 (burn)'''
+        transaction_creator = TransactionCreator()
+        transfer_proposal_data = {
+            "transfer_type": 1,
+            "asset1_code": pool_token2_code,
+            "asset2_code": "",
+            "wallet1": self.address,
+            "wallet2": recipient_address,
+            "asset1_number": token2_withdraw_amount,
+            "asset2_number": 0,
+            "additional_data": {}
+        }
+        transfer_proposal_token2 = transaction_creator.transaction_type_5(
+            transfer_proposal_data)
+
+        return [transfer_proposal_burn,transfer_proposal_token1,transfer_proposal_token2]
+
 
     def _fetch_token_balance(self,token_code,repo):
         
@@ -171,3 +296,5 @@ class dex(ContractMaster):
         balance = repo.select_count("balance").add_table_name("balances").where_clause("token_code", token_code, 1).execute_query_single_result({"token_code":token_code})
         return balance
 
+    def validate(self, callparamsip, repo: FetchRepository):
+        pass
