@@ -141,12 +141,12 @@ def validate_block_data(block):
         return True
 
     if last_block['hash'] != block['previous_hash']:
-        print('Previous block hash does not match latest block')
+        logger.info(f"Block hash does not match at index {last_block['index']} and {last_block['hash']} != {block['previous_hash']}")
         return False
     
     block_index = block['block_index'] if 'block_index' in block else block['index']
     if last_block['index'] != block_index - 1:
-        print('New block index is not 1 more than last block index')
+        logger.info(f"New block index is {block['index']} which is not 1 more than last block index {last_block['index']}")
         return False
     return True
 
