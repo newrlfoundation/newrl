@@ -1,4 +1,5 @@
 import codecs
+import math
 from subprocess import call
 import uuid
 import ecdsa
@@ -358,7 +359,7 @@ def slashing_tokens(cur,address,is_block):
         deducted_amount=0
         # Transferring amount (i.e. penal amount to the zero address)
         data_json=json.loads(data[1])
-        for index, value in enumerate(data_json[1]):
+        for index, value in enumerate(data_json):
             for i in value.keys():
                 burn_amount=data_json[index][i]-(data_json[index][i]/actual_balance)*balance
                 data_json[index][i]=(data_json[index][i]/actual_balance)*balance
