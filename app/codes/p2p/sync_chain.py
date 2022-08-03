@@ -167,8 +167,8 @@ def sync_chain_from_node(url, block_index=None):
             if not validate_block_data(block):
                 logger.info('Invalid block. Reverting by one block to retry')
                 failed_for_invalid_block = True
-                revert_chain(find_forking_block(url))
-                sync_chain_from_node(url)
+                # revert_chain(find_forking_block(url))
+                # sync_chain_from_node(url)
                 break
             con = sqlite3.connect(NEWRL_DB)
             cur = con.cursor()
@@ -398,3 +398,5 @@ def get_majority_random_node():
 
 def find_forking_block(node_url):
     return 0
+    # get_last_block_index()
+    # if 
