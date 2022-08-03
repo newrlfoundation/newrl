@@ -291,7 +291,7 @@ def init_db():
 
 def revert_chain(block_index):
     """Revert chain to given index"""
-    logger.info('Reverting chain to index ', block_index)
+    logger.info('Reverting chain to index {block_index}')
     try:
         con = sqlite3.connect(NEWRL_DB)
         cur = con.cursor()

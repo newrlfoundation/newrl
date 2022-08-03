@@ -38,12 +38,21 @@ app.include_router(blockchain.router)
 app.include_router(p2p.router)
 app.include_router(system.router)
 app.include_router(transport.router)
+def initialze_params():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--disablenetwork", help="run the node local only with no network connection",
+                        action="store_true")
+    parser.add_argument("--disableupdate", help="run the node without updating software", action="store_true")
+    parser.add_argument("--disablebootstrap", help="run the node without bootstrapping", action="store_true")
+    _args = parser.parse_args()
+    args = {
+        'disablenetwork': _args.disablenetwork,
+        'disableupdate': _args.disableupdate,
+        'disablebootstrap': _args.disablebootstrap,
+    }
+    return args
+args = initialze_params()
 
-args = {
-    'disablenetwork': False,
-    'disableupdate': False,
-    'disablebootstrap': False,
-}
 
 @app.on_event('startup')
 def app_startup():
@@ -70,12 +79,6 @@ def shutdown_event():
     os._exit(0)
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("--disablenetwork", help="run the node local only with no network connection", action="store_true")
-    # parser.add_argument("--disableupdate", help="run the node without updating software", action="store_true")
-    # parser.add_argument("--disablebootstrap", help="run the node without bootstrapping", action="store_true")
-    # _args = parser.parse_args()
-    # args["disablenetwork"] = _args.disablenetwork
     uvicorn.run("app.main:app", host="0.0.0.0", port=NEWRL_PORT, reload=True)
 
 

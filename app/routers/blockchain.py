@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 from starlette.responses import FileResponse
 from app.codes.helpers.FetchRespository import FetchRepository
+from app.codes.p2p.sync_chain import get_blocks
 from app.codes.scoremanager import get_trust_score
 
 from app.codes.transactionmanager import Transactionmanager
@@ -21,7 +22,7 @@ from app.codes.chainscanner import Chainscanner, download_chain, download_state,
 from app.codes.kycwallet import add_wallet, generate_wallet_address, get_address_from_public_key, get_digest, generate_wallet
 from app.codes.tokenmanager import create_token_transaction
 from app.codes.transfermanager import Transfermanager
-from app.codes.utils import save_file_and_get_path
+from app.codes.utils import get_last_block_hash, save_file_and_get_path
 from app.codes import validator
 from app.codes import signmanager
 from app.codes import updater
@@ -390,3 +391,25 @@ def get_sc_state(table_name, contract_address, unique_column, unique_value):
     except Exception as e:        
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/get-last-block-hash", tags=[v2_tag])
+def get_last_block_hash_api():
+    """Get a block from the chain"""
+    block = get_last_block_hash()
+    if block is None:
+        raise HTTPException(status_code=400, detail="Block not found")
+    return block
+
+
+@router.get("/get-block-tree", tags=[v2_tag])
+def get_block_tree_api(start_index: int, end_index: int):
+    """Get block tree for given start and end"""
+    blocks = get_blocks(list(range(start_index, end_index)))
+    blocks = map(lambda b: {
+        'index': b['index'],
+        'hash': b['hash'],
+        'timestamp': b['timestamp']
+        }, blocks)
+    blocks = list(blocks)
+    return blocks

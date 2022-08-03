@@ -55,7 +55,9 @@ def run_updater(add_to_chain=False):
     if len(existing_block_proposals) != 0:
         logger.info(f"Existing block proposal exists with index {new_block_index}. Broadcasting existing one.")
         broadcast_block_proposal(existing_block_proposals[0])
+        return existing_block_proposals[0]
 
+    logger.info(f'Proposing new block {new_block_index}')
     filenames = os.listdir(MEMPOOL_PATH)  # this is the mempool
     logger.info(f"Files in mempool: {filenames}")
     textarray = []
@@ -273,13 +275,13 @@ def global_internal_clock():
             last_block_ts = int(last_block['timestamp'])
             time_elapsed_seconds = (current_ts - last_block_ts) / 1000
 
-            if am_i_sentinel_node() and time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 4:
-                logger.info('I am sentinel node and catching up with the network')
+            if time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 2:
+                logger.info('I am out of sync and catching up with the network')
                 sync_chain_from_peers()
             if should_i_mine(last_block):
                 if TIMERS['mining_timer'] is None or not TIMERS['mining_timer'].is_alive():
                     start_mining_clock(last_block_ts)
-            elif time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 2:
+            elif time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 4:
                 if am_i_sentinel_node():
                     logger.info('I am sentitnel node. Mining empty block')
                     sentitnel_node_mine_empty()
