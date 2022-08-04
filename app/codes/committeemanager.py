@@ -74,6 +74,7 @@ def get_eligible_miners():
         join person_wallet on person_id = dest_person_id
         join trust_scores on wallet_address = wallet_id and last_broadcast_timestamp > ?
         where score > 0
+        order by wallet_address asc
         ''', (cutfoff_epoch, )).fetchall()
     # miner_cursor = cur.execute(
     #     '''SELECT wallet_address, network_address, last_broadcast_timestamp 
@@ -104,4 +105,5 @@ def get_committee_for_current_block(last_block=None):
     miner_wallets = list(map(lambda m: m['wallet_address'], miners))
     weights = get_scores_for_wallets(miner_wallets)
     committee = weighted_random_choices(miners, weights, committee_size)
+    committee = sorted(committee, key=lambda d: d['wallet_address']) 
     return committee

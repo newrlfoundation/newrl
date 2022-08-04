@@ -124,6 +124,9 @@ def sync_chain_from_node(url, block_index=None):
         their_last_block_index = block_index
     my_last_block = get_last_block_index()
     logger.info(f'I have {my_last_block} blocks. Node {url} has {their_last_block_index} blocks.')
+    if my_last_block == their_last_block_index:
+        logger.info('I am in sync with the node. Aborting sync.')
+        return True
 
     block_idx = my_last_block + 1
     block_batch_size = 50  # Fetch blocks in batches
@@ -133,17 +136,7 @@ def sync_chain_from_node(url, block_index=None):
         blocks_request = {'block_indexes': blocks_to_request}
         logger.info(f'Asking block node {url} for blocks {blocks_request}')
         blocks_data = get_block_from_url_retry(url, blocks_request)
-        # try:
-        #     response = requests.post(
-        #             url + '/get-blocks',
-        #             json=blocks_request,
-        #             timeout=REQUEST_TIMEOUT
-        #         )
-        #     blocks_data = response.json()
-        # except Exception as err:
-        #     logger.info(f'Could not get block {err}')
-        #     failed_for_invalid_block = True
-        #     time.sleep(5)
+
         for block in blocks_data:
             # block['index'] = block['block_index']
             # block['timestamp'] = int(block['timestamp'])
@@ -165,11 +158,9 @@ def sync_chain_from_node(url, block_index=None):
                 block['text']['transactions'][idx]['signatures'] = signatures
 
             if not validate_block_data(block):
-                logger.info('Invalid block. Reverting by one block to retry')
+                logger.info('Invalid block. Aborting sync.')
                 failed_for_invalid_block = True
-                # revert_chain(find_forking_block(url))
-                # sync_chain_from_node(url)
-                break
+                return False
             con = sqlite3.connect(NEWRL_DB)
             cur = con.cursor()
             blockchain.add_block(cur, block, hash)
@@ -201,7 +192,10 @@ def sync_chain_from_peers(force_sync=False):
 
         if url:
             logger.info(f'Syncing from peer {url}')
-            sync_chain_from_node(url, block_index)
+            sync_success = sync_chain_from_node(url, block_index)
+            if not sync_success:
+                forking_block = find_forking_block(url)
+                revert_chain(forking_block)
         else:
             logger.info('No node available to sync')
     except Exception as e:
