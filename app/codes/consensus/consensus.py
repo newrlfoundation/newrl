@@ -7,6 +7,8 @@ from ..signmanager import sign_object
 from ..blockchain import calculate_hash, get_last_block
 from ..validator import validate_block_receipts
 from ..fs.mempool_manager import append_receipt_to_block, get_receipts_from_storage
+from ...Configuration import Configuration
+from ...constants import BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_RATIO
 from ...constants import BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_RATIO, MINIMUM_ACCEPTANCE_VOTES
 from ..auth.auth import get_wallet
 from ..minermanager import get_committee_for_current_block, get_miner_for_current_block
@@ -92,7 +94,7 @@ def check_community_consensus(block):
     #        return True
     # Block is received from sentinel node after a timeout.
     if len(committee) == 1:
-        if committee[0]['wallet_address'] == SENTINEL_NODE_WALLET:  # Todo - Check if block is empty
+        if committee[0]['wallet_address'] == Configuration.config("SENTINEL_NODE_WALLET"):  # Todo - Check if block is empty
             return True
         else:
             return False

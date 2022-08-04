@@ -8,7 +8,6 @@ import threading
 from app.codes.fs.temp_manager import store_receipt_to_temp
 from app.codes.p2p.sync_chain import sync_chain_from_peers
 
-# from app.codes.receiptmanager import get_receipts_for_block_from_db
 from app.ntypes import BLOCK_VOTE_MINER
 
 from .clock.global_time import get_corrected_time_ms, get_time_difference
@@ -299,7 +298,7 @@ def global_internal_clock():
 
 def am_i_sentinel_node():
     my_wallet = get_wallet()
-    return my_wallet['address'] == SENTINEL_NODE_WALLET
+    return my_wallet['address'] == Configuration.config("SENTINEL_NODE_WALLET")
 
 
 def sentitnel_node_mine_empty():

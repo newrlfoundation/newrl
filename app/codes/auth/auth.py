@@ -1,9 +1,10 @@
 import sys
 import json
 
+from ...Configuration import Configuration
 from ...constants import AUTH_FILE_PATH
 from ..crypto import sign_object
-from ...nvalues import ZERO_ADDRESS
+
 
 
 def get_node_wallet_public():
@@ -22,7 +23,7 @@ def get_node_wallet_address():
     if wallet:
         return wallet['address']
     else:
-        return ZERO_ADDRESS
+        return Configuration.config("ZERO_ADDRESS")
 
 
 def get_wallet():

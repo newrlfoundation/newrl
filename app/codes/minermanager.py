@@ -11,6 +11,8 @@ from .utils import get_last_block_hash
 from .p2p.utils import get_my_address
 from ..constants import COMMITTEE_SIZE, IS_TEST, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
 from .clock.global_time import get_time_difference
+from ..Configuration import Configuration
+from ..constants import COMMITTEE_SIZE, IS_TEST, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
 from .auth.auth import get_wallet
 from .signmanager import sign_transaction
 from ..ntypes import TRANSACTION_MINER_ADDITION

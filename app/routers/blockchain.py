@@ -27,6 +27,7 @@ from app.codes import validator
 from app.codes import signmanager
 from app.codes import updater
 from app.codes.contracts.contract_master import create_contract_address
+from ..Configuration import Configuration
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -95,7 +96,7 @@ def get_contract_api(contract_address: str):
 @router.get("/get-trust-score", tags=[v2_tag])
 def get_trust_score_api(
         destination_person_id: str,
-        source_person_id: str=NETWORK_TRUST_MANAGER_PID):
+        source_person_id: str=Configuration.config("NETWORK_TRUST_MANAGER_PID")):
     """Get a trust score. Default source_person_id is network trust manager"""
     trust_score = get_trust_score(src_person_id=source_person_id, dest_person_id=destination_person_id)
     if trust_score is None:

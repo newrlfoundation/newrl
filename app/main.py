@@ -1,4 +1,6 @@
 import logging
+
+from app.Configuration import Configuration
 from .codes.log_config import logger_init
 logger_init()
 import argparse
@@ -80,6 +82,9 @@ def shutdown_event():
 
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=NEWRL_PORT, reload=True)
+    Configuration.init_values()
+    logger.info("Initializing Config Values")
+
 
 
 def custom_openapi():

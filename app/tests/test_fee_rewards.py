@@ -3,11 +3,11 @@ import sqlite3
 
 from app.codes import updater
 from app.codes.auth.auth import get_wallet
+from ..Configuration import Configuration
 from ..codes.db_updater import update_wallet_token_balance
 from fastapi.testclient import TestClient
 from ..ntypes import NUSD_TOKEN_CODE
 from ..constants import NEWRL_DB, TIME_BETWEEN_BLOCKS_SECONDS
-from ..nvalues import TREASURY_WALLET_ADDRESS
 from ..migrations.init import init_newrl
 
 from ..main import app
@@ -121,8 +121,8 @@ def test_transaction_fee_payment():
     wallet_address = wallet['wallet_address']
 
     set_balance(wallet_address, NUSD_TOKEN_CODE, 100)
-    set_balance(TREASURY_WALLET_ADDRESS, NUSD_TOKEN_CODE, 500)
-    current_treasury_balance = get_wallet_balance(TREASURY_WALLET_ADDRESS, NUSD_TOKEN_CODE)
+    set_balance(Configuration.config("TREASURY_WALLET_ADDRESS"), NUSD_TOKEN_CODE, 500)
+    current_treasury_balance = get_wallet_balance(Configuration.config("TREASURY_WALLET_ADDRESS"), NUSD_TOKEN_CODE)
     wallet = create_wallet_with_fee(0)
     
     set_balance(wallet['address'], NUSD_TOKEN_CODE, 100)
@@ -130,5 +130,5 @@ def test_transaction_fee_payment():
     time.sleep(TIME_BETWEEN_BLOCKS_SECONDS + 1)
     
     create_wallet_with_fee(23, custodian_wallet=wallet)
-    new_treasury_balance = get_wallet_balance(TREASURY_WALLET_ADDRESS, NUSD_TOKEN_CODE)
+    new_treasury_balance = get_wallet_balance(Configuration.config("TREASURY_WALLET_ADDRESS"), NUSD_TOKEN_CODE)
     assert new_treasury_balance == current_treasury_balance + 23
