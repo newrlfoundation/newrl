@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 from starlette.responses import FileResponse
 from app.codes.helpers.FetchRespository import FetchRepository
-from app.codes.p2p.sync_chain import get_blocks
+from app.codes.p2p.sync_chain import find_forking_block, get_block_hashes, get_blocks
 from app.codes.scoremanager import get_trust_score
 
 from app.codes.transactionmanager import Transactionmanager
@@ -405,11 +405,11 @@ def get_last_block_hash_api():
 @router.get("/get-block-tree", tags=[v2_tag])
 def get_block_tree_api(start_index: int, end_index: int):
     """Get block tree for given start and end"""
-    blocks = get_blocks(list(range(start_index, end_index)))
-    blocks = map(lambda b: {
-        'index': b['index'],
-        'hash': b['hash'],
-        'timestamp': b['timestamp']
-        }, blocks)
+    blocks = get_block_hashes(start_index, end_index)
     blocks = list(blocks)
     return blocks
+
+
+@router.get("/find-forking-block", tags=[v2_tag])
+def get_fork_block(url: str):
+    return find_forking_block(url)    

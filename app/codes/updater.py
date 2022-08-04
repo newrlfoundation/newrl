@@ -289,6 +289,9 @@ def global_internal_clock():
             # elif am_i_in_current_committee(last_block):
             #     if TIMERS['block_receive_timeout'] is None or not TIMERS['block_receive_timeout'].is_alive():
             #         start_empty_block_mining_clock(last_block_ts)
+        else:
+            logger.info('No blocks with me. Syncing with the network.')
+            sync_chain_from_peers()
     except Exception as e:
         logger.info(f'Error in global clock {e}')
 

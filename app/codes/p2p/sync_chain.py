@@ -42,6 +42,30 @@ def get_blocks(block_indexes):
     return blocks
 
 
+def get_block_hashes(start_index, end_index):
+    con = sqlite3.connect(NEWRL_DB)
+    # con.row_factory = sqlite3.Row
+    cur = con.cursor()
+
+    blocks = cur.execute(
+        '''
+        SELECT block_index, hash, timestamp FROM 
+        blocks 
+        where block_index>=? and block_index < ?
+        ''', (start_index, end_index, )).fetchall()
+    
+    results = []
+    for row in blocks:
+        block = {
+            'index': row[0],
+            'hash': row[1],
+            'timestamp': row[2],
+        }
+        results.append(block)
+    
+    return results
+
+
 def get_block(block_index):
     chain = blockchain.Blockchain()
     return chain.get_block(block_index)
@@ -52,6 +76,9 @@ def get_last_block_index():
 
 
 def receive_block(block):
+    if SYNC_STATUS['IS_SYNCING']:
+        logger.info('Syncing with network. Ignoring incoming block.')
+        return
     block_index = block['index']
     if block_index > get_last_block_index() + 1:
         logger.info('Node not in sync. Cannot add block')
@@ -330,15 +357,19 @@ def get_block_from_url_retry(url, blocks_request):
 
 def get_block_tree_from_url_retry(url, start_index, end_index):
     response = None
+    retry_count = 3
     while response is None or response.status_code != 200:
         try:
-            response = requests.post(
+            response = requests.get(
                     url + f'/get-block-tree?start_index={start_index}&end_index={end_index}'
                 )
         except Exception as err:
             logger.info(f'Retrying block get {err}')
             failed_for_invalid_block = True
             time.sleep(1)
+            retry_count -= 1
+            if retry_count == 0:
+                break
     blocks_data = response.json()
     return blocks_data
 
@@ -392,5 +423,23 @@ def get_majority_random_node():
 
 def find_forking_block(node_url):
     return 0
-    # get_last_block_index()
-    # if 
+    my_last_block_index = get_last_block_index()
+
+    batch_size = 100
+    start_idx = my_last_block_index - batch_size
+
+    while start_idx >= 0:
+        end_idx = start_idx + batch_size
+        hash_tree = get_block_tree_from_url_retry(node_url, start_idx, end_idx)
+        my_blocks = get_blocks(list(range(start_idx, end_idx)))
+
+        idx = end_idx - 1 - start_idx
+
+        while idx >= 0:
+            if hash_tree[idx]['hash'] == my_blocks[idx]['hash']:
+                return idx + start_idx
+            idx -= 1
+        
+        start_idx -= batch_size
+    
+    return 0
