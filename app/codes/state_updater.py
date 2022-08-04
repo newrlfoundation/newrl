@@ -15,6 +15,7 @@ from app.codes.helpers.CentralRespository import CentralRepository
 from .db_updater import *
 from app.codes.networkscoremanager import get_invalid_block_creation_score, get_invalid_receipt_score, get_valid_block_creation_score, get_valid_receipt_score, update_network_trust_score_from_receipt
 from .p2p.utils import get_peers
+from ..Configuration import Configuration
 
 from ..nvalues import NETWORK_TRUST_MANAGER_PID, TREASURY_WALLET_ADDRESS
 
@@ -45,6 +46,8 @@ def update_db_states(cur, block):
     collated_txns = simplify_transactions(cur, transactions)
     global simplified_transactions
     simplified_transactions = []
+    global config_updated
+    config_updated = False
 
     for transaction in collated_txns:
 
@@ -74,6 +77,8 @@ def update_db_states(cur, block):
         except Exception as e:
             logger.error(f'Error in transaction: {str(transaction)}')
             logger.error(str(e))
+    if config_updated:
+        Configuration.updateDataFromDB()
     return True
 
 

@@ -33,6 +33,8 @@ def clear_db():
     cur.execute('DROP TABLE IF EXISTS dao_membership')
     cur.execute('DROP TABLE IF EXISTS proposal_data')
     cur.execute('DROP TABLE IF EXISTS DAO_TOKEN_LOCK')
+    cur.execute('DROP TABLE IF EXISTS stake_ledger')
+    cur.execute('DROP TABLE IF EXISTS configuration')
     con.commit()
     con.close()
 
@@ -181,7 +183,7 @@ def init_db():
                      ON miners (wallet_address, last_broadcast_timestamp)
                 ''')
 
-    
+
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS kyc
                     (id text NOT NULL PRIMARY KEY, 
@@ -264,6 +266,27 @@ def init_db():
                     wallet_address text
                     )
                     ''')
+    cur.execute('''
+                    CREATE TABLE IF NOT EXISTS stake_ledger 
+                    (
+                    address text NOT NULL, 
+                    person_id text Not NULL, 
+                    wallet_address TEXT , 
+                    amount INT, 
+                    time_updated TIMESTAMP,
+                    staker_wallet_address text
+                    )
+                    ''')
+    cur.execute('''
+                        CREATE TABLE IF NOT EXISTS configuration 
+                        (
+                        address text NOT NULL,
+                        property_key text NOT NULL, 
+                        property_value text Not NULL, 
+                        is_editable TEXT , 
+                        last_updated TIMESTAMP 
+                        )
+                        ''')
 
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS sample_template
@@ -308,10 +331,10 @@ def revert_chain(block_index):
 
     init_db()
     run_migrations()
-    
+
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
-    
+
     chain = Blockchain()
     for _block_index in range(1, block_index):
         block = chain.get_block(_block_index)

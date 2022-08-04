@@ -1,7 +1,6 @@
 """Consensus related functions"""
 
 import logging
-from app.nvalues import SENTINEL_NODE_WALLET
 from ..clock.global_time import get_corrected_time_ms
 from ..signmanager import sign_object
 from ..blockchain import calculate_hash, get_last_block

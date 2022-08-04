@@ -13,6 +13,7 @@ from app.ntypes import BLOCK_VOTE_MINER
 from .clock.global_time import get_corrected_time_ms, get_time_difference
 from .fs.temp_manager import get_all_receipts_from_storage, get_blocks_for_index_from_storage, store_block_to_temp
 from .minermanager import am_i_in_current_committee, broadcast_miner_update, get_committee_for_current_block, get_miner_for_current_block, should_i_mine
+from ..Configuration import Configuration
 from ..nvalues import SENTINEL_NODE_WALLET, TREASURY_WALLET_ADDRESS
 from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, GLOBAL_INTERNAL_CLOCK_SECONDS, IS_TEST, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, NEWRL_PORT, NO_BLOCK_TIMEOUT, NO_RECEIPT_COMMITTEE_TIMEOUT, REQUEST_TIMEOUT, MEMPOOL_PATH, TIME_BETWEEN_BLOCKS_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS
 from .p2p.peers import get_peers
@@ -285,7 +286,7 @@ def global_internal_clock():
                 if am_i_sentinel_node():
                     logger.info('I am sentitnel node. Mining empty block')
                     sentitnel_node_mine_empty()
-            
+
             # elif am_i_in_current_committee(last_block):
             #     if TIMERS['block_receive_timeout'] is None or not TIMERS['block_receive_timeout'].is_alive():
             #         start_empty_block_mining_clock(last_block_ts)

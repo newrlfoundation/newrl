@@ -15,7 +15,7 @@ from app.codes.scoremanager import get_trust_score
 
 from app.codes.transactionmanager import Transactionmanager
 from app.constants import NEWRL_DB
-from app.nvalues import NETWORK_TRUST_MANAGER_PID
+
 
 from .request_models import AddWalletRequest, BalanceRequest, BalanceType, CallSC, CreateTokenRequest, CreateWalletRequest, GetTokenRequest, RunSmartContractRequest, TransferRequest, CreateSCRequest, TscoreRequest
 from app.codes.chainscanner import Chainscanner, download_chain, download_state, get_block, get_contract, get_token, get_transaction, get_wallet
