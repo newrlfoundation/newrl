@@ -25,10 +25,10 @@ class dex(ContractMaster):
         callparams = input_to_dict(callparamsip)
         #dex liquidity shouldnt be initalised already
 
-        liquidity_initialized = cspecs['liquidity_initialized']
+        # liquidity_initialized = cspecs['liquidity_initialized']
         
-        if liquidity_initialized:
-            raise Exception("Liquidity for this contract is already initialized, can't initialise it again")
+        # if liquidity_initialized:
+        #     raise Exception("Liquidity for this contract is already initialized, can't initialise it again")
 
         token_1_amount = callparams['token_1_amount'] 
         token_2_amount  = callparams['token_2_amount']
@@ -51,11 +51,10 @@ class dex(ContractMaster):
         ot_token_name = cspecs['ot_token_name']
 
         token_ratio = cspecs['token_ratio']
-        #issue min of tokens that will be issued? as this is the amount that will be in circulation later on
-        initial_ot_to_issue = cspecs['initial_ot_to_issue']
+        #ot issue amount will be the geometic mean of submited initial liquidity
+        initial_ot_to_issue = (token_1_amount*token_2_amount)**(1/2)
         value = callparams['value']
-        provided_ratio = token_1_amount/token_2_amount
-        if not provided_ratio == token_ratio:
+        if not is_ratio_same(token_ratio,token_1_amount,token_2_amount):
          raise Exception(f"Provided token ratio is not correct, should be of ratio {token_ratio}")
 
         if required_value_token1 in value and required_value_token2 in value:
@@ -206,7 +205,6 @@ class dex(ContractMaster):
         recipient_address = callparams['recipient_address']
 
         ot_token_code = cspecs['ot_token_code']
-        ot_token_name = cspecs['ot_token_name']
         ot_outstanding = self._get_outstanding_ot(ot_token_code, repo)
 
         pool_token1_code = cspecs['pool_token1_code']
@@ -298,3 +296,11 @@ class dex(ContractMaster):
 
     def validate(self, callparamsip, repo: FetchRepository):
         pass
+
+
+def is_ratio_same(pool_ratio_st, token1, token2):
+    #assumes pool ratio is of type string "x:y"
+    ratio = [int(i) for i in pool_ratio_st.split(":") if i.isdigit()]
+    pool_ratio = ratio[0]/ratio[1]
+    token_ratio = token1/token2
+    return pool_ratio.as_integer_ratio() == token_ratio.as_integer_ratio()
