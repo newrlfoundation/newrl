@@ -340,6 +340,7 @@ def receive_receipt(receipt):
 
 def get_block_from_url_retry(url, blocks_request):
     response = None
+    retry_count = 3
     while response is None or response.status_code != 200:
         try:
             response = requests.post(
@@ -349,7 +350,9 @@ def get_block_from_url_retry(url, blocks_request):
                 )
         except Exception as err:
             logger.info(f'Retrying block get {err}')
-            failed_for_invalid_block = True
+            if retry_count < 0:
+                break
+            retry_count -= 1
             time.sleep(5)
     blocks_data = response.json()
     return blocks_data
@@ -382,7 +385,7 @@ def get_last_block_hash_from_url_retry(url):
                 url + '/get-last-block-hash',
                 timeout=0.5
             )
-        return response.json()
+        return response.json()['hash']
     except Exception as err:
         logger.info(f'Error getting block hash {err}')
     
@@ -406,12 +409,12 @@ def get_majority_random_node():
         hash = get_last_block_hash_from_url_retry(url)
         if hash:
             hashes.append(hash)
-            if hash['hash'] == candidate_hash:
+            if hash == candidate_hash:
                 candidate_hash_count += 1
             else:
                 candidate_hash_count -= 1
             if candidate_hash_count < 0:
-                candidate_hash = hash['hash']
+                candidate_hash = hash
                 candidate_hash_count = 0
                 candidate_node_url = url
     
