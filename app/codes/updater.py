@@ -277,7 +277,7 @@ def global_internal_clock():
             time_elapsed_seconds = (current_ts - last_block_ts) / 1000
 
             if time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 4:
-                logger.info('I am out of sync and catching up with the network')
+                logger.info('I have not received a block for 4 intervals. Querying chain for majority chain.')
                 sync_chain_from_peers()
             if should_i_mine(last_block):
                 if TIMERS['mining_timer'] is None or not TIMERS['mining_timer'].is_alive():
