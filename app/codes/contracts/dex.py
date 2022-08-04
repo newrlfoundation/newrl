@@ -92,12 +92,13 @@ class dex(ContractMaster):
  
         pool_token1_code = cspecs['pool_token1_code']
         pool_token2_code = cspecs['pool_token2_code']
-        token_ratio = pool_token1_balance/pool_token2_balance
 
         #fetch token balance 1
         pool_token1_balance = self._fetch_token_balance(pool_token1_code, repo)
         #fetch token balance 2
         pool_token2_balance = self._fetch_token_balance(pool_token2_code, repo)
+
+        token_ratio = pool_token1_balance/pool_token2_balance
 
         if not provided_ratio == token_ratio:
             raise Exception(
@@ -281,8 +282,8 @@ class dex(ContractMaster):
     def _fetch_token_balance(self,token_code,repo):
         
         balance = repo.select_Query("balance").add_table_name("balances").where_clause("wallet_address", self.address, 1).and_clause(
-            "tokencode", token_code).execute_query_single_result({"wallet_address": self.address,"tokencode":token_code})
-        return balance    
+            "tokencode", token_code,1).execute_query_single_result({"wallet_address": self.address,"tokencode":token_code})
+        return balance[0]    
         
     def _get_ot_issue(self,ot_outstanding, token_1_amount, token_2_amount, pool_token1_balance, pool_token2_balance):
         t1 = token_1_amount / (pool_token1_balance)
@@ -291,8 +292,8 @@ class dex(ContractMaster):
         return ot_to_issue
 
     def _get_outstanding_ot(self,token_code,repo: FetchRepository):
-        balance = repo.select_count("balance").add_table_name("balances").where_clause("token_code", token_code, 1).execute_query_single_result({"token_code":token_code})
-        return balance
+        balance = repo.select_sum("balance").add_table_name("balances").where_clause("tokencode", token_code, 1).execute_query_single_result({"tokencode":token_code})
+        return balance[0]
 
     def validate(self, callparamsip, repo: FetchRepository):
         pass

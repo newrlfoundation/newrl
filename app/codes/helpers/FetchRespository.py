@@ -22,6 +22,10 @@ class FetchRepository:
         self.__query = 'Select count(' + select_param + ') from '
         return self
 
+    def select_sum(self, select_param="*"):
+        self.__query = 'Select sum(' + select_param + ') from '
+        return self
+
     def add_table_name(self, table_name):
         self.__query = self.__query + ' ' + table_name + ' '
         return self
