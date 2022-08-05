@@ -146,6 +146,8 @@ class dex(ContractMaster):
     def swap(self, callparamsip, repo: FetchRepository):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
 
+        #TODO validate
+
         callparams = input_to_dict(callparamsip)
         recipient_address = callparams['recipient_address']
 
@@ -202,7 +204,7 @@ class dex(ContractMaster):
     def withdraw(self, callparamsip, repo: FetchRepository):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         callparams = input_to_dict(callparamsip)
-        withdraw_amount = callparamsip['exit_amount']
+        withdraw_amount = callparams['withdraw_amount']
         recipient_address = callparams['recipient_address']
 
         ot_token_code = cspecs['ot_token_code']
