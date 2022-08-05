@@ -402,7 +402,7 @@ class Transactionmanager:
                 startingbalance2 = get_wallet_token_balance_tm(
                     sender2, tokencode2)
             if token1amt > startingbalance1:  # sender1 is trying to send more than she owns
-                print("sender1 is trying to send,", token1amt, "she owns,",
+                print("sender1: ",sender1," is trying to send,", token1amt, "she owns,",
                       startingbalance1, " invalidating transaction")
             #	self.transaction['valid']=0;
                 self.validity = 0

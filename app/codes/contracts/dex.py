@@ -230,24 +230,24 @@ class dex(ContractMaster):
         if not required_value in value:
             raise Exception("Value sent is invalid")
 
-        #A txn 5 to send tokens to address 0 to burn (assuming value txn happens before this)
-        '''txn type 5 (burn)'''
-        transaction_creator = TransactionCreator()
-        transfer_proposal_data = {
-            "transfer_type": 1,
-            "asset1_code": ot_token_code,
-            "asset2_code": "",
-            "wallet1": self.address,
-            "wallet2": ZERO_ADDRESS,
-            "asset1_number": withdraw_amount,
-            "asset2_number": 0,
-            "additional_data": {}
-        }
-        transfer_proposal_burn = transaction_creator.transaction_type_5(
-            transfer_proposal_data)
+        # #A txn 5 to send tokens to address 0 to burn (assuming value txn happens before this)
+        # '''txn type 5 (burn)'''
+        # transaction_creator = TransactionCreator()
+        # transfer_proposal_data = {
+        #     "transfer_type": 1,
+        #     "asset1_code": ot_token_code,
+        #     "asset2_code": "",
+        #     "wallet1": self.address,
+        #     "wallet2": ZERO_ADDRESS,
+        #     "asset1_number": withdraw_amount,
+        #     "asset2_number": 0,
+        #     "additional_data": {}
+        # }
+        # transfer_proposal_burn = transaction_creator.transaction_type_5(
+        #     transfer_proposal_data)
 
         #A txn 5 to send pool token1 to recipient 
-        '''txn type 5 (burn)'''
+        '''txn type 5 token1'''
         transaction_creator = TransactionCreator()
         transfer_proposal_data = {
             "transfer_type": 1,
@@ -263,7 +263,7 @@ class dex(ContractMaster):
             transfer_proposal_data)
 
         #A txn 5 to send pool token2 to recipient
-        '''txn type 5 (burn)'''
+        '''txn type 5 token2'''
         transaction_creator = TransactionCreator()
         transfer_proposal_data = {
             "transfer_type": 1,
@@ -278,7 +278,7 @@ class dex(ContractMaster):
         transfer_proposal_token2 = transaction_creator.transaction_type_5(
             transfer_proposal_data)
 
-        return [transfer_proposal_burn,transfer_proposal_token1,transfer_proposal_token2]
+        return [transfer_proposal_token1,transfer_proposal_token2]
 
 
     def _fetch_token_balance(self,token_code,repo):
