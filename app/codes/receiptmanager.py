@@ -2,34 +2,10 @@
 
 import sqlite3
 
-from app.codes.fs.temp_manager import remove_receipt_from_temp
+from app.codes.fs.temp_manager import get_all_receipts_from_storage, remove_receipt_from_temp
 from .statereader import get_public_key_from_wallet_address
 from ..constants import NEWRL_DB
 
-
-def store_receipt_to_db(receipt):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
-
-    wallet_cursor = cur.execute(
-        'SELECT wallet_address FROM wallets where wallet_public=?', (receipt['public_key'],)).fetchone()
-    
-    if wallet_cursor is not None:
-        
-        db_receipt_data = (
-            receipt['data']['block_index'],
-            receipt['data']['block_hash'],
-            receipt['data']['vote'],
-            wallet_cursor[0],
-        )
-
-        cur.execute('''
-            INSERT OR IGNORE INTO receipts (block_index, block_hash, vote, wallet_address)
-            VALUES(?, ?, ?, ?)
-        ''', db_receipt_data)
-    
-    con.commit()
-    con.close()
 
 
 def get_receipts_included_in_block_from_db(block_index):
@@ -66,37 +42,37 @@ def update_receipts_in_state(cur, block):
     receipts = block['text']['previous_block_receipts']
 
     for receipt in receipts:
-        wallet_cursor = cur.execute(
-        'SELECT wallet_address FROM wallets where wallet_public=?', 
-        (receipt['public_key'],)).fetchone()
-        if wallet_cursor is not None:
-            wallet_address = wallet_cursor[0]
-            db_receipt_data = (
-                receipt['data']['block_index'],
-                receipt['data']['block_hash'],
-                receipt['data']['vote'],
-                wallet_address,
-                block['index'],
-                receipt['signature'],
-                receipt['data']['timestamp'],
-            )
+        db_receipt_data = (
+            receipt['data']['block_index'],
+            receipt['data']['block_hash'],
+            receipt['data']['vote'],
+            receipt['data']['wallet_address'],
+            # wallet_address,
+            block['index'],
+            receipt['signature'],
+            receipt['data']['timestamp'],
+        )
 
-            cur.execute('''
-                INSERT OR IGNORE INTO receipts 
-                (block_index, block_hash, vote, wallet_address, 
-                included_block_index, signature, timestamp)
-                VALUES(?, ?, ?, ?, ?, ?, ?)
-            ''', db_receipt_data)
+        cur.execute('''
+            INSERT OR IGNORE INTO receipts 
+            (block_index, block_hash, vote, wallet_address, 
+            included_block_index, signature, timestamp)
+            VALUES(?, ?, ?, ?, ?, ?, ?)
+        ''', db_receipt_data)
 
-            remove_receipt_from_temp(
-                receipt['data']['block_index'],
-                receipt['data']['block_hash'],
-                wallet_address)
+        remove_receipt_from_temp(
+            receipt['data']['block_index'],
+            receipt['data']['block_hash'],
+            receipt['data']['wallet_address'])
 
 
-def check_receipt_exists_in_db(block_index, block_hash, wallet_address):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
+def check_receipt_exists_in_db(block_index, block_hash, wallet_address, cur=None):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        connection_created = True
+    else:
+        connection_created = False
 
     receipt_cursor = cur.execute(
         '''
@@ -105,4 +81,26 @@ def check_receipt_exists_in_db(block_index, block_hash, wallet_address):
         , (block_index, block_hash, wallet_address)).fetchone()
     
     receipt_exists = receipt_cursor is not None
+    if connection_created:
+        con.close()
     return receipt_exists
+
+
+def get_receipt_in_temp_not_in_chain(exclude_block, cur=None):
+    receipts = get_all_receipts_from_storage(exclude_block_index=exclude_block)
+    receipts_not_included = []
+    for receipt in receipts:
+        if check_receipt_exists_in_db(
+            receipt['data']['block_index'],
+            receipt['data']['block_hash'],
+            receipt['data']['wallet_address'],
+            ):
+            remove_receipt_from_temp(
+                receipt['data']['block_index'],
+                receipt['data']['block_hash'],
+                receipt['data']['wallet_address'],
+            )
+        else:
+            receipts_not_included.append(receipt)
+    
+    return receipts_not_included

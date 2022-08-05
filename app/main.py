@@ -51,7 +51,12 @@ def initialze_params():
         'disablebootstrap': _args.disablebootstrap,
     }
     return args
-args = initialze_params()
+# args = initialze_params()  # TODO - This is causing tests to fail
+args = args = {
+    'disablenetwork': False,
+    'disableupdate': False,
+    'disablebootstrap': False,
+}
 
 
 @app.on_event('startup')

@@ -265,7 +265,7 @@ def init_db():
                     )
                     ''')
     cur.execute('''
-                    CREATE TABLE stake_ledger 
+                    CREATE TABLE IF NOT EXISTS stake_ledger 
                     (
                     address text NOT NULL, 
                     person_id text Not NULL, 
