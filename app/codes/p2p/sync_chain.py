@@ -219,7 +219,8 @@ def sync_chain_from_peers(force_sync=False):
             sync_success = sync_chain_from_node(url, block_index)
             if not sync_success:
                 forking_block = find_forking_block(url)
-                revert_chain(forking_block)
+                logger.info(f'Chains forking from block {forking_block}. Need to revert.')
+                # revert_chain(forking_block)
         else:
             logger.info('No node available to sync')
     except Exception as e:

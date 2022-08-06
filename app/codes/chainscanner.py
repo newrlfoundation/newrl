@@ -65,12 +65,24 @@ def download_state():
     
     contracts_cursor = cur.execute('SELECT * FROM contracts').fetchall()
     contracts = [dict(ix) for ix in contracts_cursor]
+    
+    miners_cursor = cur.execute('SELECT * FROM miners').fetchall()
+    miners = [dict(ix) for ix in miners_cursor]
+    
+    trust_scores_cursor = cur.execute('SELECT * FROM trust_scores').fetchall()
+    trust_scores = [dict(ix) for ix in trust_scores_cursor]
+    
+    stake_ledger_cursor = cur.execute('SELECT * FROM stake_ledger').fetchall()
+    stake_ledger = [dict(ix) for ix in stake_ledger_cursor]
 
     state = {
         'wallets': wallets,
         'tokens': tokens,
         'balances': balances,
-        'contracts': contracts
+        'contracts': contracts,
+        'miners': miners,
+        'trust_scores': trust_scores,
+        'stake_ledger': stake_ledger,
     }
     return state
 
