@@ -301,3 +301,23 @@ def block_exists(block_index):
         
         con.close()
         return block_exists
+
+
+def get_blocks_in_range(start_index, end_index):
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
+    blocks_cursor = cur.execute(
+        'SELECT * FROM blocks where block_index >= ? and block_index < ?'
+        ,(start_index, end_index)).fetchall()
+    transactions_cursor = cur.execute(
+            'SELECT * FROM transactions where block_index >= ? and block_index < ?'
+            ,(start_index, end_index)).fetchall()
+    receipt_cursor = cur.execute(
+        'SELECT * FROM receipts where included_block_index >= ? and block_index < ?'
+        ,(start_index, end_index)).fetchall()
+    con.close()
+    return {
+        'blocks': blocks_cursor,
+        'transactions': transactions_cursor,
+        'receipts': receipt_cursor
+    }

@@ -329,7 +329,8 @@ def receive_receipt(receipt):
         for block in blocks_appended:
             if check_community_consensus(block):
                 original_block = copy.deepcopy(block)
-                accept_block(block, block['hash'])
+                if not SYNC_STATUS['IS_SYNCING']:
+                    accept_block(block, block['hash'])
                 broadcast_block(original_block)
 
     # committee = get_committee_for_current_block()

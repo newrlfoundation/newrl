@@ -70,7 +70,7 @@ def sync_chain_from_node_api(url: str = 'https://newrl-devnet1.herokuapp.com'):
     try:
         return sync_chain_from_node(url)
     except Exception as e:
-        raise HTTPException(status_code=500, detail='No more blocks')
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/sync-chain-from-peers", tags=[p2p_tag])

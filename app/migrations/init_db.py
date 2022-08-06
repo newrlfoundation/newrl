@@ -2,6 +2,8 @@ import sqlite3
 import json
 import logging
 
+from app.codes.p2p.sync_chain import SYNC_STATUS
+
 from ..codes.blockchain import Blockchain, add_block
 from ..codes.state_updater import add_block_reward, update_state_from_transaction, update_trust_scores
 from ..codes.receiptmanager import update_receipts_in_state
@@ -292,6 +294,11 @@ def init_db():
 def revert_chain(block_index):
     """Revert chain to given index"""
     logger.info(f'Reverting chain to index {block_index}')
+    global SYNC_STATUS
+    if SYNC_STATUS['IS_SYNCING']:
+        logger.info('Syncing with network. Aborting revert.')
+        return
+    SYNC_STATUS['IS_SYNCING'] = True
     try:
         con = sqlite3.connect(NEWRL_DB)
         cur = con.cursor()
@@ -333,9 +340,10 @@ def revert_chain(block_index):
 
         con.commit()
         con.close()
-        return {'status': 'SUCCESS'}
     except Exception as e:
         logger.error(f'Error reverting {str(e)}')
+    SYNC_STATUS['IS_SYNCING'] = False
+    return {'status': 'SUCCESS'}
 
 
 def init_peer_db():

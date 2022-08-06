@@ -197,7 +197,6 @@ def simplify_transactions(cur, transactions):
   global value_txns
   simplified_transactions = []
   for transaction in transactions:
-    print(transaction)
     if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
       non_sc_txns = []
       #recursive method that iterates till there is no sc txn
