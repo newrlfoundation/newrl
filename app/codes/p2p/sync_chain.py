@@ -22,14 +22,11 @@ from app.codes.consensus.consensus import check_community_consensus, is_timeout_
     add_my_receipt_to_block
 from app.migrations.init_db import revert_chain
 from app.nvalues import SENTINEL_NODE_WALLET
+from app.codes.timers import SYNC_STATUS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# IS_SYNCING = False
-SYNC_STATUS = {
-    'IS_SYNCING': False
-}
 
 def get_blocks(block_indexes):
     blocks = []

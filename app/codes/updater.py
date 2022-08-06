@@ -6,7 +6,8 @@ import logging
 import sqlite3
 import threading
 from app.codes.fs.temp_manager import store_receipt_to_temp
-from app.codes.p2p.sync_chain import SYNC_STATUS, sync_chain_from_peers
+from app.codes.p2p.sync_chain import sync_chain_from_peers
+from app.codes.timers import SYNC_STATUS
 
 # from app.codes.receiptmanager import get_receipts_for_block_from_db
 from app.ntypes import BLOCK_VOTE_MINER

@@ -2,13 +2,12 @@ import sqlite3
 import json
 import logging
 
-from app.codes.p2p.sync_chain import SYNC_STATUS
-
 from ..codes.blockchain import Blockchain, add_block
 from ..codes.state_updater import add_block_reward, update_state_from_transaction, update_trust_scores
 from ..codes.receiptmanager import update_receipts_in_state
 from .migrate_db import run_migrations
 from ..constants import NEWRL_DB, NEWRL_P2P_DB
+from ..codes.timers import SYNC_STATUS
 
 db_path = NEWRL_DB
 
