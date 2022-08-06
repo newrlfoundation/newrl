@@ -295,8 +295,9 @@ def revert_chain(block_index):
     logger.info(f'Reverting chain to index {block_index}')
     global SYNC_STATUS
     if SYNC_STATUS['IS_SYNCING']:
-        logger.info('Syncing with network. Aborting revert.')
-        return
+        logger.info('Syncing with network. Reverting anyway.')
+        # logger.info('Syncing with network. Aborting revert.')
+        # return
     SYNC_STATUS['IS_SYNCING'] = True
     try:
         con = sqlite3.connect(NEWRL_DB)
