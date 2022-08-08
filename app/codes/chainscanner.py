@@ -54,25 +54,25 @@ def download_state():
     con = sqlite3.connect(NEWRL_DB)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
-    wallets_cursor = cur.execute('SELECT * FROM wallets').fetchall()
+    wallets_cursor = cur.execute('SELECT * FROM wallets ORDER BY wallet_address').fetchall()
     wallets = [dict(ix) for ix in wallets_cursor]
 
-    tokens_cursor = cur.execute('SELECT * FROM tokens').fetchall()
+    tokens_cursor = cur.execute('SELECT * FROM tokens ORDER BY tokencode').fetchall()
     tokens = [dict(ix) for ix in tokens_cursor]
 
-    balances_cursor = cur.execute('SELECT * FROM balances').fetchall()
+    balances_cursor = cur.execute('SELECT * FROM balances ORDER BY wallet_address').fetchall()
     balances = [dict(ix) for ix in balances_cursor]
     
-    contracts_cursor = cur.execute('SELECT * FROM contracts').fetchall()
+    contracts_cursor = cur.execute('SELECT * FROM contracts ORDER BY address').fetchall()
     contracts = [dict(ix) for ix in contracts_cursor]
     
-    miners_cursor = cur.execute('SELECT * FROM miners').fetchall()
+    miners_cursor = cur.execute('SELECT * FROM miners ORDER BY id').fetchall()
     miners = [dict(ix) for ix in miners_cursor]
     
-    trust_scores_cursor = cur.execute('SELECT * FROM trust_scores').fetchall()
+    trust_scores_cursor = cur.execute('SELECT * FROM trust_scores ORDER BY src_person_id, dest_person_id').fetchall()
     trust_scores = [dict(ix) for ix in trust_scores_cursor]
     
-    stake_ledger_cursor = cur.execute('SELECT * FROM stake_ledger').fetchall()
+    stake_ledger_cursor = cur.execute('SELECT * FROM stake_ledger ORDER BY address').fetchall()
     stake_ledger = [dict(ix) for ix in stake_ledger_cursor]
 
     state = {
