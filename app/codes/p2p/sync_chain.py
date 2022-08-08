@@ -424,7 +424,6 @@ def get_majority_random_node():
 
 
 def find_forking_block(node_url):
-    return 0
     my_last_block_index = get_last_block_index()
 
     batch_size = 100
