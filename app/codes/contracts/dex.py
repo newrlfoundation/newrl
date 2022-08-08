@@ -92,7 +92,6 @@ class dex(ContractMaster):
  
         pool_token1_code = cspecs['pool_token1_code']
         pool_token2_code = cspecs['pool_token2_code']
-
         #fetch token balance 1
         pool_token1_balance = self._fetch_token_balance(pool_token1_code, repo)
         #fetch token balance 2
@@ -294,7 +293,7 @@ class dex(ContractMaster):
         return ot_to_issue
 
     def _get_outstanding_ot(self,token_code,repo: FetchRepository):
-        balance = repo.select_sum("balance").add_table_name("balances").where_clause("tokencode", token_code, 1).execute_query_single_result({"tokencode":token_code})
+        balance = repo.select_sum("balance").add_table_name("balances").where_clause("tokencode", token_code, 1).and_clause("wallet_address",self.address, 5).execute_query_single_result({"tokencode": token_code,"wallet_address": self.address})
         return balance[0]
 
     def validate(self, callparamsip, repo: FetchRepository):

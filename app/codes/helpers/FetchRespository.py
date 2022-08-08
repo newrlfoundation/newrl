@@ -5,7 +5,7 @@ class FetchRepository:
     escape_string: Final = ["--", ";--", ";", "/*", "*/", "@@", "@", "char", "nchar", "varchar", "nvarchar", "alter",
                             "begin", "cast", "create", "cursor", "declare", "delete", "drop", "end", "exec", "execute",
                             "fetch", "insert", "kill", "select", "sys", "sysobjects", "syscolumns", "table", "update"]
-    operation: Final = {1: "=", 2: "in", 3: "not in",4:"like"}
+    operation: Final = {1: "=", 2: "in", 3: "not in",4:"like",5: "!="}
 
     def __init__(self, cur):
         self.cur = cur
