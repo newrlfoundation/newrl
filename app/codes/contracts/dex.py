@@ -1,5 +1,6 @@
 
 
+import math
 from re import T
 from app.codes.db_updater import input_to_dict
 from app.codes.helpers.FetchRespository import FetchRepository
@@ -51,11 +52,13 @@ class dex(ContractMaster):
         ot_token_name = cspecs['ot_token_name']
 
         token_ratio = cspecs['token_ratio']
+        if not is_ratio_same(token_ratio, token_1_amount, token_2_amount):
+            raise Exception(f"Provided token ratio is not correct, should be of ratio {token_ratio}")
+        
         #ot issue amount will be the geometic mean of submited initial liquidity
-        initial_ot_to_issue = (token_1_amount*token_2_amount)**(1/2)
+        initial_ot_to_issue = math.floor((token_1_amount*token_2_amount)**(1/2))
         value = callparams['value']
-        if not is_ratio_same(token_ratio,token_1_amount,token_2_amount):
-         raise Exception(f"Provided token ratio is not correct, should be of ratio {token_ratio}")
+
 
         if required_value_token1 in value and required_value_token2 in value:
             tokendata = {
@@ -87,8 +90,6 @@ class dex(ContractMaster):
         token_1_amount = callparams['token_1_amount'] 
         token_2_amount  = callparams['token_2_amount']
         recipient_address = callparams['recipient_address']
-
-        provided_ratio = token_1_amount/token_2_amount
  
         pool_token1_code = cspecs['pool_token1_code']
         pool_token2_code = cspecs['pool_token2_code']
@@ -97,11 +98,10 @@ class dex(ContractMaster):
         #fetch token balance 2
         pool_token2_balance = self._fetch_token_balance(pool_token2_code, repo)
 
-        token_ratio = pool_token1_balance/pool_token2_balance
+        token_ratio = cspecs['token_ratio']
+        if not is_ratio_same(token_ratio, token_1_amount, token_2_amount):
+            raise Exception(f"Provided token ratio is not correct, should be of ratio {token_ratio}")
 
-        if not provided_ratio == token_ratio:
-            raise Exception(
-                f"Provided token ratio is not correct, should be of ratio {token_ratio}")
 
         ot_token_code = cspecs['ot_token_code']
         ot_token_name = cspecs['ot_token_name']
@@ -166,14 +166,15 @@ class dex(ContractMaster):
 
         if token_sent["token_code"] == pool_token1_code:
             new_token1_balance = pool_token1_balance + token_sent["amount"]
-            new_token2_balance = product / new_token1_balance
+            new_token2_balance = math.floor(product / new_token1_balance)
             token_amount_to_send = pool_token2_balance - new_token2_balance
         else:    
             new_token2_balance = pool_token2_balance + token_sent["amount"]
-            new_token1_balance = product / new_token2_balance
+            new_token1_balance = math.floor(product / new_token2_balance)
             token_amount_to_send = pool_token1_balance - new_token1_balance
 
-        #add fee    
+        #fee in aboslute Ex : 1% will be provided as 0.01 
+        #TODO check determistic logic for rounding , parse to int (floor it)
         tokens_to_send = (1 - fee )*token_amount_to_send
 
         required_value = {
@@ -216,9 +217,9 @@ class dex(ContractMaster):
         pool_token1_balance = self._fetch_token_balance(pool_token1_code, repo)
         #fetch token balance 2
         pool_token2_balance = self._fetch_token_balance(pool_token2_code, repo)
-
-        token1_withdraw_amount = (pool_token1_balance * withdraw_amount ) / ot_outstanding
-        token2_withdraw_amount = (pool_token2_balance * withdraw_amount) / ot_outstanding
+        #TODO INT
+        token1_withdraw_amount = math.floor((pool_token1_balance * withdraw_amount ) / ot_outstanding)
+        token2_withdraw_amount = math.floor((pool_token2_balance * withdraw_amount) / ot_outstanding)
 
         required_value = {
             "token_code": ot_token_code,
@@ -229,6 +230,23 @@ class dex(ContractMaster):
         if not required_value in value:
             raise Exception("Value sent is invalid")
 
+        # current_self_ot_outstanding = self._get_self_ot_outstanding(ot_token_code, repo)
+        # #TODO only if > 0 
+        # #A txn 5 to send tokens (burn) previous outstanding tokens to address 0 to burn (assuming value txn happens before this)
+        # '''txn type 5 (burn)'''
+        # transaction_creator = TransactionCreator()
+        # transfer_proposal_data = {
+        #     "transfer_type": 1,
+        #     "asset1_code": ot_token_code,
+        #     "asset2_code": "",
+        #     "wallet1": self.address,
+        #     "wallet2": ZERO_ADDRESS,
+        #     "asset1_number": current_self_ot_outstanding,
+        #     "asset2_number": 0,
+        #     "additional_data": {}
+        # }
+        # transfer_proposal_burn = transaction_creator.transaction_type_5(
+        #     transfer_proposal_data)
         # #A txn 5 to send tokens to address 0 to burn (assuming value txn happens before this)
         # '''txn type 5 (burn)'''
         # transaction_creator = TransactionCreator()
@@ -287,8 +305,8 @@ class dex(ContractMaster):
         return balance[0]    
         
     def _get_ot_issue(self,ot_outstanding, token_1_amount, token_2_amount, pool_token1_balance, pool_token2_balance):
-        t1 = token_1_amount / (pool_token1_balance)
-        t2 = token_2_amount / (pool_token2_balance)
+        t1 = math.floor(token_1_amount / (pool_token1_balance))
+        t2 = math.flooe(token_2_amount / (pool_token2_balance))
         ot_to_issue = ot_outstanding * min(t1, t2)
         return ot_to_issue
 
