@@ -1,13 +1,13 @@
 """Consensus related functions"""
 
 import logging
+from app.nvalues import SENTINEL_NODE_WALLET
 from ..clock.global_time import get_corrected_time_ms
 from ..signmanager import sign_object
 from ..blockchain import calculate_hash, get_last_block
 from ..validator import validate_block_receipts
-from ..fs.mempool_manager import append_receipt_to_block, get_receipts_from_storage
 from ...Configuration import Configuration
-from ...constants import BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_RATIO
+from ..fs.mempool_manager import append_receipt_to_block, get_receipts_from_storage
 from ...constants import BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_RATIO, MINIMUM_ACCEPTANCE_VOTES
 from ..auth.auth import get_wallet
 from ..minermanager import get_committee_for_current_block, get_miner_for_current_block

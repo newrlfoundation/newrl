@@ -7,7 +7,9 @@ import sqlite3
 import threading
 from app.codes.fs.temp_manager import store_receipt_to_temp
 from app.codes.p2p.sync_chain import sync_chain_from_peers
+from app.codes.timers import SYNC_STATUS
 
+# from app.codes.receiptmanager import get_receipts_for_block_from_db
 from app.ntypes import BLOCK_VOTE_MINER
 
 from .clock.global_time import get_corrected_time_ms, get_time_difference
@@ -180,7 +182,6 @@ def broadcast_block_proposal(block_payload, block_receipt=None):
             if len(peers) > len(nodes):
                 logger.info('Committee not adequate. Broadcasting block proposal to all peers.')
                 nodes = peers
-        broadcast_receipt(block_receipt, nodes)
         broadcast_block(block_payload, nodes)
         if block_receipt is not None:
             broadcast_receipt(block_receipt, nodes)
@@ -267,31 +268,38 @@ def should_include_transaction(transaction):
 def global_internal_clock():
     """Reccuring clock for all node level activities"""
     global TIMERS
-    
-    try:
-        # Check for mining delay
-        current_ts = get_corrected_time_ms()
-        last_block = get_last_block()
-        if last_block:
-            last_block_ts = int(last_block['timestamp'])
-            time_elapsed_seconds = (current_ts - last_block_ts) / 1000
+    global SYNC_STATUS
 
-            if time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 4:
-                logger.info('I have not received a block for 4 intervals. Querying chain for majority chain.')
+    if SYNC_STATUS['IS_SYNCING']:
+        logger.info('Timer tick. Syncing with network. Continuing sync.')
+    else:
+        try:
+            # Check for mining delay
+            current_ts = get_corrected_time_ms()
+            last_block = get_last_block()
+            if last_block:
+                last_block_ts = int(last_block['timestamp'])
+                time_elapsed_seconds = (current_ts - last_block_ts) / 1000
+
+                if time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 4:
+                    logger.info('I have not received a block for 4 intervals. Querying chain for majority chain.')
+                    sync_chain_from_peers()
+                if should_i_mine(last_block):
+                    if TIMERS['mining_timer'] is None or not TIMERS['mining_timer'].is_alive():
+                        start_mining_clock(last_block_ts)
+                elif time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 8:
+                    if am_i_sentinel_node():
+                        logger.info('I am sentitnel node. Mining empty block')
+                        sentitnel_node_mine_empty()
+
+                # elif am_i_in_current_committee(last_block):
+                #     if TIMERS['block_receive_timeout'] is None or not TIMERS['block_receive_timeout'].is_alive():
+                #         start_empty_block_mining_clock(last_block_ts)
+            else:
+                logger.info('No blocks with me. Syncing with the network.')
                 sync_chain_from_peers()
-            if should_i_mine(last_block):
-                if TIMERS['mining_timer'] is None or not TIMERS['mining_timer'].is_alive():
-                    start_mining_clock(last_block_ts)
-            elif time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 8:
-                if am_i_sentinel_node():
-                    logger.info('I am sentitnel node. Mining empty block')
-                    sentitnel_node_mine_empty()
-
-            # elif am_i_in_current_committee(last_block):
-            #     if TIMERS['block_receive_timeout'] is None or not TIMERS['block_receive_timeout'].is_alive():
-            #         start_empty_block_mining_clock(last_block_ts)
-    except Exception as e:
-        logger.info(f'Error in global clock {e}')
+        except Exception as e:
+            logger.info(f'Error in global clock {e}')
 
     timer = threading.Timer(GLOBAL_INTERNAL_CLOCK_SECONDS, global_internal_clock)
     timer.start()

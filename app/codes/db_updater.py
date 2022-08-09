@@ -192,7 +192,6 @@ def get_wallet_token_balance(cur, wallet_address, token_code):
 
 
 def add_tx_to_block(cur, block_index, transactions):
-    print(block_index, transactions)
     for transaction_signature in transactions:
         transaction = transaction_signature['transaction']
         signatures = json.dumps(transaction_signature['signatures'])

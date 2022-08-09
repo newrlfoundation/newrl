@@ -6,10 +6,15 @@ from math import sqrt
 from app.Configuration import Configuration
 from app.codes.clock.global_time import get_corrected_time_ms
 from app.codes.db_updater import get_block_from_cursor, get_pid_from_wallet, update_trust_score
+from app.codes.state_updater import slashing_tokens
 
 from app.constants import INITIAL_NETWORK_TRUST_SCORE, MAX_NETWORK_TRUST_SCORE
 from app.ntypes import BLOCK_VOTE_MINER, BLOCK_VOTE_VALID
 
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 logging.basicConfig(level=logging.INFO)
@@ -81,14 +86,18 @@ def update_network_trust_score_from_receipt(cur, receipt):
                         score = get_valid_block_creation_score(existing_score)
                     else:
                         score = get_invalid_block_creation_score(existing_score)
+                        slashing_tokens(cur, wallet_address, True)
                 else:
                     score = get_invalid_block_creation_score(existing_score)
+                    slashing_tokens(cur, wallet_address, True)
         else:
             committee = get_committee_for_block(actual_block)
             if actual_block['proof'] == 42:  # Empty block check
                 if actual_block['status'] == 2:
                     if vote == BLOCK_VOTE_VALID:
                         score = get_invalid_receipt_score(existing_score)
+                        slashing_tokens(cur, wallet_address, False)
+
                     else:
                         score = get_valid_receipt_score(existing_score)
                 else:
@@ -101,8 +110,10 @@ def update_network_trust_score_from_receipt(cur, receipt):
                         score = get_valid_receipt_score(existing_score)
                     else:
                         score = get_invalid_receipt_score(existing_score)
-                
+                        slashing_tokens(cur, wallet_address, False)
             if wallet_address not in committee:
                 score = get_invalid_receipt_score(existing_score)
+                slashing_tokens(cur, wallet_address, False)
+
 
         update_trust_score(cur, Configuration.config("NETWORK_TRUST_MANAGER_PID"), person_id, score, get_corrected_time_ms())

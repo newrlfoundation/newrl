@@ -5,6 +5,7 @@ import uvicorn
 from fastapi import APIRouter
 from fastapi.exceptions import HTTPException
 from starlette.requests import Request
+from app.codes.blockchain import get_blocks_in_range
 
 from app.codes.chainscanner import download_chain, download_state, get_transaction
 from app.codes.clock.global_time import get_time_stats
@@ -37,6 +38,10 @@ def get_mempool_transactions_api(req: TransactionsRequest):
 @router.post("/get-blocks", tags=[p2p_tag])
 def get_blocks_api(req: BlockRequest):
     return get_blocks(req.block_indexes)
+
+@router.get("/get-blocks-in-range", tags=[p2p_tag])
+def get_blocks_in_range_api(start_index: int, end_index: int):
+    return get_blocks_in_range(start_index, end_index)
 
 @router.post("/receive-transaction", tags=[p2p_tag])
 async def receive_transaction_api(req: TransactionAdditionRequest):

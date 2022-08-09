@@ -22,14 +22,11 @@ from app.codes.consensus.consensus import check_community_consensus, is_timeout_
     add_my_receipt_to_block
 from app.migrations.init_db import revert_chain
 from app.nvalues import SENTINEL_NODE_WALLET
+from app.codes.timers import SYNC_STATUS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# IS_SYNCING = False
-SYNC_STATUS = {
-    'IS_SYNCING': False
-}
 
 def get_blocks(block_indexes):
     blocks = []
@@ -42,6 +39,30 @@ def get_blocks(block_indexes):
     return blocks
 
 
+def get_block_hashes(start_index, end_index):
+    con = sqlite3.connect(NEWRL_DB)
+    # con.row_factory = sqlite3.Row
+    cur = con.cursor()
+
+    blocks = cur.execute(
+        '''
+        SELECT block_index, hash, timestamp FROM 
+        blocks 
+        where block_index>=? and block_index < ?
+        ''', (start_index, end_index, )).fetchall()
+
+    results = []
+    for row in blocks:
+        block = {
+            'index': row[0],
+            'hash': row[1],
+            'timestamp': row[2],
+        }
+        results.append(block)
+
+    return results
+
+
 def get_block(block_index):
     chain = blockchain.Blockchain()
     return chain.get_block(block_index)
@@ -52,6 +73,9 @@ def get_last_block_index():
 
 
 def receive_block(block):
+    if SYNC_STATUS['IS_SYNCING']:
+        logger.info('Syncing with network. Ignoring incoming block.')
+        return
     block_index = block['index']
     if block_index > get_last_block_index() + 1:
         logger.info('Node not in sync. Cannot add block')
@@ -72,7 +96,7 @@ def receive_block(block):
         accept_block(block, block['hash'])
         broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
         return
-    
+
     # store_block_proposal(block)
     
     if not validate_block_miner(block['data']):
@@ -195,7 +219,8 @@ def sync_chain_from_peers(force_sync=False):
             sync_success = sync_chain_from_node(url, block_index)
             if not sync_success:
                 forking_block = find_forking_block(url)
-                revert_chain(forking_block)
+                logger.info(f'Chains forking from block {forking_block}. Need to revert.')
+                # revert_chain(forking_block)
         else:
             logger.info('No node available to sync')
     except Exception as e:
@@ -302,7 +327,8 @@ def receive_receipt(receipt):
         for block in blocks_appended:
             if check_community_consensus(block):
                 original_block = copy.deepcopy(block)
-                accept_block(block, block['hash'])
+                if not SYNC_STATUS['IS_SYNCING']:
+                    accept_block(block, block['hash'])
                 broadcast_block(original_block)
 
     # committee = get_committee_for_current_block()
@@ -313,16 +339,19 @@ def receive_receipt(receipt):
 
 def get_block_from_url_retry(url, blocks_request):
     response = None
+    retry_count = 3
     while response is None or response.status_code != 200:
         try:
             response = requests.post(
                     url + '/get-blocks',
                     json=blocks_request,
-                    # timeout=REQUEST_TIMEOUT
+                    timeout=10
                 )
         except Exception as err:
             logger.info(f'Retrying block get {err}')
-            failed_for_invalid_block = True
+            if retry_count < 0:
+                break
+            retry_count -= 1
             time.sleep(5)
     blocks_data = response.json()
     return blocks_data
@@ -330,15 +359,19 @@ def get_block_from_url_retry(url, blocks_request):
 
 def get_block_tree_from_url_retry(url, start_index, end_index):
     response = None
+    retry_count = 3
     while response is None or response.status_code != 200:
         try:
-            response = requests.post(
+            response = requests.get(
                     url + f'/get-block-tree?start_index={start_index}&end_index={end_index}'
                 )
         except Exception as err:
             logger.info(f'Retrying block get {err}')
             failed_for_invalid_block = True
             time.sleep(1)
+            retry_count -= 1
+            if retry_count == 0:
+                break
     blocks_data = response.json()
     return blocks_data
 
@@ -351,10 +384,10 @@ def get_last_block_hash_from_url_retry(url):
                 url + '/get-last-block-hash',
                 timeout=0.5
             )
-        return response.json()
+        return response.json()['hash']
     except Exception as err:
         logger.info(f'Error getting block hash {err}')
-    
+
     return None
 
 
@@ -375,15 +408,15 @@ def get_majority_random_node():
         hash = get_last_block_hash_from_url_retry(url)
         if hash:
             hashes.append(hash)
-            if hash['hash'] == candidate_hash:
+            if hash == candidate_hash:
                 candidate_hash_count += 1
             else:
                 candidate_hash_count -= 1
             if candidate_hash_count < 0:
-                candidate_hash = hash['hash']
+                candidate_hash = hash
                 candidate_hash_count = 0
                 candidate_node_url = url
-    
+
     logger.info(f'Majority hash is {candidate_hash} and a random url is {candidate_node_url}')
     return candidate_node_url
     # revert_chain(find_forking_block(candidate_node_url))
@@ -391,6 +424,23 @@ def get_majority_random_node():
 
 
 def find_forking_block(node_url):
+    my_last_block_index = get_last_block_index()
+
+    batch_size = 100
+    start_idx = my_last_block_index - batch_size
+
+    while start_idx >= 0:
+        end_idx = start_idx + batch_size
+        hash_tree = get_block_tree_from_url_retry(node_url, start_idx, end_idx)
+        my_blocks = get_blocks(list(range(start_idx, end_idx)))
+
+        idx = end_idx - 1 - start_idx
+
+        while idx >= 0:
+            if hash_tree[idx]['hash'] == my_blocks[idx]['hash']:
+                return idx + start_idx
+            idx -= 1
+
+        start_idx -= batch_size
+
     return 0
-    # get_last_block_index()
-    # if 

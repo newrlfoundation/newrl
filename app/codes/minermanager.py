@@ -1,18 +1,12 @@
 """Miner update functions"""
 import sqlite3
-import random
 import logging
 
 from .p2p.peers import add_peer
-
-from ..nvalues import SENTINEL_NODE_WALLET
-from .utils import get_last_block_hash
-# from .p2p.outgoing import propogate_transaction_to_peers
-from .p2p.utils import get_my_address
-from ..constants import COMMITTEE_SIZE, IS_TEST, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
-from .clock.global_time import get_time_difference
 from ..Configuration import Configuration
-from ..constants import COMMITTEE_SIZE, IS_TEST, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
+from .p2p.utils import get_my_address
+from ..constants import NEWRL_DB
+from .clock.global_time import get_time_difference
 from .auth.auth import get_wallet
 from .signmanager import sign_transaction
 from ..ntypes import TRANSACTION_MINER_ADDITION

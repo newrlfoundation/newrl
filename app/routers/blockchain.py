@@ -10,12 +10,12 @@ from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 from starlette.responses import FileResponse
 from app.codes.helpers.FetchRespository import FetchRepository
-from app.codes.p2p.sync_chain import get_blocks
+from app.codes.p2p.sync_chain import find_forking_block, get_block_hashes, get_blocks
 from app.codes.scoremanager import get_trust_score
 
 from app.codes.transactionmanager import Transactionmanager
 from app.constants import NEWRL_DB
-
+from app.nvalues import NETWORK_TRUST_MANAGER_PID
 
 from .request_models import AddWalletRequest, BalanceRequest, BalanceType, CallSC, CreateTokenRequest, CreateWalletRequest, GetTokenRequest, RunSmartContractRequest, TransferRequest, CreateSCRequest, TscoreRequest
 from app.codes.chainscanner import Chainscanner, download_chain, download_state, get_block, get_contract, get_token, get_transaction, get_wallet
@@ -383,13 +383,13 @@ def get_sc_state(table_name, contract_address, unique_column, unique_value):
         con = sqlite3.connect(NEWRL_DB)
         cur = con.cursor()
         repo = FetchRepository(cur)
-    
+
         data = repo.select_Query().add_table_name(table_name).where_clause(unique_column, unique_value, 1).and_clause(
             "address", contract_address,1).execute_query_single_result({unique_column: unique_value, "address": contract_address})
-        
+
         con.close()
         return {"status": "SUCCESS", 'data' : data}
-    except Exception as e:        
+    except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -406,11 +406,11 @@ def get_last_block_hash_api():
 @router.get("/get-block-tree", tags=[v2_tag])
 def get_block_tree_api(start_index: int, end_index: int):
     """Get block tree for given start and end"""
-    blocks = get_blocks(list(range(start_index, end_index)))
-    blocks = map(lambda b: {
-        'index': b['index'],
-        'hash': b['hash'],
-        'timestamp': b['timestamp']
-        }, blocks)
+    blocks = get_block_hashes(start_index, end_index)
     blocks = list(blocks)
     return blocks
+
+
+@router.get("/find-forking-block", tags=[v2_tag])
+def get_fork_block(url: str):
+    return find_forking_block(url)
