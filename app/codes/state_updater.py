@@ -78,7 +78,7 @@ def update_db_states(cur, block):
             logger.error(f'Error in transaction: {str(transaction)}')
             logger.error(str(e))
     if config_updated:
-        Configuration.updateDataFromDB()
+        Configuration.updateDataFromDB(cur)
     return True
 
 
@@ -156,18 +156,23 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
         )
     if transaction_type == TRANSACTION_SC_UPDATE:
         cr = CentralRepository(cur, cur)
+        global config_updated
         if(transaction_data['operation'] == "save"):
             cr.save_private_sc_state(
                 transaction_data['table_name'], transaction_data["data"])
-        if(transaction_data['operation'] == "update"):
-            cr.update_private_sc_state(transaction_data['table_name'], transaction_data["data"],
-                                       transaction_data["unique_column"], transaction_data["unique_value"], transaction_data["contract_address"])
             if transaction_data['table_name']=='configuration':
                 # Call to update the constants
-                set_attr(transaction_data['unique_value'],transaction_data['data']['property_value'])
+                config_updated=True
+        if(transaction_data['operation'] == "update"):
+            cr.update_private_sc_state(transaction_data['table_name'], transaction_data["data"],
+                                       transaction_data["unique_column"], transaction_data["unique_value"], transaction_data["sc_address"])
+            if transaction_data['table_name']=='configuration':
+                # Call to update the constants
+
+                config_updated=True
         if(transaction_data['operation'] == "delete"):
             cr.delete_private_sc_state(transaction_data['table_name'], transaction_data["unique_column"],
-                                       transaction_data["unique_value"], transaction_data["contract_address"])
+                                       transaction_data["unique_value"], transaction_data["sc_address"])
 
 
 

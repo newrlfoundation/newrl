@@ -9,9 +9,9 @@ class TransactionCreator:
     def transaction_type_one(self,data:dict):
 
         add_wallet_request = {
-            "custodian_address": data['custodian_address'],
+            "custodian_wallet": data['custodian_wallet'],
             "ownertype": data['ownertype'],
-            "jurisd ": data['jurisdiction'],
+            "jurisd": data['jurisdiction'],
             "kyc_docs": data['kyc_docs'],
             "specific_data": data['specific_data'],
             'wallet_address': data['address'],

@@ -50,13 +50,14 @@ class Configuration:
         Configuration.set("SENTINEL_NODE_WALLET", SENTINEL_NODE_WALLET)
         Configuration.set("SENTINEL_NODE_WALLET_PUBLIC", SENTINEL_NODE_WALLET_PUBLIC)
         Configuration.set("DAO_MANAGER", DAO_MANAGER)
-        Configuration.updateDataFromDB()
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        Configuration.updateDataFromDB(cur)
         return True
 
     @staticmethod
-    def updateDataFromDB():
-        con = sqlite3.connect(NEWRL_DB)
-        cur = con.cursor()
+    def updateDataFromDB(cur):
+
         data = cur.execute(f'''select property_key,property_value from configuration''')
         data = data.fetchall()
         for i in data:

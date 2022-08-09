@@ -67,12 +67,13 @@ class ConfigurationManager(DaoMainTemplate, ABC):
                 logging.error("Property key already exists for %s", i['property_key'])
                 return trxn
             else:
-                logging.info("Property value saved %s", (config_data[1], i['property_value']))
+                logging.info("Property value saved %s", (i['property_value']))
                 sc_state_proposal1_data = {
                     "operation": "save",
                     "table_name": "configuration",
                     "sc_address": self.address,
                     "data": {
+                        "property_key":i['property_key'],
                         "property_value": i['property_value'],
                         "address": self.address,
                         "last_updated": get_corrected_time_ms()
