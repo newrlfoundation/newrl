@@ -16,7 +16,7 @@ from .clock.global_time import get_corrected_time_ms, get_time_difference
 from .fs.temp_manager import get_all_receipts_from_storage, get_blocks_for_index_from_storage, store_block_to_temp
 from .minermanager import am_i_in_current_committee, broadcast_miner_update, get_committee_for_current_block, get_miner_for_current_block, should_i_mine
 from ..nvalues import SENTINEL_NODE_WALLET, TREASURY_WALLET_ADDRESS
-from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, GLOBAL_INTERNAL_CLOCK_SECONDS, IS_TEST, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, NEWRL_PORT, NO_BLOCK_TIMEOUT, NO_RECEIPT_COMMITTEE_TIMEOUT, REQUEST_TIMEOUT, MEMPOOL_PATH, TIME_BETWEEN_BLOCKS_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS
+from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, GLOBAL_INTERNAL_CLOCK_SECONDS, IS_TEST, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, NEWRL_PORT, NO_BLOCK_TIMEOUT, NO_RECEIPT_COMMITTEE_TIMEOUT, REQUEST_TIMEOUT, MEMPOOL_PATH, SOFTWARE_VERSION, TIME_BETWEEN_BLOCKS_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS
 from .p2p.peers import get_peers
 from .p2p.utils import is_my_address
 from .utils import BufferedLog, get_time_ms
@@ -105,7 +105,7 @@ def run_updater(add_to_chain=False):
             os.remove(file)
             continue
         
-        if not should_include_transaction(transaction):
+        if not should_include_transaction(transaction, previous_block['index']):
             os.remove(file)
             continue
         
@@ -163,7 +163,8 @@ def run_updater(add_to_chain=False):
         'index': block['index'],
         'hash': calculate_hash(block),
         'data': block,
-        'receipts': [block_receipt]
+        'receipts': [block_receipt],
+        'software_version': SOFTWARE_VERSION
     }
     store_block_to_temp(block_payload)
     # store_receipt_to_temp(block_receipt)
@@ -256,11 +257,19 @@ def start_miner_broadcast_clock():
     timer.start()
 
 
-def should_include_transaction(transaction):
-    if transaction['type'] == 7:
-        broadcast_timestamp = transaction['specific_data']['broadcast_timestamp']
-        if broadcast_timestamp < get_corrected_time_ms() - TIME_MINER_BROADCAST_INTERVAL_SECONDS * 1000:
-            return False
+def should_include_transaction(transaction, my_last_block_index=0):
+    try:
+        if transaction['type'] == 7:
+            broadcast_timestamp = transaction['specific_data']['broadcast_timestamp']
+            if broadcast_timestamp < get_corrected_time_ms() - TIME_MINER_BROADCAST_INTERVAL_SECONDS * 1000:
+                return False
+            software_version = transaction['specific_data']['software_version']
+            last_block_index = transaction['specific_data']['software_version']
+            if software_version < SOFTWARE_VERSION or last_block_index < my_last_block_index:
+                return False
+    except Exception as e:
+        logger.error(f'Invalid transaction format {str(transaction)}, {str(e)}')
+        return False
     return True
 
 
@@ -310,6 +319,17 @@ def am_i_sentinel_node():
 
 
 def sentitnel_node_mine_empty():
+    previous_block = get_last_block()
+    if previous_block is None:
+        new_block_index = 1
+    else:
+        new_block_index = previous_block['index'] + 1
+    existing_block_proposals = get_blocks_for_index_from_storage(new_block_index)
+    
+    if len(existing_block_proposals) != 0:
+        logger.info(f"Existing block proposal exists with index {new_block_index}. Broadcasting existing one.")
+        broadcast_block_proposal(existing_block_proposals[0])
+        return existing_block_proposals[0]
     blockchain = Blockchain()
     current_time_ms = get_corrected_time_ms()
     block = blockchain.mine_empty_block(current_time_ms)

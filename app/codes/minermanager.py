@@ -2,10 +2,10 @@
 import sqlite3
 import logging
 
+from .blockchain import get_last_block_index
 from .p2p.peers import add_peer
-
 from .p2p.utils import get_my_address
-from ..constants import NEWRL_DB
+from ..constants import NEWRL_DB, SOFTWARE_VERSION
 from .clock.global_time import get_time_difference
 from .auth.auth import get_wallet
 from .signmanager import sign_transaction
@@ -37,7 +37,9 @@ def miner_addition_transaction(wallet=None, my_address=None):
         'specific_data': {
             'wallet_address': wallet['address'],
             'network_address': my_address,
-            'broadcast_timestamp': timestamp
+            'broadcast_timestamp': timestamp,
+            'software_version': SOFTWARE_VERSION,
+            'last_block_index': get_last_block_index()
         }
     }
 
