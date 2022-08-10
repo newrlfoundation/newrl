@@ -94,7 +94,7 @@ def receive_block(block):
     if is_timeout_block_from_sentinel_node(block['data']):
         logger.info('Accepting timeout block from sentinel node')
         accept_block(block, block['hash'])
-        broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
+        broadcast_block(original_block)
         return
 
     # store_block_proposal(block)
@@ -226,6 +226,12 @@ def sync_chain_from_peers(force_sync=False):
     except Exception as e:
         logger.info(f'Sync failed {e}')
     SYNC_STATUS['IS_SYNCING'] = False
+
+
+def find_forking_block_with_majority():
+    url = get_majority_random_node()
+    forking_block = find_forking_block(url)
+    return forking_block
 
 
 # TODO - use mode of max last 

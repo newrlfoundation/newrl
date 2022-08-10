@@ -58,6 +58,7 @@ def update_network_trust_score_from_receipt(cur, receipt):
         wallet_address = receipt['data']['wallet_address']
         person_id = get_pid_from_wallet(cur, wallet_address)
         vote = receipt['data']['vote']
+        receipt_timestamp = receipt['data']['timestamp']
 
         trust_score_cursor = cur.execute('''
             SELECT score FROM trust_scores where src_person_id=? and dest_person_id=?
@@ -116,4 +117,4 @@ def update_network_trust_score_from_receipt(cur, receipt):
                 slashing_tokens(cur, wallet_address, False)
 
 
-        update_trust_score(cur, Configuration.config("NETWORK_TRUST_MANAGER_PID"), person_id, score, get_corrected_time_ms())
+        update_trust_score(cur, Configuration.config("NETWORK_TRUST_MANAGER_PID"), person_id, score, receipt_timestamp)

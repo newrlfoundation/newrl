@@ -10,7 +10,7 @@ from app.codes.blockchain import get_blocks_in_range
 from app.codes.chainscanner import download_chain, download_state, get_transaction
 from app.codes.clock.global_time import get_time_stats
 from app.codes.p2p.peers import add_peer, clear_peers, get_peers, update_software
-from app.codes.p2p.sync_chain import get_blocks, get_last_block_index, receive_block, receive_receipt, sync_chain_from_peers
+from app.codes.p2p.sync_chain import find_forking_block_with_majority, get_blocks, get_last_block_index, receive_block, receive_receipt, sync_chain_from_peers
 from app.codes.p2p.sync_mempool import get_mempool_transactions, list_mempool_transactions, sync_mempool_transactions
 from app.codes.p2p.peers import call_api_on_peers
 from .request_models import BlockAdditionRequest, BlockRequest, ReceiptAdditionRequest, TransactionAdditionRequest, TransactionsRequest
@@ -61,6 +61,10 @@ async def receive_receipt_api(req: ReceiptAdditionRequest):
 @router.get("/get-last-block-index", tags=[p2p_tag])
 def get_last_block_index_api():
     return get_last_block_index()
+
+@router.get("/find-forking-block-with-majority", tags=[p2p_tag])
+def find_forking_block_with_majority_api():
+    return find_forking_block_with_majority()
 
 @router.get("/get-peers", tags=[p2p_tag])
 def get_peers_api():
