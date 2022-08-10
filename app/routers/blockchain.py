@@ -102,15 +102,6 @@ def get_trust_score_api(
         raise HTTPException(status_code=400, detail="Trust score not available")
     return {'trust_score': trust_score}
 
-@router.get("/download-chain", tags=[v2_tag])
-def download_chain_api():
-    return download_chain()
-
-
-@router.get("/download-state", tags=[v2_tag])
-def download_state_api():
-    return download_state()
-
 
 @router.post("/get-balance", tags=[legacy])
 def get_balance(req: BalanceRequest):

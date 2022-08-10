@@ -30,7 +30,7 @@ p2p_tag = 'System'
 
 
 @router.get("/get-node-info", tags=[p2p_tag])
-def get_node_info():
+async def get_node_info():
     last_block = get_last_block_hash()
     if last_block is None:
         last_block_index = 0
@@ -44,7 +44,7 @@ def get_node_info():
         'timers': get_timers(),
         'miners': get_miner_info(),
         'peers': get_peers(),
-        'recent_blocks': get_blocks(list(range(last_block_index - 5, last_block_index))),
+        # 'recent_blocks': get_blocks(list(range(last_block_index - 5, last_block_index))),
         'mempool_transactions': list_mempool_transactions()[-10:],
     }
     return node_info
