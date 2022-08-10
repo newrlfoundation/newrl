@@ -22,7 +22,7 @@ def get_valid_block_creation_score(current_score):
 
 
 def get_invalid_block_creation_score(current_score):
-    score_diff = 5 * MAX_NETWORK_TRUST_SCORE/100 + 0.01 * current_score
+    score_diff = 5 * (MAX_NETWORK_TRUST_SCORE/100 + 0.01 * current_score)
     new_score = int(current_score - score_diff)
     return new_score
 

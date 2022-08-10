@@ -264,7 +264,7 @@ def should_include_transaction(transaction, my_last_block_index=0):
             if broadcast_timestamp < get_corrected_time_ms() - TIME_MINER_BROADCAST_INTERVAL_SECONDS * 1000:
                 return False
             software_version = transaction['specific_data']['software_version']
-            last_block_index = transaction['specific_data']['software_version']
+            last_block_index = transaction['specific_data']['last_block_index']
             if software_version < SOFTWARE_VERSION or last_block_index < my_last_block_index:
                 return False
     except Exception as e:
