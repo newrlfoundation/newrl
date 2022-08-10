@@ -1,4 +1,6 @@
 import logging
+
+from app.Configuration import Configuration
 from .codes.log_config import logger_init
 logger_init()
 import argparse
@@ -62,6 +64,9 @@ args = args = {
 @app.on_event('startup')
 def app_startup():
     try:
+        Configuration.init_values()
+        Configuration.init_values_in_db()
+        logger.info("Initializing Config Values")
         if not args['disablenetwork']:
             sync_timer_clock_with_global()
             # if not args['disableupdate']:
@@ -73,7 +78,7 @@ def app_startup():
     except Exception as e:
         print('Bootstrap failed')
         logging.critical(e, exc_info=True)
-    
+
     start_miner_broadcast_clock()
     global_internal_clock()
     
@@ -85,6 +90,8 @@ def shutdown_event():
 
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=NEWRL_PORT, reload=True)
+
+
 
 
 def custom_openapi():

@@ -4,6 +4,7 @@ import logging
 
 from .blockchain import get_last_block_index
 from .p2p.peers import add_peer
+from ..Configuration import Configuration
 from .p2p.utils import get_my_address
 from ..constants import NEWRL_DB, SOFTWARE_VERSION
 from .clock.global_time import get_time_difference

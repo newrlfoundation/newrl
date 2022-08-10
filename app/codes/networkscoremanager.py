@@ -2,13 +2,19 @@
 import logging
 import json
 from math import sqrt
+
+from app.Configuration import Configuration
 from app.codes.clock.global_time import get_corrected_time_ms
 from app.codes.db_updater import get_block_from_cursor, get_pid_from_wallet, update_trust_score
 from app.codes.state_updater import slashing_tokens
 
 from app.constants import INITIAL_NETWORK_TRUST_SCORE, MAX_NETWORK_TRUST_SCORE
 from app.ntypes import BLOCK_VOTE_MINER, BLOCK_VOTE_VALID
-from app.nvalues import NETWORK_TRUST_MANAGER_PID
+
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 logging.basicConfig(level=logging.INFO)
@@ -22,7 +28,7 @@ def get_valid_block_creation_score(current_score):
 
 
 def get_invalid_block_creation_score(current_score):
-    score_diff = 5 * MAX_NETWORK_TRUST_SCORE/100 + 0.01 * current_score
+    score_diff = 5 * (MAX_NETWORK_TRUST_SCORE/100 + 0.01 * current_score)
     new_score = int(current_score - score_diff)
     return new_score
 
@@ -56,7 +62,7 @@ def update_network_trust_score_from_receipt(cur, receipt):
 
         trust_score_cursor = cur.execute('''
             SELECT score FROM trust_scores where src_person_id=? and dest_person_id=?
-            ''', (NETWORK_TRUST_MANAGER_PID, person_id)).fetchone()
+            ''', (Configuration.config("NETWORK_TRUST_MANAGER_PID"), person_id)).fetchone()
                     
         if trust_score_cursor is None:
             existing_score = INITIAL_NETWORK_TRUST_SCORE
@@ -111,4 +117,4 @@ def update_network_trust_score_from_receipt(cur, receipt):
                 slashing_tokens(cur, wallet_address, False)
 
 
-        update_trust_score(cur, NETWORK_TRUST_MANAGER_PID, person_id, score, receipt_timestamp)
+        update_trust_score(cur, Configuration.config("NETWORK_TRUST_MANAGER_PID"), person_id, score, receipt_timestamp)

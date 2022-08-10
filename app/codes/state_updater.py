@@ -15,6 +15,7 @@ from app.codes.helpers.CentralRespository import CentralRepository
 from .db_updater import *
 from app.codes.networkscoremanager import get_invalid_block_creation_score, get_invalid_receipt_score, get_valid_block_creation_score, get_valid_receipt_score, update_network_trust_score_from_receipt
 from .p2p.utils import get_peers
+from ..Configuration import Configuration
 
 from ..nvalues import NETWORK_TRUST_MANAGER_PID, TREASURY_WALLET_ADDRESS
 
@@ -46,6 +47,8 @@ def update_db_states(cur, block):
     collated_txns = simplify_transactions(cur, transactions)
     global simplified_transactions
     simplified_transactions = []
+    global config_updated
+    config_updated = False
 
     for transaction in collated_txns:
 
@@ -75,6 +78,8 @@ def update_db_states(cur, block):
         except Exception as e:
             logger.error(f'Error in transaction: {str(transaction)}')
             logger.error(str(e))
+    if config_updated:
+        Configuration.updateDataFromDB(cur)
     return True
 
 
@@ -148,15 +153,24 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
         )
     if transaction_type == TRANSACTION_SC_UPDATE:
         cr = CentralRepository(cur, cur)
+        global config_updated
         if(transaction_data['operation'] == "save"):
             cr.save_private_sc_state(
                 transaction_data['table_name'], transaction_data["data"])
+            if transaction_data['table_name']=='configuration':
+                # Call to update the constants
+                config_updated=True
         if(transaction_data['operation'] == "update"):
             cr.update_private_sc_state(transaction_data['table_name'], transaction_data["data"],
                                        transaction_data["unique_column"], transaction_data["unique_value"], transaction_data["address"])
+            if transaction_data['table_name']=='configuration':
+                # Call to update the constants
+
+                config_updated=True
         if(transaction_data['operation'] == "delete"):
             cr.delete_private_sc_state(transaction_data['table_name'], transaction_data["unique_column"],
                                        transaction_data["unique_value"], transaction_data["address"])
+
 
 
 def add_block_reward(cur, creator, blockindex):

@@ -27,7 +27,7 @@ class dao_manager(ContractMaster):
         dao_person_id = get_person_id_for_wallet_address(dao_sc_address)
 
         add_wallet_request = {
-            "custodian_address": self.address,
+            "custodian_wallet": self.address,
             "ownertype": 2,
             "jurisdiction": 91,
             "kyc_docs":json.dumps(dao_params['legalparams']),
