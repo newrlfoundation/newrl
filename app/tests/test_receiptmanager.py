@@ -35,9 +35,9 @@ def test_receipt_exist_store_delete():
     block_hash = receipt['data']['block_hash']
     wallet_address = receipt['data']['wallet_address']
     remove_receipt_from_temp(100, block_hash, wallet_address)
-    
+
     assert not check_receipt_exists_in_temp(100, block_hash, wallet_address)
-    
+
     store_receipt_to_temp(receipt)
 
     assert check_receipt_exists_in_temp(100, block_hash, wallet_address)
@@ -50,19 +50,19 @@ def test_receipt_exist_store_delete():
 def test_check_receipt_exists_in_db():
     receipts = get_receipts_included_in_block_from_db(10)
     receipt = receipts[0]
-    
+
     assert check_receipt_exists_in_db(
         receipt['data']['block_index'],
         receipt['data']['block_hash'],
         receipt['data']['wallet_address']
         )
-    
+
     assert not check_receipt_exists_in_db(
         receipt['data']['block_index'] + 1,
         receipt['data']['block_hash'],
         receipt['data']['wallet_address']
         )
-    
+
 
 def test_get_receipt_in_temp_not_in_chain():
     last_block_index = get_last_block_index()

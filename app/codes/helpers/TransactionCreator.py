@@ -8,7 +8,7 @@ from app.routers.request_models import CreateTokenRequest, CreateWalletRequest
 class TransactionCreator:
     def transaction_type_one(self, data: dict):
         add_wallet_request = {
-            "custodian_wallet": data['custodian_address'],
+            "custodian_wallet": data['custodian_wallet'],
             "ownertype": data['ownertype'],
             "jurisd": data['jurisdiction'],
             "kyc_docs": data['kyc_docs'],

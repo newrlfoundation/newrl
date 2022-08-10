@@ -12,11 +12,11 @@ import sqlite3
 import hashlib
 
 from app.codes.clock.global_time import get_corrected_time_ms
+from ..Configuration import Configuration
 
 from ..constants import INITIAL_NETWORK_TRUST_SCORE, NEWRL_DB
 from .utils import get_person_id_for_wallet_address, get_time_ms
 from ..ntypes import NEWRL_TOKEN_CODE
-from ..nvalues import MIN_STAKE_AMOUNT, NETWORK_TRUST_MANAGER_PID, STAKE_PENALTY_RATIO, ZERO_ADDRESS
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -329,7 +329,7 @@ def add_miner(cur, wallet_address, network_address, broadcast_timestamp):
         INSERT OR IGNORE INTO trust_scores
         (src_person_id, dest_person_id, score, last_time)
         VALUES (?, ?, ?, ?)''', 
-        (NETWORK_TRUST_MANAGER_PID, person_id, 
+        (Configuration.config("NETWORK_TRUST_MANAGER_PID"), person_id,
         INITIAL_NETWORK_TRUST_SCORE, get_corrected_time_ms()))
 
 def add_pid_contract_add(cur,ct_add):
@@ -351,9 +351,9 @@ def slashing_tokens(cur,address,is_block):
     if data is not None:
         balance = data[0]
         if is_block:
-            amount = MIN_STAKE_AMOUNT
+            amount = Configuration.config("MIN_STAKE_AMOUNT")
         else:
-            amount = int((MIN_STAKE_AMOUNT/STAKE_PENALTY_RATIO))
+            amount = int((Configuration.config("MIN_STAKE_AMOUNT")/Configuration.config("STAKE_PENALTY_RATIO")))
         actual_balance=balance
         balance = balance-amount
         deducted_amount=0
@@ -363,7 +363,7 @@ def slashing_tokens(cur,address,is_block):
             for i in value.keys():
                 burn_amount=data_json[index][i]-(data_json[index][i]/actual_balance)*balance
                 data_json[index][i]=(data_json[index][i]/actual_balance)*balance
-                transfer_tokens_and_update_balances(cur,i,ZERO_ADDRESS,NEWRL_TOKEN_CODE,math.ceil(burn_amount))
+                transfer_tokens_and_update_balances(cur,Configuration.config("STAKE_CT_ADDRESS"),Configuration.config("ZERO_ADDRESS"),NEWRL_TOKEN_CODE,math.ceil(burn_amount))
                 deducted_amount=deducted_amount+math.ceil(burn_amount)
         # updating stake_ledger table with the new updated address amount
         cur.execute(f'''UPDATE stake_ledger set amount=:amount, staker_wallet_address=:staker_wallet_address where wallet_address=:address''', {"amount": actual_balance-deducted_amount,

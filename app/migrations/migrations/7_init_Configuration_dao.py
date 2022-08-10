@@ -4,28 +4,28 @@ import sqlite3
 from app.codes.utils import get_person_id_for_wallet_address
 from app.constants import NEWRL_DB
 from app.nvalues import DAO_MANAGER, ASQI_WALLET, TREASURY_CONTRACT_ADDRESS, FOUNDATION_WALLET, ASQI_DAO_ADDRESS, \
-    NEWRL_DAO_ADDRESS, ASQI_WALLET_DAO, FOUNDATION_WALLET_DAO
+    NEWRL_DAO_ADDRESS, CONFIG_DAO_ADDRESS
 
 
 def migrate():
-    print("Migrating Foundation Dao")
-    init_Foundation_Dao()
+    print("Migrating Configuration Dao")
+    init_Configuration_Dao()
 
 
-def init_Foundation_Dao():
+def init_Configuration_Dao():
     """Initialise Dao_Manager."""
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
 
-    create_foundation_dao(cur, ASQI_DAO_ADDRESS,"ASQI_DAO",ASQI_WALLET_DAO)
-    create_foundation_dao(cur,NEWRL_DAO_ADDRESS,"NEWRL_DAO",FOUNDATION_WALLET_DAO)
+    create_Configuration_Dao(cur, CONFIG_DAO_ADDRESS,"ConfigurationManager",ASQI_WALLET)
+
 
     con.commit()
     con.close()
 
 
-def create_foundation_dao(cur, address,name,wallet):
-    address_signatories = [ASQI_WALLET_DAO, FOUNDATION_WALLET_DAO]
+def create_Configuration_Dao(cur, address,name,wallet):
+    address_signatories = [ASQI_WALLET, FOUNDATION_WALLET]
     signatories = {"vote_on_proposal": None,
                 "delete_member": [
                     -1
@@ -34,10 +34,10 @@ def create_foundation_dao(cur, address,name,wallet):
                 "add_member": [
                     -1
                 ],
-                "invest": [
+                "change_config": [
                     -1
                 ],
-                "payout": [
+                "add_config": [
                     -1
                 ],
                 "initialize_membership":None
@@ -47,7 +47,7 @@ def create_foundation_dao(cur, address,name,wallet):
         address,
         json.dumps(address_signatories),
         1648706655,
-        'FoundationDao',
+        'MembershipDao',
         '1.0.0',
         'hybrid',
         '1',
@@ -60,7 +60,7 @@ def create_foundation_dao(cur, address,name,wallet):
         '{}'
     )
     dao_exists = cur.execute(f'''SELECT COUNT(*) FROM CONTRACTS WHERE ADDRESS=? AND NAME LIKE ? ''',
-                                          (address, 'FoundationDao'))
+                                          (address, 'MembershipDao'))
     dao_exists = dao_exists.fetchone()
     cur.execute(f'''INSERT OR IGNORE INTO CONTRACTS
         (address, creator, ts_init, 

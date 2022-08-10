@@ -27,6 +27,7 @@ from app.codes import validator
 from app.codes import signmanager
 from app.codes import updater
 from app.codes.contracts.contract_master import create_contract_address
+from ..Configuration import Configuration
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -95,7 +96,7 @@ def get_contract_api(contract_address: str):
 @router.get("/get-trust-score", tags=[v2_tag])
 def get_trust_score_api(
         destination_person_id: str,
-        source_person_id: str=NETWORK_TRUST_MANAGER_PID):
+        source_person_id: str=Configuration.config("NETWORK_TRUST_MANAGER_PID")):
     """Get a trust score. Default source_person_id is network trust manager"""
     trust_score = get_trust_score(src_person_id=source_person_id, dest_person_id=destination_person_id)
     if trust_score is None:
@@ -373,13 +374,13 @@ def get_sc_state(table_name, contract_address, unique_column, unique_value):
         con = sqlite3.connect(NEWRL_DB)
         cur = con.cursor()
         repo = FetchRepository(cur)
-    
+
         data = repo.select_Query().add_table_name(table_name).where_clause(unique_column, unique_value, 1).and_clause(
             "address", contract_address,1).execute_query_single_result({unique_column: unique_value, "address": contract_address})
-        
+
         con.close()
         return {"status": "SUCCESS", 'data' : data}
-    except Exception as e:        
+    except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -403,4 +404,4 @@ def get_block_tree_api(start_index: int, end_index: int):
 
 @router.get("/find-forking-block", tags=[v2_tag])
 def get_fork_block(url: str):
-    return find_forking_block(url)    
+    return find_forking_block(url)

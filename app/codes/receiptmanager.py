@@ -79,7 +79,7 @@ def check_receipt_exists_in_db(block_index, block_hash, wallet_address, cur=None
         SELECT vote FROM receipts where block_index=? and block_hash=? and wallet_address=?
         '''
         , (block_index, block_hash, wallet_address)).fetchone()
-    
+
     receipt_exists = receipt_cursor is not None
     if connection_created:
         con.close()
@@ -102,5 +102,5 @@ def get_receipt_in_temp_not_in_chain(exclude_block, cur=None):
             )
         else:
             receipts_not_included.append(receipt)
-    
+
     return receipts_not_included

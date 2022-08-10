@@ -1,7 +1,7 @@
 import sqlite3
 
+from app.Configuration import Configuration
 from ...ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME
-from ...nvalues import ASQI_PID, ASQI_WALLET, NETWORK_TRUST_MANAGER_PID, NETWORK_TRUST_MANAGER_PUBLIC, NETWORK_TRUST_MANAGER_WALLET, SENTINEL_NODE_WALLET, ASQI_WALLET_PUBLIC, FOUNDATION_WALLET, FOUNDATION_WALLET_PUBLIC, SENTINEL_NODE_WALLET_PUBLIC
 
 from ...constants import NEWRL_DB
 
@@ -16,20 +16,20 @@ def init_newrl_tokens():
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
 
-    create_wallet(cur, FOUNDATION_WALLET, FOUNDATION_WALLET_PUBLIC)
-    create_wallet(cur, ASQI_WALLET, ASQI_WALLET_PUBLIC)
-    create_wallet(cur, SENTINEL_NODE_WALLET, SENTINEL_NODE_WALLET_PUBLIC)
-    create_wallet(cur, NETWORK_TRUST_MANAGER_WALLET, NETWORK_TRUST_MANAGER_PUBLIC)
+    create_wallet(cur, Configuration.config("FOUNDATION_WALLET"), Configuration.config("FOUNDATION_WALLET_PUBLIC"))
+    create_wallet(cur, Configuration.config("ASQI_WALLET"), Configuration.config("ASQI_WALLET_PUBLIC"))
+    create_wallet(cur, Configuration.config("SENTINEL_NODE_WALLET"), Configuration.config("SENTINEL_NODE_WALLET_PUBLIC"))
+    create_wallet(cur, Configuration.config("NETWORK_TRUST_MANAGER_WALLET"), Configuration.config("NETWORK_TRUST_MANAGER_PUBLIC"))
 
     create_newrl_tokens(cur, FOUNDATION_RESERVE * 2)
     
-    credit_wallet(cur, FOUNDATION_WALLET, FOUNDATION_RESERVE)
-    credit_wallet(cur, ASQI_WALLET, FOUNDATION_RESERVE)
+    credit_wallet(cur, Configuration.config("FOUNDATION_WALLET"), FOUNDATION_RESERVE)
+    credit_wallet(cur, Configuration.config("ASQI_WALLET"), FOUNDATION_RESERVE)
 
-    create_person(cur, ASQI_PID)
-    link_person_wallet(cur, ASQI_PID, ASQI_WALLET)
-    create_person(cur, NETWORK_TRUST_MANAGER_PID)
-    link_person_wallet(cur, NETWORK_TRUST_MANAGER_PID, NETWORK_TRUST_MANAGER_WALLET)
+    create_person(cur, Configuration.config("ASQI_PID"))
+    link_person_wallet(cur, Configuration.config("ASQI_PID"), Configuration.config("ASQI_WALLET"))
+    create_person(cur, Configuration.config("NETWORK_TRUST_MANAGER_PID"))
+    link_person_wallet(cur, Configuration.config("NETWORK_TRUST_MANAGER_PID"), Configuration.config("NETWORK_TRUST_MANAGER_WALLET"))
 
     con.commit()
     con.close()

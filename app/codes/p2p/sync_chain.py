@@ -50,7 +50,7 @@ def get_block_hashes(start_index, end_index):
         blocks 
         where block_index>=? and block_index < ?
         ''', (start_index, end_index, )).fetchall()
-    
+
     results = []
     for row in blocks:
         block = {
@@ -59,7 +59,7 @@ def get_block_hashes(start_index, end_index):
             'timestamp': row[2],
         }
         results.append(block)
-    
+
     return results
 
 
@@ -96,7 +96,7 @@ def receive_block(block):
         accept_block(block, block['hash'])
         broadcast_block(original_block)
         return
-    
+
     # store_block_proposal(block)
     
     if not validate_block_miner(block['data']):
@@ -393,7 +393,7 @@ def get_last_block_hash_from_url_retry(url):
         return response.json()['hash']
     except Exception as err:
         logger.info(f'Error getting block hash {err}')
-    
+
     return None
 
 
@@ -422,7 +422,7 @@ def get_majority_random_node():
                 candidate_hash = hash
                 candidate_hash_count = 0
                 candidate_node_url = url
-    
+
     logger.info(f'Majority hash is {candidate_hash} and a random url is {candidate_node_url}')
     return candidate_node_url
     # revert_chain(find_forking_block(candidate_node_url))
@@ -446,7 +446,7 @@ def find_forking_block(node_url):
             if hash_tree[idx]['hash'] == my_blocks[idx]['hash']:
                 return idx + start_idx
             idx -= 1
-        
+
         start_idx -= batch_size
-    
+
     return 0
