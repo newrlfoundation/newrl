@@ -234,7 +234,8 @@ def init_db():
                     CREATE TABLE IF NOT EXISTS dao_membership
                     (address text NOT NULL,
                     dao_person_id text NOT NULL, 
-                    member_person_id text NOT NULL)
+                    member_person_id text NOT NULL,
+                    role INT )
                     ''')
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS proposal_data

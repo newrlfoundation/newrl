@@ -21,4 +21,5 @@ def run_migrations():
 if __name__ == '__main__':
     db_path = '../' + db_path
     Configuration.init_values()
+    Configuration.init_values_in_db()
     run_migrations()

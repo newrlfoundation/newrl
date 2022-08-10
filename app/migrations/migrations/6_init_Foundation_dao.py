@@ -4,7 +4,7 @@ import sqlite3
 from app.codes.utils import get_person_id_for_wallet_address
 from app.constants import NEWRL_DB
 from app.nvalues import DAO_MANAGER, ASQI_WALLET, TREASURY_CONTRACT_ADDRESS, FOUNDATION_WALLET, ASQI_DAO_ADDRESS, \
-    NEWRL_DAO_ADDRESS
+    NEWRL_DAO_ADDRESS, ASQI_WALLET_DAO, FOUNDATION_WALLET_DAO
 
 
 def migrate():
@@ -17,15 +17,15 @@ def init_Foundation_Dao():
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
 
-    create_foundation_dao(cur, ASQI_DAO_ADDRESS,"ASQI_DAO",ASQI_WALLET)
-    create_foundation_dao(cur,NEWRL_DAO_ADDRESS,"NEWRL_DAO",FOUNDATION_WALLET)
+    create_foundation_dao(cur, ASQI_DAO_ADDRESS,"ASQI_DAO",ASQI_WALLET_DAO)
+    create_foundation_dao(cur,NEWRL_DAO_ADDRESS,"NEWRL_DAO",FOUNDATION_WALLET_DAO)
 
     con.commit()
     con.close()
 
 
 def create_foundation_dao(cur, address,name,wallet):
-    address_signatories = [ASQI_WALLET, FOUNDATION_WALLET]
+    address_signatories = [ASQI_WALLET_DAO, FOUNDATION_WALLET_DAO]
     signatories = {"vote_on_proposal": None,
                 "delete_member": [
                     -1

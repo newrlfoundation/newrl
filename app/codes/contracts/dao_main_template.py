@@ -217,7 +217,8 @@ class DaoMainTemplate(ContractMaster):
                 "data": {
                     "address": self.address,
                     "dao_person_id": dao_pid,
-                    "member_person_id": callparams['member_person_id']
+                    "member_person_id": callparams['member_person_id'],
+                    "role":callparams.get("role",0)
                 }
             }
             transaction_creator = TransactionCreator()
