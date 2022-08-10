@@ -6,7 +6,29 @@ from app.nvalues import *
 
 
 class Configuration:
-    __conf = {
+    conf = {
+        "ZERO_ADDRESS": ZERO_ADDRESS,
+        "TREASURY_WALLET_ADDRESS": TREASURY_WALLET_ADDRESS,
+        "NETWORK_TRUST_MANAGER_WALLET": NETWORK_TRUST_MANAGER_WALLET,
+        "NETWORK_TRUST_MANAGER_PUBLIC": NETWORK_TRUST_MANAGER_PUBLIC,
+        "NETWORK_TRUST_MANAGER_PID": NETWORK_TRUST_MANAGER_PID,
+        "ASQI_WALLET": ASQI_WALLET,
+        "ASQI_WALLET_DAO": ASQI_WALLET_DAO,
+        "ASQI_WALLET_PUBLIC": ASQI_WALLET_PUBLIC,
+        "FOUNDATION_WALLET": FOUNDATION_WALLET,
+        "FOUNDATION_WALLET_DAO": FOUNDATION_WALLET_DAO,
+        "FOUNDATION_WALLET_PUBLIC": FOUNDATION_WALLET_PUBLIC,
+        "SENTINEL_NODE_WALLET": SENTINEL_NODE_WALLET,
+        "SENTINEL_NODE_WALLET_PUBLIC": SENTINEL_NODE_WALLET_PUBLIC,
+        "DAO_MANAGER": DAO_MANAGER,
+        "CONFIG_DAO_ADDRESS": CONFIG_DAO_ADDRESS,
+        "STAKE_CT_ADDRESS": STAKE_CT_ADDRESS,
+        "STAKE_PENALTY_RATIO": STAKE_PENALTY_RATIO,
+        "MIN_STAKE_AMOUNT": MIN_STAKE_AMOUNT,
+        "STAKE_COOLDOWN_MS": STAKE_COOLDOWN_MS,
+        "NEWRL_DAO_ADDRESS": NEWRL_DAO_ADDRESS,
+        "ASQI_DAO_ADDRESS": ASQI_DAO_ADDRESS,
+        "TREASURY_CONTRACT_ADDRESS": TREASURY_CONTRACT_ADDRESS
     }
     setters = ["ZERO_ADDRESS",
                "TREASURY_WALLET_ADDRESS",
@@ -32,11 +54,11 @@ class Configuration:
 
     @staticmethod
     def config(name):
-        return Configuration.__conf[name]
+        return Configuration.conf[name]
 
     @staticmethod
     def set(name, value):
-        Configuration.__conf[name] = value
+        Configuration.conf[name] = value
 
     @staticmethod
     def init_values():
