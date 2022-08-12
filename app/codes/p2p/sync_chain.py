@@ -7,6 +7,7 @@ import time
 import copy
 
 from app.codes import blockchain
+from ..clock.global_time import get_corrected_time_ms
 from app.codes.crypto import calculate_hash
 from app.codes.minermanager import get_committee_for_current_block
 from app.codes.p2p.outgoing import broadcast_receipt, broadcast_block
@@ -356,6 +357,7 @@ def get_block_from_url_retry(url, blocks_request):
         except Exception as err:
             logger.info(f'Retrying block get {err}')
             if retry_count < 0:
+                SYNC_STATUS['IS_SYNCING'] = False
                 break
             retry_count -= 1
             time.sleep(5)
@@ -405,7 +407,7 @@ def get_majority_random_node():
     candidate_hash = ''
     candidate_hash_count = 0
     candidate_node_url = ''
-
+    random.seed(get_corrected_time_ms())
     peers = random.sample(peers, k=min(len(peers), COMMITTEE_SIZE))
     for peer in peers:
         url = 'http://' + peer['address'] + ':' + str(NEWRL_PORT)
