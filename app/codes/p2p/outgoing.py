@@ -2,8 +2,9 @@ import random
 import requests
 from threading import Thread
 
+from ..clock.global_time import get_corrected_time_ms
 from ...constants import IS_TEST, MAX_BROADCAST_NODES, NEWRL_PORT, REQUEST_TIMEOUT, TRANSPORT_SERVER
-from ..p2p.utils import get_peers
+from ..p2p.utils import get_my_address, get_peers
 from ..p2p.utils import is_my_address
 
 
@@ -89,7 +90,11 @@ def broadcast_block(block_payload, nodes=None, exclude_nodes=None):
         peers = get_random_peers(exclude_nodes)
 
     print('Broadcasting block to peers', peers)
-    block_payload['peers_already_broadcasted'] = get_excluded_node_list(peers, exclude_nodes)
+    peers_i_am_broadcasting = get_excluded_node_list(peers, exclude_nodes)
+    my_address = get_my_address()
+    if my_address in peers_i_am_broadcasting:
+        peers_i_am_broadcasting.remove()
+    block_payload['peers_already_broadcasted'] = peers_i_am_broadcasting
     # TODO - Do not send to self
     for peer in peers:
         if 'address' not in peer or is_my_address(peer['address']):
@@ -114,6 +119,7 @@ def get_random_peers(exclude_nodes=None):
     if exclude_nodes:
         peers = get_excluded_peers_to_broadcast(peers, exclude_nodes)
     node_count = min(MAX_BROADCAST_NODES, len(peers))
+    random.seed(get_corrected_time_ms())
     peers = random.sample(peers, k=node_count)
     return peers
 
