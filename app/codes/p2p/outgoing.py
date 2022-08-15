@@ -93,7 +93,7 @@ def broadcast_block(block_payload, nodes=None, exclude_nodes=None):
     peers_i_am_broadcasting = get_excluded_node_list(peers, exclude_nodes)
     my_address = get_my_address()
     if my_address in peers_i_am_broadcasting:
-        peers_i_am_broadcasting.remove()
+        peers_i_am_broadcasting.remove(my_address)
     block_payload['peers_already_broadcasted'] = peers_i_am_broadcasting
     # TODO - Do not send to self
     for peer in peers:
