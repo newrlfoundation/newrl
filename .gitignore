@@ -18,7 +18,7 @@ data_test/
 venv/
 __pycache__/
 
-.vscode
+# .vscode
 .idea
 .DS_Store
 
