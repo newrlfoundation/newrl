@@ -29,7 +29,7 @@ class Blockchain:
 
     def create_block(self, cur, block, block_hash, creator_wallet=None):
         """Create a block and store to db"""
-        transactions_hash = self.calculate_hash(block['text']['transactions'])
+        # transactions_hash = self.calculate_hash(block['text']['transactions'])
         committee = block['committee']
         if not isinstance(committee, str):
             committee = json.dumps(committee)
@@ -42,21 +42,23 @@ class Blockchain:
             creator_wallet,
             block['expected_miner'],
             committee,
-            transactions_hash
+            # transactions_hash
         )
         cur.execute('''
             INSERT OR IGNORE INTO blocks 
             (block_index, timestamp, proof, previous_hash, 
-            hash, creator_wallet, expected_miner, committee, 
-            transactions_hash) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'''
+            hash, creator_wallet, expected_miner, committee) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
         , db_block_data)
         return block
 
-    def get_block(self, block_index):
-        con = sqlite3.connect(NEWRL_DB)
-        con.row_factory = sqlite3.Row
-        cur = con.cursor()
+    def get_block(self, block_index, cur=None):
+        new_cursor = False
+        if cur is None:
+            con = sqlite3.connect(NEWRL_DB)
+            con.row_factory = sqlite3.Row
+            cur = con.cursor()
+            new_cursor = True
         block_cursor = cur.execute(
             'SELECT * FROM blocks where block_index=?', (block_index,)).fetchone()
         
@@ -85,6 +87,9 @@ class Blockchain:
             'previous_block_receipts': get_receipts_included_in_block_from_db(block_index)
         }
 
+        if new_cursor:
+            con.close()
+
         return block
 
     def proof_of_work(self, block):
@@ -92,7 +97,8 @@ class Blockchain:
            returns the proof that makes its hash start with 0000"""
         proof = 1
         block_hash = ''
-
+        block['proof'] = proof
+        return self.calculate_hash(block)
         while block_hash[:4] != '0000':
             block['proof'] = proof
             block_hash = self.calculate_hash(block)
@@ -219,7 +225,7 @@ def add_block(cur, block, block_hash, is_state_reconstruction=False):
     # Needed for backward compatibility of blocks
     block_index = block['block_index'] if 'block_index' in block else block['index']
     # transactions_hash = block['transactions_hash'] if 'transactions_hash' in block else ''
-    transactions_hash = calculate_hash(block['text']['transactions'])
+    # transactions_hash = calculate_hash(block['text']['transactions'])
     print('Adding block', block_index)
     if not isinstance(block['committee'], str):
         block['committee'] = json.dumps(block['committee'])
@@ -232,14 +238,13 @@ def add_block(cur, block, block_hash, is_state_reconstruction=False):
         block['creator_wallet'],
         block['expected_miner'],
         block['committee'],
-        transactions_hash
+        # transactions_hash
     )
     cur.execute('''
         INSERT OR IGNORE INTO blocks 
         (block_index, timestamp, proof, previous_hash, hash, 
-        creator_wallet, expected_miner, committee,
-        transactions_hash) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', db_block_data)
+        creator_wallet, expected_miner, committee) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', db_block_data)
     update_db_states(cur, block)
     update_trust_scores(cur, block)
     update_receipts_in_state(cur, block)

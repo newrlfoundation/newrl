@@ -102,8 +102,7 @@ def init_db():
                     hash text,
                     creator_wallet text,
                     expected_miner text,
-                    committee text,
-                    transactions_hash text)
+                    committee text)
                     ''')
     cur.execute('''
                     CREATE UNIQUE INDEX IF NOT EXISTS idx_block_hash ON blocks (hash)

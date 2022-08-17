@@ -25,7 +25,7 @@ def setup_test_files():
     init_newrl()
     init_peer_db()
     run_migrations()
-    os.environ['NEWRL_TEST'] = '1'
+    os.environ['NEWRL_TEST'] = 'Y'
 
 
 @pytest.fixture(scope="session", autouse=True)

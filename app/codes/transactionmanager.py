@@ -75,7 +75,7 @@ class Transactionmanager:
     def loadtransactionpassive(self, file):
         transactiondata = {}
         with open(file, "r") as readfile:
-            print("Now reading from ", file)
+            # print("Now reading from ", file)
             trandata = json.load(readfile)
         self.transaction = trandata['transaction']
         self.signatures = trandata['signatures']
@@ -158,11 +158,11 @@ class Transactionmanager:
                 # for a valid address the signature is found
                 addvaliditydict[signaddress] = True
                 prodflag = prodflag*1
-        if prodflag:
-            print("All provided signatures of the message valid; still need to check if all required ones are provided")
+        # if prodflag:
+            # print("All provided signatures of the message valid; still need to check if all required ones are provided")
         #	return True
-        else:
-            print("Some of the provided signatures not valid")
+        # else:
+            # print("Some of the provided signatures not valid")
         #	return False
         # now checking if signatures for all valid addresses are covered
         validsignspresent = 0
@@ -174,7 +174,7 @@ class Transactionmanager:
                     "Either couldn't find signature or found invalid signature for ", valadd)
             #	valaddsignpresent=valaddsignpresent*0;	#any one signaure not being present will throw an error
         if prodflag and validsignspresent >= len(validadds):
-            print("All provided signatures valid and all required signatures provided")
+            # print("All provided signatures valid and all required signatures provided")
             return True
         else:
             print("Either some signatures invalid or some required ones missing")
@@ -222,7 +222,7 @@ class Transactionmanager:
             #	self.transaction['valid']=0
                 self.validity = 0
             else:
-                print("Valid custodian address")
+                # print("Valid custodian address")
 #                if self.transaction['specific_data']['specific_data']['linked_wallet']:  #linked wallet
                 if 'linked_wallet' in self.transaction['specific_data']['specific_data']:
                     linkedwalletstatus = self.transaction['specific_data']['specific_data']['linked_wallet']
@@ -266,7 +266,7 @@ class Transactionmanager:
             custvalidity = False
             if firstowner:
                 if is_wallet_valid(firstowner):
-                    print("Valid first owner")
+                    # print("Valid first owner")
                     fovalidity = True
                 else:
                     fovalidity = False
@@ -278,7 +278,7 @@ class Transactionmanager:
                 else:
                     fovalidity = True
             if is_wallet_valid(custodian):
-                print("Valid custodian")
+                # print("Valid custodian")
                 custvalidity = True
             if not fovalidity:
                 print("No first owner address found")
@@ -288,7 +288,7 @@ class Transactionmanager:
                 print("No custodian address found")
                 self.validity = 0
             if fovalidity and custvalidity:
-                print("Valid first owner and custodian")
+                # print("Valid first owner and custodian")
             #	self.transaction['valid']=1
             #   now checking for instances where more tokens are added for an existing tokencode
                 self.validity = 1
@@ -305,12 +305,12 @@ class Transactionmanager:
                                     "The custodian for that token is someone else.")
                                 self.validity = 0
                         else:
-                            print(
-                                "Tokencode provided does not exist. Will append as new one.")
+                            # print(
+                            #     "Tokencode provided does not exist. Will append as new one.")
                             self.validity = 1  # tokencode is provided by user
                     else:
-                        print(
-                            "Tokencode provided does not exist. Will append as new one.")
+                        # print(
+                        #     "Tokencode provided does not exist. Will append as new one.")
                         self.validity = 1  # tokencode is provided by user
 
         if self.transaction['type'] == TRANSACTION_SMART_CONTRACT:

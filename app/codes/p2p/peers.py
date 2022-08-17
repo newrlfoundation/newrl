@@ -125,8 +125,8 @@ def init_bootstrap_nodes():
         try:
             response = register_me_with_them(address)
         except Exception as e:
-            print(f'Peer unreachable, deleting: {peer}')
-            remove_peer(peer['address'])
+            print(f'Peer unreachable: {peer}')
+            # remove_peer(peer['address'])
     return True
 
 

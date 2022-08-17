@@ -270,7 +270,7 @@ def get_block_from_cursor(cur, block_index):
         '''SELECT 
         block_index, hash, timestamp, status, proof,
         previous_hash, creator_wallet, 
-        expected_miner, committee, transactions_hash
+        expected_miner, committee
         FROM blocks where block_index=?'''
     , (block_index,)).fetchone()
     if block is None:
@@ -285,7 +285,6 @@ def get_block_from_cursor(cur, block_index):
         'creator_wallet': block[6],
         'expected_miner': block[7],
         'committee': block[8],
-        'transactions_hash': block[9],
     }
 
 

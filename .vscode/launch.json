@@ -11,7 +11,8 @@
             "module": "app.main",
             "justMyCode": true,
             "env": {
-                "NEWRL_ENV": "test"
+                "NEWRL_ENV": "test",
+                "NEWRL_TEST": "Y",
             }
         },
         {
@@ -21,7 +22,8 @@
             "module": "app.main",
             "justMyCode": true,
             "env": {
-                "NEWRL_ENV": "devnet"
+                "NEWRL_ENV": "devnet",
+                "NEWRL_TEST": "N",
             }
         }
     ]

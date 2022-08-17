@@ -4,6 +4,7 @@ import json
 import os
 import logging
 import sqlite3
+import time
 import threading
 from app.codes.fs.temp_manager import store_receipt_to_temp
 from app.codes.p2p.sync_chain import sync_chain_from_peers
@@ -39,6 +40,7 @@ MAX_BLOCK_SIZE = 1000
 
 
 def run_updater(add_to_chain=False):
+    start_time = time.time()
     # logger = BufferedLog()
     blockchain = Blockchain()
 
@@ -61,10 +63,10 @@ def run_updater(add_to_chain=False):
 
     logger.info(f'Proposing new block {new_block_index}')
     filenames = os.listdir(MEMPOOL_PATH)  # this is the mempool
-    logger.info(f"Files in mempool: {filenames}")
+    logger.info(f"Transactions in mempool: {len(filenames)}")
     textarray = []
     transfiles = filenames
-    txcodes = []
+    txcodes = {}
     tmtemp = Transactionmanager()
 
     transaction_fees = 0
@@ -73,22 +75,17 @@ def run_updater(add_to_chain=False):
         file = MEMPOOL_PATH + filename
         try:
             with open(file, "r") as read_file:
-                logger.info(f"Processing {file}")
-                transaction_file_data = json.load(read_file)
+                trandata = tmtemp.loadtransactionpassive(file)
+                transaction = trandata['transaction']
         except:
             logger.info(f"Couldn't load transaction file {file}")
             continue
         
-        transaction = transaction_file_data['transaction']
-        signatures = transaction_file_data['signatures']
-
-        # new code for validating again
-        trandata = tmtemp.loadtransactionpassive(file)
-        if not tmtemp.verifytransigns():
-            logger.info(
-                f"Transaction id {trandata['transaction']['trans_code']} has invalid signatures")
-            os.remove(file)
-            continue
+        # if not tmtemp.verifytransigns():
+        #     logger.info(
+        #         f"Transaction id {trandata['transaction']['trans_code']} has invalid signatures")
+        #     os.remove(file)
+        #     continue
         # Pay fee for transaction. If payee doesn't have enough funds, remove transaction
         if not pay_fee_for_transaction(cur, transaction):
             os.remove(file)
@@ -98,8 +95,8 @@ def run_updater(add_to_chain=False):
             os.remove(file)
             continue
 
-        logger.info("Found valid transaction, checking if it is already included")
-        transactions_cursor = cur.execute("SELECT * FROM transactions where transaction_code='" + transaction['trans_code'] + "'")
+        # logger.info("Found valid transaction, checking if it is already included")
+        transactions_cursor = cur.execute("SELECT transaction_code FROM transactions where transaction_code=?", (transaction['trans_code'], ))
         row = transactions_cursor.fetchone()
         if row is not None:
             # The current transaction is already included in some earlier block
@@ -111,16 +108,10 @@ def run_updater(add_to_chain=False):
             continue
         
         if trandata['transaction']['trans_code'] not in txcodes:
-            textarray.append(transaction_file_data)
-            txcodes.append(trandata['transaction']['trans_code'])
-
-            # transaction_fees += get_fees_for_transaction(trandata['transaction'])
-            # Delete the transaction from mempool at the stage of accepting
-            # try:
-            #     os.remove(file)
-            # except:
-            #     logger.info("Couldn't delete:",file)
-        block_height += 1
+            textarray.append(tmtemp.get_transaction_complete())
+            txcodes[trandata['transaction']['trans_code']] = 1
+            block_height += 1
+        
         if block_height >= MAX_BLOCK_SIZE:
             logger.info(
                 "Reached max block height, moving forward with the collected transactions")
@@ -151,7 +142,7 @@ def run_updater(add_to_chain=False):
     else:
         transactionsdata['previous_block_receipts'] = []
     # transactionsdata['previous_block_proposals'] = get_proposals_for_block(previous_block['index'])
-
+    logger.info("Time taken to mine block: %s seconds" % (time.time() - start_time))
     if add_to_chain:
         block = blockchain.mine_block(cur, transactionsdata)
         update_db_states(cur, block)
@@ -169,7 +160,7 @@ def run_updater(add_to_chain=False):
     }
     store_block_to_temp(block_payload)
     # store_receipt_to_temp(block_receipt)
-    logger.info(f'Stored block to temp with payload {json.dumps(block_payload)}')
+    logger.info(f"Stored block to temp with index {block_payload['index']} and hash {block_payload['hash']}")
     broadcast_block_proposal(block_payload, block_receipt)
 
     return block_payload
