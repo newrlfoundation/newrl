@@ -1,9 +1,16 @@
 import random
 import string
+import os
 
-NODE_URL = 'http://testnet.newrl.net:8182'
-WALLET =  {'public': 'MKGFOKkyE2gLU7xzlhxZEl6+Ar+zXIQPEEkyCKeZbrlPoNzfP5/ugpx7HWsDEW3qsQ0cVTQ8+Sh2rPOV9f2Zcg==', 'private': 'x8zx8ZU+EYgLboxB2sw8i/ED91jjYkDKhLs0Ezu2c5E=', 'address': '0xa21c018881619441e23e4fe7f45405391bcd2cc6'}
-BLOCK_WAIT_TIME = 35
+WALLET = {"public": "CcGRdIzGC0ODmycwg8xWWBHCb1zlSxftS0oXxh561riA/HrDCBucDPKHVuohzlAXibWej5ED82aMzyyGEIYo7g==", "private": "1j58o3vNa0OmvfKBsvm03n5k8CfA90H/4SoQW/OVXsc=", "address": "0x667663f36ac08e78bbf259f1361f02dc7dad593b"}
+BLOCK_WAIT_TIME = 45
 
 def generate_random_token_code():
     return 'TSTTK' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+
+TEST_ENV = os.environ.get('TEST_ENV')
+
+if TEST_ENV == 'local':
+    NODE_URL = 'http://localhost:4018'
+else:
+    NODE_URL = 'http://testnet.newrl.net:8182'

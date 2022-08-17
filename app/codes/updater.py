@@ -106,7 +106,7 @@ def run_updater(add_to_chain=False):
             os.remove(file)
             continue
         
-        if not should_include_transaction(transaction, previous_block['index']):
+        if not should_include_transaction(transaction, new_block_index - 1):
             os.remove(file)
             continue
         

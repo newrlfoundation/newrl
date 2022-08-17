@@ -18,6 +18,11 @@ elif NEWRL_ENV == 'mainnet':
     NEWRL_PORT = 8456
     DATA_PATH = 'data_mainnet/'
     print('Using mainnet constants')
+elif NEWRL_ENV == 'test':
+    BOOTSTRAP_NODES = ['testnet.newrl.net']
+    NEWRL_PORT = 4018
+    DATA_PATH = 'data_test/'
+    print('Using test constants')
 else:
     BOOTSTRAP_NODES = ['testnet.newrl.net']
     NEWRL_PORT = 8182

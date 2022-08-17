@@ -4,7 +4,7 @@ import time
 import requests
 
 from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME
-from tests.setup import generate_random_token_code
+from setup import generate_random_token_code
 
 token_code_1 = generate_random_token_code()
 token_code_2 = generate_random_token_code()

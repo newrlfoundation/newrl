@@ -3,7 +3,7 @@ import string
 import time
 import requests
 
-from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME
+from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
 
 token_code = 'TSTTK' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
@@ -38,8 +38,11 @@ def test_add_token():
     print(response.text)
     assert response.status_code == 200
 
-    print('Waiting to mine block')
-    time.sleep(BLOCK_WAIT_TIME)
+    if TEST_ENV == 'local':
+        response = requests.post(NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+    else:
+        print('Waiting to mine block')
+        time.sleep(BLOCK_WAIT_TIME)
 
     response = requests.get(NODE_URL + '/get-token?token_code=' + token_code)
     assert response.status_code == 200
@@ -50,6 +53,3 @@ def test_add_token():
 
     print('Test passed.')
 
-
-if __name__ == '__main__':
-    test_add_token()

@@ -1,7 +1,8 @@
 import time
 import requests
 
-from setup import NODE_URL, WALLET
+from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME
+from tests.setup import TEST_ENV
 
 def test_add_wallet():
     response = requests.get(NODE_URL + '/generate-wallet-address')
@@ -42,8 +43,11 @@ def test_add_wallet():
     print('Got response from chain\n', response.text)
     assert response.status_code == 200
 
-    print('Waiting to mine block')
-    time.sleep(35)
+    if TEST_ENV == 'local':
+        response = requests.post(NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+    else:
+        print('Waiting to mine block')
+        time.sleep(BLOCK_WAIT_TIME)
 
     response = requests.get(NODE_URL + '/get-wallet?wallet_address=' + wallet_address)
     assert response.status_code == 200
