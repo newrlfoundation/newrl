@@ -284,11 +284,20 @@ def global_internal_clock():
                 if time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 4:
                     logger.info('I have not received a block for 4 intervals. Querying chain for majority chain.')
                     sync_chain_from_peers()
-                if should_i_mine(last_block):
+                    current_ts = get_corrected_time_ms()
+                    last_block = get_last_block()
+                    last_block_ts = int(last_block['timestamp'])
+                    time_elapsed_seconds = (current_ts - last_block_ts) / 1000  # This needs to be calculated again after the sync
+                if time_elapsed_seconds < BLOCK_TIME_INTERVAL_SECONDS / 2 and should_i_mine(last_block):
+                    logger.info('I am the miner for this block.')
+                    # Don't mine a block if half the block time interval has passed. Wait for sentinel node.
                     if TIMERS['mining_timer'] is None or not TIMERS['mining_timer'].is_alive():
                         start_mining_clock(last_block_ts)
-                elif time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 8:
-                    if am_i_sentinel_node():
+                elif am_i_sentinel_node():
+                    if should_i_mine(last_block):
+                        start_mining_clock(last_block_ts)
+                    elif time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 16:
+                        # Sentinel node empty mining is the last resort. 
                         logger.info('I am sentitnel node. Mining empty block')
                         sentitnel_node_mine_empty()
 
