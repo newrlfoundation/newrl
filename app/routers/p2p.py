@@ -5,14 +5,16 @@ import uvicorn
 from fastapi import APIRouter
 from fastapi.exceptions import HTTPException
 from starlette.requests import Request
+from fastapi.responses import FileResponse
 from app.codes.blockchain import get_blocks_in_range
 
 from app.codes.chainscanner import download_chain, download_state, get_transaction
 from app.codes.clock.global_time import get_time_stats
 from app.codes.p2p.peers import add_peer, clear_peers, get_peers, update_software
-from app.codes.p2p.sync_chain import find_forking_block_with_majority, get_blocks, get_last_block_index, receive_block, receive_receipt, sync_chain_from_peers
+from app.codes.p2p.sync_chain import find_forking_block_with_majority, get_blocks, get_last_block_index, quick_sync, receive_block, receive_receipt, sync_chain_from_peers
 from app.codes.p2p.sync_mempool import get_mempool_transactions, list_mempool_transactions, sync_mempool_transactions
 from app.codes.p2p.peers import call_api_on_peers
+from app.constants import NEWRL_DB
 from .request_models import BlockAdditionRequest, BlockRequest, ReceiptAdditionRequest, TransactionAdditionRequest, TransactionsRequest
 from app.codes.auth.auth import get_node_wallet_address, get_node_wallet_public
 from app.codes.validator import validate as validate_transaction
@@ -80,3 +82,12 @@ def add_peer_api(req: Request, dns_address: str=None):
         return add_peer(req.client.host)
     else:
         return add_peer(dns_address)
+
+@router.get("/get-newrl-db", tags=[p2p_tag])
+def get_newrldb_api():
+    return FileResponse(NEWRL_DB)
+
+
+@router.get("/quick-sync-db-from-node", tags=[p2p_tag])
+def get_newrldb_api(node_url: str):
+    quick_sync(node_url + "/get-newrl-db")

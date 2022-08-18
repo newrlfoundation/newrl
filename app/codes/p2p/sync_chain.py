@@ -1,6 +1,7 @@
 import json
 import logging
 import random
+import subprocess
 import requests
 import sqlite3
 import time
@@ -153,6 +154,8 @@ def sync_chain_from_node(url, block_index=None):
         logger.info('I am in sync with the node. Aborting sync.')
         return True
 
+    # quick_sync(url + '/get-newrl-db')
+    # return
     block_idx = my_last_block + 1
     block_batch_size = 50  # Fetch blocks in batches
     while block_idx <= their_last_block_index:
@@ -452,3 +455,26 @@ def find_forking_block(node_url):
         start_idx -= batch_size
 
     return 0
+
+
+def quick_sync(db_url):
+    """Copies the entire newrl.db from a peer. Unsecured."""
+    downloaded_db_path = NEWRL_DB + ".DOWNLOADED"
+    subprocess.call(["curl", "-o", downloaded_db_path, db_url])
+    try:
+        con = sqlite3.connect(downloaded_db_path)
+        cur = con.cursor()
+        blocks = cur.execute('SELECT block_index, hash FROM blocks ORDER BY block_index DESC LIMIT 1').fetchone()
+        logger.info(f"Downloaded db from node with block {blocks[0]} and hash {blocks[1]}")
+        con.close()
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        existing_block = cur.execute('SELECT block_index, hash FROM blocks ORDER BY block_index DESC LIMIT 1').fetchone()
+        logger.info(f"Existing db with block {existing_block[0]} and hash {existing_block[1]}")
+        con.close()
+
+        # Only copy if the downloaded db has more blocks than local
+        if blocks[0] > existing_block[0]:
+            subprocess.call(["mv", downloaded_db_path, NEWRL_DB])
+    except Exception as e:
+        logger.info('Could not parse the downloaded DB' + str(e))
