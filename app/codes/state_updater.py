@@ -78,6 +78,7 @@ def update_db_states(cur, block):
         except Exception as e:
             logger.error(f'Error in transaction: {str(transaction)}')
             logger.error(str(e))
+            logger.error(traceback.format_exc())
     if config_updated:
         Configuration.updateDataFromDB(cur)
     return True
@@ -221,6 +222,7 @@ def simplify_transactions(cur, transactions):
         logger.error(
             f"Exception during sc txn execution for txn : {transaction}")
         logger.error(traceback.format_exc())
+      print(f"Value transactions are {value_txns}")
       simplified_transactions.extend(value_txns)
       simplified_transactions.extend(non_sc_txns)
       value_txns = []
@@ -320,7 +322,6 @@ def get_value_txns(transaction_signer, transaction_data):
                 "SC-value txn economic validation failed for transaction")
             raise Exception("SC-value txn validation failed for transaction")
         value_txns_local.append(transfer_proposal.get_transaction_complete())
-
     return value_txns_local
 
 def get_fees_for_transaction(transaction):

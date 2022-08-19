@@ -126,7 +126,7 @@ def create_token(wallet, owner , token_name,token_code, amount):
 
 
 
-def create_dex():
+def test_create_dex():
     response_ct_add = requests.get(NODE_URL+"/generate-contract-address")
     assert response_ct_add.status_code == 200
     ct_address = response_ct_add.json()
@@ -219,7 +219,7 @@ create_token(WALLET, wallet2['address'],
 create_token(WALLET, wallet2['address'],
              pool_token2_code, pool_token2_code, wallet2_token2_init_amount)
 
-dex_address = create_dex()
+dex_address = test_create_dex()
 
 def test_provide_initial_liquidity():
     token_1_lp = 1000
@@ -303,10 +303,10 @@ def test_provide_initial_liquidity():
 
     #TODO check contract balance
 
-
+#TODO bug, connect validate method
 def test_swap():
-    token_1_lp = 1000
-    token2_lp = 4000
+    token2_swaped = 200
+    token1_given  = 47
     req_json = {
         "sc_address": dex_address,
         "function_called": "swap",
@@ -316,16 +316,86 @@ def test_swap():
         "params": {
             "recipient_address": wallet2["address"],
             "token_sent": {
-                "token_code": "nUSDC",
-                "amount": 30
+                "token_code": pool_token2_code,
+                "amount": token2_swaped
             },
             "token_asked": {
-                "token_code": "NWRL"
+                "token_code": pool_token1_code
             },
             "value": [
                 {
-                    "token_code": "nUSDC",
-                    "amount": 30
+                    "token_code": pool_token2_code,
+                    "amount": token2_swaped
+                }
+            ]
+        }
+    }
+    response = requests.post(NODE_URL+'/call-sc', json=req_json)
+
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    assert unsigned_transaction['transaction']
+    assert len(unsigned_transaction['signatures']) == 0
+
+    response = requests.post(NODE_URL+'/sign-transaction', json={
+        "wallet_data": wallet2,
+        "transaction_data": unsigned_transaction
+    })
+
+    assert response.status_code == 200
+    signed_transaction = response.json()
+    assert signed_transaction['transaction']
+    assert signed_transaction['signatures']
+    assert len(signed_transaction['signatures']) == 1
+
+    response = requests.post(
+        NODE_URL+'/validate-transaction', json=signed_transaction)
+    assert response.status_code == 200
+
+    if TEST_ENV == 'local':
+        response = requests.post(
+            NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+    else:
+        print('Waiting to mine block')
+        time.sleep(BLOCK_WAIT_TIME)
+
+    response_token1 = requests.post(NODE_URL+'/get-balance', json={
+        "balance_type": "TOKEN_IN_WALLET",
+        "token_code": pool_token1_code,
+        "wallet_address": wallet2['address']
+    })
+    assert response_token1.status_code == 200
+    balance_token1_resp = response_token1.json()
+    balance_token1 = balance_token1_resp['balance']
+    assert balance_token1 == wallet2_token1_init_amount+token1_given
+
+    response_token2 = requests.post(NODE_URL+'/get-balance', json={
+        "balance_type": "TOKEN_IN_WALLET",
+        "token_code": pool_token2_code,
+        "wallet_address": wallet2['address']
+    })
+    assert response_token2.status_code == 200
+    balance_token2 = response_token2.json()['balance']
+    assert balance_token2 == wallet2_token2_init_amount-token2_swaped
+
+    # TODO assert pool balances 
+
+
+def test_withdraw():
+    amount_to_withdraw = 1000
+    req_json = {
+        "sc_address": dex_address,
+        "function_called": "withdraw",
+        "signers": [
+            wallet1['address']
+        ],
+        "params": {
+            "recipient_address": wallet1['address'],
+            "withdraw_amount": amount_to_withdraw,
+            "value": [
+                {
+                    "token_code": ot_token_code,
+                    "amount": amount_to_withdraw
                 }
             ]
         }
@@ -359,30 +429,16 @@ def test_swap():
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response_token1 = requests.post(NODE_URL+'/get-balance', json={
-        "balance_type": "TOKEN_IN_WALLET",
-        "token_code": pool_token1_code,
-        "wallet_address": wallet1['address']
-    })
-    assert response_token1.status_code == 200
-    balance_token1_resp = response_token1.json()
-    balance_token1 = balance_token1_resp['balance']
-    assert balance_token1 == wallet1_token1_init_amount-token_1_lp
-
-    response_token2 = requests.post(NODE_URL+'/get-balance', json={
-        "balance_type": "TOKEN_IN_WALLET",
-        "token_code": pool_token2_code,
-        "wallet_address": wallet1['address']
-    })
-    assert response_token2.status_code == 200
-    balance_token2 = response_token2.json()['balance']
-    assert balance_token2 == wallet1_token2_init_amount-token2_lp
-
-    response_token_ot = requests.post(NODE_URL+'/get-balance', json={
+    response_ot = requests.post(NODE_URL+'/get-balance', json={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": ot_token_code,
         "wallet_address": wallet1['address']
     })
-    assert response_token_ot.status_code == 200
-    balance_token_ot = response_token_ot.json()['balance']
-    assert balance_token_ot == 2000
+    assert response_ot.status_code == 200
+    balance_ot_resp = response_ot.json()
+    balance_ot = balance_ot_resp['balance']
+    assert balance_ot == 1000
+
+    #TODO check pool ot balance
+
+
