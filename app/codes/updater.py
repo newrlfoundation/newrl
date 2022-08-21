@@ -341,6 +341,7 @@ def sentitnel_node_mine_empty():
         'data': block,
         'receipts': [block_receipt]
     }
+    store_block_to_temp(block_payload)
     broadcast_block(block_payload=block_payload)
 
 
