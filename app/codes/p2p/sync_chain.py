@@ -467,6 +467,11 @@ def quick_sync(db_url):
         blocks = cur.execute('SELECT block_index, hash FROM blocks ORDER BY block_index DESC LIMIT 1').fetchone()
         logger.info(f"Downloaded db from node with block {blocks[0]} and hash {blocks[1]}")
         con.close()
+    except Exception as e:
+        logger.info('Could not parse the downloaded DB' + str(e))
+        return False
+
+    try:
         con = sqlite3.connect(NEWRL_DB)
         cur = con.cursor()
         existing_block = cur.execute('SELECT block_index, hash FROM blocks ORDER BY block_index DESC LIMIT 1').fetchone()
@@ -477,4 +482,5 @@ def quick_sync(db_url):
         if blocks[0] > existing_block[0]:
             subprocess.call(["mv", downloaded_db_path, NEWRL_DB])
     except Exception as e:
-        logger.info('Could not parse the downloaded DB' + str(e))
+        logger.info('Could not query internal db. Using downloaded db' + str(e))
+        subprocess.call(["mv", downloaded_db_path, NEWRL_DB])
