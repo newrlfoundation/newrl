@@ -87,6 +87,12 @@ class CentralRepository:
             return False
         values = tuple(query_param.values())
         values = values + (unique_value, address)
+
+        if table_name == 'tokens' and i=='token_attributes' :
+            print('UPDATE  ' + table_name + ' set ' + keys + ' WHERE ' + unique_column + '=? AND custodian=?')
+            return self.cur.execute(
+                'UPDATE  ' + table_name + ' set ' + keys + ' WHERE ' + unique_column + '=? AND custodian=?',
+                values)
         print('UPDATE  ' + table_name + ' set ' + keys + ' WHERE ' + unique_column + '=? AND address=?')
         return self.cur.execute(
             'UPDATE  ' + table_name + ' set ' + keys + ' WHERE ' + unique_column + '=? AND address=?',
