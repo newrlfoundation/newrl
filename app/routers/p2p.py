@@ -14,6 +14,7 @@ from app.codes.p2p.peers import add_peer, clear_peers, get_peers, update_softwar
 from app.codes.p2p.sync_chain import find_forking_block_with_majority, get_blocks, get_last_block_index, quick_sync, receive_block, receive_receipt, sync_chain_from_peers
 from app.codes.p2p.sync_mempool import get_mempool_transactions, list_mempool_transactions, sync_mempool_transactions
 from app.codes.p2p.peers import call_api_on_peers
+from app.codes.utils import create_db_snapshot
 from app.constants import NEWRL_DB
 from .request_models import BlockAdditionRequest, BlockRequest, ReceiptAdditionRequest, TransactionAdditionRequest, TransactionsRequest
 from app.codes.auth.auth import get_node_wallet_address, get_node_wallet_public
@@ -85,7 +86,8 @@ def add_peer_api(req: Request, dns_address: str=None):
 
 @router.get("/get-newrl-db", tags=[p2p_tag])
 def get_newrldb_api():
-    return FileResponse(NEWRL_DB)
+    snapshot_file = create_db_snapshot()
+    return FileResponse(snapshot_file)
 
 
 @router.get("/quick-sync-db-from-node", tags=[p2p_tag])

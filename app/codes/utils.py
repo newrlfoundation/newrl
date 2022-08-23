@@ -96,3 +96,14 @@ def get_last_block_hash():
 #         (block_index, )
 #     )
 #     con.close()
+
+
+def create_db_snapshot():
+    snapshot_file = NEWRL_DB + '.snapshot'
+    con = sqlite3.connect(NEWRL_DB)
+    bck = sqlite3.connect(snapshot_file)
+    with bck:
+        con.backup(bck)
+    bck.close()
+    con.close()
+    return snapshot_file
