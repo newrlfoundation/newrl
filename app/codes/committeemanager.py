@@ -25,12 +25,12 @@ def weighted_random_choices(population, weights, k):
         raise Exception('Population less than selection count')
     
     selections = []
-    previous_idx = 0
+    # previous_idx = 0
     while len(selections) < k:
-        random.seed(previous_idx)
+        # random.seed(previous_idx)
         choice = random.choices(population, weights=weights)[0]
         index = population.index(choice)
-        previous_idx = index
+        # previous_idx = index
         selections.append(choice)
         del population[index]
         del weights[index]
@@ -51,7 +51,7 @@ def get_miner_for_current_block(last_block=None):
         logger.info('Inadequate committee. Sentinel node is the miner.')
         return {'wallet_address': SENTINEL_NODE_WALLET}
 
-    random.seed(get_number_from_hash(last_block['hash']))
+    # random.seed(get_number_from_hash(last_block['hash']))
     return random.choice(committee_list)
 
     # return committee_list[0]
