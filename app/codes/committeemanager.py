@@ -17,7 +17,8 @@ def get_number_from_hash(block_hash):
     """
     Return a number from a string determinstically
     """
-    return hash(block_hash) % 1000000
+    # return hash(block_hash) % 1000000
+    return ord(block_hash[0])
 
 
 def weighted_random_choices(population, weights, k):
@@ -51,7 +52,7 @@ def get_miner_for_current_block(last_block=None):
         logger.info('Inadequate committee. Sentinel node is the miner.')
         return {'wallet_address': SENTINEL_NODE_WALLET}
 
-    # random.seed(get_number_from_hash(last_block['hash']))
+    random.seed(get_number_from_hash(last_block['hash']))
     return random.choice(committee_list)
 
     # return committee_list[0]
