@@ -33,7 +33,7 @@ class AuthorizeContract(ContractMaster):
         else:
             return False
 
-    def validate(self, callparamsip, repo:FetchRepository):
+    def validate(self, callparamsip, repo: FetchRepository):
         callparams = input_to_dict(callparamsip)
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         custodian_address = cspecs['custodian_address']
@@ -44,8 +44,8 @@ class AuthorizeContract(ContractMaster):
 
         return self.validateCustodian(callparams, custodian_address, custodian_wallet, transaction_manager)
 
-    def modifyTokenAttributes(self, callparamsip,repo:FetchRepository):
-        if self.validate(callparamsip,repo):
+    def modifyTokenAttributes(self, callparamsip, repo: FetchRepository):
+        if self.validate(callparamsip, repo):
 
             transaction_creator = TransactionCreator()
             trxn = []
@@ -59,8 +59,8 @@ class AuthorizeContract(ContractMaster):
             # cursor = cur.execute('SELECT token_attributes FROM tokens WHERE tokencode = :tokencode',
             #                      {'tokencode': query_params[0]})
             # tokenAttributes = cursor.fetchone()
-            tokenAttributes = repo.select_Query("token_attributes").\
-                add_table_name("tokens").where_clause("tokencode",query_params[0],1).\
+            tokenAttributes = repo.select_Query("token_attributes"). \
+                add_table_name("tokens").where_clause("tokencode", query_params[0], 1). \
                 execute_query_single_result({'tokencode': query_params[0]})
             jsonObj = json.loads(tokenAttributes[0])
             list = []
@@ -91,24 +91,26 @@ class AuthorizeContract(ContractMaster):
     def destroyTokens(self, cur, callparamsip):
         pass
 
-    def createTokens(self, callparamsip,repo:FetchRepository):
-        trxn=[]
-        callparams=input_to_dict(callparamsip)
-        token_code=callparams['token_code']
-        amount=callparams['token_amount']
-        token_name=callparams.get('token_name',token_code)
-        recipient_address=callparams['recipient_address']
-        legal_doc=callparams.get('legal_doc','')
+    def createTokens(self, callparamsip, repo: FetchRepository):
+        trxn = []
+        callparams = input_to_dict(callparamsip)
+        token_code = callparams['token_code']
+        amount = callparams['token_amount']
+        token_name = callparams.get('token_name', token_code)
+        recipient_address = callparams['recipient_address']
+        token_attributes = callparams.get('token_attributes', {})
+        value_created = callparams.get('value_created', '')
+        legal_doc = callparams.get('legal_doc', '')
         tokendata = {
             "tokenname": token_name,
             "tokencode": token_code,
             "tokentype": '31',
-            "tokenattributes": {},
+            "tokenattributes": token_attributes,
             "first_owner": recipient_address,
             "custodian": self.address,
             "legaldochash": legal_doc,
             "amount_created": amount,
-            "value_created": '',
+            "value_created": value_created,
             "disallowed": {},
             "sc_flag": True
         }
@@ -116,8 +118,7 @@ class AuthorizeContract(ContractMaster):
         trxn.append(transacation_creator.transaction_type_two(tokendata))
         return trxn
 
-
-    def terminate(self, callparamsip,repo:FetchRepository):
+    def terminate(self, callparamsip, repo: FetchRepository):
 
         transaction_creator = TransactionCreator()
         trxn = []
