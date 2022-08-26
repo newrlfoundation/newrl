@@ -3,6 +3,8 @@ import json
 import os
 import logging
 
+from app.codes.dbmanager import revert_to_last_snapshot
+
 from ..codes.blockchain import Blockchain, add_block
 from ..codes.state_updater import add_block_reward, update_state_from_transaction, update_trust_scores
 from ..codes.receiptmanager import update_receipts_in_state
@@ -311,6 +313,8 @@ def revert_chain(block_index):
         logger.info('Syncing with network. Reverting anyway.')
         # logger.info('Syncing with network. Aborting revert.')
         # return
+    revert_to_last_snapshot()
+    return
     SYNC_STATUS['IS_SYNCING'] = True
     try:
         if block_index == 0:

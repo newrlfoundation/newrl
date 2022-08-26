@@ -6,6 +6,7 @@ import logging
 import sqlite3
 import time
 import threading
+from app.codes.dbmanager import check_and_create_snapshot_in_thread
 from app.codes.fs.temp_manager import store_receipt_to_temp
 from app.codes.p2p.sync_chain import sync_chain_from_peers
 from app.codes.timers import SYNC_STATUS
@@ -301,6 +302,7 @@ def global_internal_clock():
                         logger.info('I am sentitnel node. Mining empty block')
                         sentitnel_node_mine_empty()
 
+                check_and_create_snapshot_in_thread(last_block['index'])
                 # elif am_i_in_current_committee(last_block):
                 #     if TIMERS['block_receive_timeout'] is None or not TIMERS['block_receive_timeout'].is_alive():
                 #         start_empty_block_mining_clock(last_block_ts)
