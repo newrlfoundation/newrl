@@ -105,7 +105,7 @@ def receive_block(block):
         # Store proposal to penalise false miner
         return False
 
-    if not validate_block(block):
+    if not validate_block(block) or not validate_block_transactions(block['data']):
         logger.info('Invalid block. Sending receipts.')
         receipt_for_invalid_block = generate_block_receipt(block['data'], vote=0)
         committee = get_committee_for_current_block()
@@ -288,9 +288,6 @@ def ask_peers_for_block(block_index):
 
 def accept_block(block, hash):
     global TIMERS
-    if not validate_block_transactions(block['data']):
-        logger.info('Transaction validation failed')
-        return False
 
     # if hash is None:
     #     hash = calculate_hash(block['data'])

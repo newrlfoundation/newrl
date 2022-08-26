@@ -1,6 +1,8 @@
+from app.codes.db_updater import input_to_dict
 from app.codes.helpers.FetchRespository import FetchRepository
 from app.codes.helpers.TransactionCreator import TransactionCreator
 from .contract_master import ContractMaster
+from app.codes.helpers.CustomExceptions import ContractValidationError
 
 
 class sample_template(ContractMaster):
@@ -152,4 +154,17 @@ class sample_template(ContractMaster):
             sc_proposal1_data)
         return [sc_proposal1]
 
-    
+    def sample_validate(self, params, fetFetchRepository: FetchRepository):
+        print("Sample_validate invoked")
+        return []
+
+    def validate(self, txn_data, fetFetchRepository: FetchRepository):
+        method = txn_data["function"]
+        if(method == "sample_validate"):
+            value = txn_data["params"]["value"]
+            token_1 = value[0]
+            token_1_code = token_1["token_code"]
+            if token_1_code != "OT1":
+                raise ContractValidationError("Provided value tokens are incorrect, please provide ot1 tokens only")
+        pass
+                            

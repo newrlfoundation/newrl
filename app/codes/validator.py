@@ -43,10 +43,11 @@ def validate(transaction, propagate=False, validate_economics=True):
         else:
             msg = "Valid signatures. Not checking economics"
             valid = True
-
-        if not transaction_manager.contract_validate():
-            msg = "Contract Validation Failed"
-            valid = False
+        #contract validation    
+        if transaction['transaction']['type'] == 3:
+            if not transaction_manager.contract_validate():
+                msg = "Contract Validation Failed"
+                valid = False
     # if  economics_valid and signatures_valid:
     #     msg = "Transaction is valid"
     #     valid = True
