@@ -6,11 +6,12 @@ import requests
 import sqlite3
 import time
 import copy
+import multiprocessing
 
 from app.codes import blockchain
 from ..clock.global_time import get_corrected_time_ms
 from app.codes.crypto import calculate_hash
-from app.codes.minermanager import get_committee_for_current_block
+from app.codes.minermanager import am_i_in_block_committee, am_i_in_current_committee, get_committee_for_current_block
 from app.codes.p2p.outgoing import broadcast_receipt, broadcast_block
 from app.codes.receiptmanager import check_receipt_exists_in_db
 # from app.codes.utils import store_block_proposal
@@ -106,10 +107,12 @@ def receive_block(block):
         return False
 
     if not validate_block(block):
-        logger.info('Invalid block. Sending receipts.')
-        receipt_for_invalid_block = generate_block_receipt(block['data'], vote=0)
-        committee = get_committee_for_current_block()
-        broadcast_receipt(receipt_for_invalid_block, committee)
+        logger.info('Invalid block received.')
+        if am_i_in_block_committee(block['data']):
+            logger.info('Sending receipts for invalid block.')
+            receipt_for_invalid_block = generate_block_receipt(block['data'], vote=0)
+            committee = get_committee_for_current_block()
+            broadcast_receipt(receipt_for_invalid_block, committee)
         return False
 
     if check_community_consensus(block):
@@ -117,7 +120,7 @@ def receive_block(block):
         original_block = copy.deepcopy(block)
         accept_block(block, block['hash'])
         broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
-    else:
+    elif am_i_in_block_committee(block['data']):
         my_receipt = add_my_receipt_to_block(block)
         if check_community_consensus(block):
             logger.info('Block satisfies consensus after adding my receipt. Accepting and broadcasting.')
@@ -403,6 +406,11 @@ def get_last_block_hash_from_url_retry(url):
     return None
 
 
+def get_hash(peer):
+        url = 'http://' + peer['address'] + ':' + str(NEWRL_PORT)
+        hash = get_last_block_hash_from_url_retry(url)
+        return hash, url
+
 def get_majority_random_node():
     """Return a random node from the majority fork"""
     logger.info('Finding a majority node')
@@ -413,19 +421,20 @@ def get_majority_random_node():
     candidate_node_url = ''
     random.seed(get_corrected_time_ms())
     peers = random.sample(peers, k=min(len(peers), COMMITTEE_SIZE))
-    for peer in peers:
-        url = 'http://' + peer['address'] + ':' + str(NEWRL_PORT)
-        logger.info(f"Querying {url} for block hash")
 
-        hash = get_last_block_hash_from_url_retry(url)
-        if hash:
-            hashes.append(hash)
-            if hash == candidate_hash:
+    pool = multiprocessing.Pool(5)
+    hash_urls = pool.map(get_hash, peers)
+    for hash_url in hash_urls:
+        block_hash = hash_url[0]
+        url = hash_url[1]
+        if block_hash:
+            hashes.append(block_hash)
+            if block_hash == candidate_hash:
                 candidate_hash_count += 1
             else:
                 candidate_hash_count -= 1
             if candidate_hash_count < 0:
-                candidate_hash = hash
+                candidate_hash = block_hash
                 candidate_hash_count = 0
                 candidate_node_url = url
 

@@ -84,8 +84,7 @@ def check_community_consensus(block):
         append_receipt_to_block(block, receipt)
 
     receipt_counts = validate_block_receipts(block)
-
-    committee = get_committee_for_current_block()
+    committee = block['data']['committee']
 
     # TODO - Deal with the case when minimum number of committee members are not avalable
     # if len(committee) < 3:
@@ -100,7 +99,7 @@ def check_community_consensus(block):
     if len(committee) < MINIMUM_ACCEPTANCE_VOTES:
         return False
 
-    if receipt_counts['positive_receipt_count'] + 1 > MINIMUM_ACCEPTANCE_RATIO * COMMITTEE_SIZE:
+    if receipt_counts['positive_receipt_count'] + 1 >= MINIMUM_ACCEPTANCE_VOTES:
         # TODO - Check if time elapsed has exceeded receipt cut off. Do not accept otherwise
         # This is to give every node sometime to send their receipts for the block
         return True
