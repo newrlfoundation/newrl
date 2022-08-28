@@ -421,6 +421,37 @@ def get_majority_random_node():
     candidate_node_url = ''
     random.seed(get_corrected_time_ms())
     peers = random.sample(peers, k=min(len(peers), COMMITTEE_SIZE))
+    for peer in peers:
+        url = 'http://' + peer['address'] + ':' + str(NEWRL_PORT)
+        logger.info(f"Querying {url} for block hash")
+
+        hash = get_last_block_hash_from_url_retry(url)
+        if hash:
+            hashes.append(hash)
+            if hash == candidate_hash:
+                candidate_hash_count += 1
+            else:
+                candidate_hash_count -= 1
+            if candidate_hash_count < 0:
+                candidate_hash = hash
+                candidate_hash_count = 0
+                candidate_node_url = url
+
+    logger.info(f'Majority hash is {candidate_hash} and a random url is {candidate_node_url}')
+    return candidate_node_url
+    # revert_chain(find_forking_block(candidate_node_url))
+    # sync_chain_from_node(candidate_node_url)
+
+def get_majority_random_node_parallel():  # TODO - Need to fix for memory leakage
+    """Return a random node from the majority fork"""
+    logger.info('Finding a majority node')
+    peers = get_peers()
+    hashes = []
+    candidate_hash = ''
+    candidate_hash_count = 0
+    candidate_node_url = ''
+    random.seed(get_corrected_time_ms())
+    peers = random.sample(peers, k=min(len(peers), COMMITTEE_SIZE))
 
     pool = multiprocessing.Pool(5)
     hash_urls = pool.map(get_hash, peers)
