@@ -2,6 +2,8 @@ import random
 import requests
 from threading import Thread
 
+from app.codes.p2p.packager import compress_block_payload
+
 from ..clock.global_time import get_corrected_time_ms
 from ...constants import IS_TEST, MAX_BROADCAST_NODES, NEWRL_PORT, REQUEST_TIMEOUT, TRANSPORT_SERVER
 from ..p2p.utils import get_my_address, get_peers
@@ -46,6 +48,7 @@ def send_request(url, data, as_json=True):
         if as_json:
             requests.post(url, json=data, timeout=REQUEST_TIMEOUT)
         else:
+            data = compress_block_payload(data)
             requests.post(url, data=data, timeout=REQUEST_TIMEOUT)
     except Exception as e:
         print(f'Could not send request to node {url}')
@@ -105,7 +108,7 @@ def broadcast_block(block_payload, nodes=None, exclude_nodes=None):
         url = 'http://' + peer['address'] + ':' + str(NEWRL_PORT)
         try:
             # send_request_in_thread(url + '/receive-block', {'block': block_payload})
-            send_request_in_thread(url + '/receive-block-binary', send_request_in_thread, as_json=False)
+            send_request_in_thread(url + '/receive-block-binary', block_payload, as_json=False)
         except Exception as e:
             print(f'Error sending block to peer: {url}')
             print(e)
