@@ -92,7 +92,8 @@ def check_community_consensus(block):
     #        return True
     # Block is received from sentinel node after a timeout.
     if len(committee) == 1:
-        if committee[0]['wallet_address'] == Configuration.config("SENTINEL_NODE_WALLET"):  # Todo - Check if block is empty
+        if committee[0] == Configuration.config("SENTINEL_NODE_WALLET"):  # Todo - Check if block is empty
+            logger.info('Consensus satisfied as sentinel node is the miner')
             return True
         else:
             return False
