@@ -359,7 +359,7 @@ def get_block_from_url_retry(url, blocks_request):
             response = requests.post(
                     url + '/get-blocks',
                     json=blocks_request,
-                    timeout=10
+                    timeout=15
                 )
         except Exception as err:
             logger.info(f'Retrying block get {err}')

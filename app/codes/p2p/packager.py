@@ -70,6 +70,8 @@ def decompress_block_transaction(compressed_transaction):
 
 
 def compress_block_payload(block_payload):
+    compressed_data = zlib.compress(json.dumps(block_payload).encode("utf-8"))
+    return compressed_data
     receipts = list(
         map(lambda r: compress_block_receipt(r), block_payload['receipts']))
     previous_block_receipts = list(
