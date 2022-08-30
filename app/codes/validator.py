@@ -7,9 +7,11 @@ import logging
 
 import ecdsa
 import os
+from app.codes.crypto import calculate_hash
 
 from app.codes.fs.mempool_manager import get_mempool_transaction
 from app.codes.p2p.transport import send
+from app.ntypes import BLOCK_VOTE_VALID
 from .utils import get_last_block_hash
 from .transactionmanager import Transactionmanager
 from ..constants import IS_TEST, MEMPOOL_PATH
@@ -113,16 +115,19 @@ def validate_block_receipts(block):
     for receipt in block['receipts']:
         total_receipt_count += 1
 
+        if receipt['data']['wallet_address'] not in block['data']['committee']:
+            continue
+
         if not validate_receipt_signature(receipt):
             continue
 
         if receipt['data']['block_index'] != block['index'] or receipt['data']['vote'] < 1:
             continue
 
-        trust_score = get_node_trust_score(receipt['public_key'])
-        valid_probability = 0 if trust_score < 0 else (trust_score + 2) / 5
+        # trust_score = get_node_trust_score(receipt['public_key'])
+        # valid_probability = 0 if trust_score < 0 else (trust_score + 2) / 5
 
-        if receipt['data']['vote'] == 1:
+        if receipt['data']['vote'] == BLOCK_VOTE_VALID:
             positive_receipt_count += 1
     
     return {
@@ -134,7 +139,8 @@ def validate_block_receipts(block):
 def validate_block(block):
     if not validate_block_data(block['data']):
         return False
-
+    if calculate_hash(block['data']) != block['hash']:
+        return False
     return True
 
 

@@ -2,6 +2,8 @@ import random
 import requests
 from threading import Thread
 
+from app.codes.p2p.packager import compress_block_payload
+
 from ..clock.global_time import get_corrected_time_ms
 from ...constants import IS_TEST, MAX_BROADCAST_NODES, NEWRL_PORT, REQUEST_TIMEOUT, TRANSPORT_SERVER
 from ..p2p.utils import get_my_address, get_peers
@@ -35,15 +37,19 @@ def propogate_transaction_to_peers(transaction, exclude_nodes=None):
             print(f'Error broadcasting block to peer: {url}')
             print(e)
 
-def send_request_in_thread(url, data):
-    thread = Thread(target=send_request, args = (url, data))
+def send_request_in_thread(url, data, as_json=True):
+    thread = Thread(target=send_request, args = (url, data, as_json))
     thread.start()
 
-def send_request(url, data):
+def send_request(url, data, as_json=True):
     if IS_TEST:
         return
     try:
-        requests.post(url, json=data, timeout=REQUEST_TIMEOUT)
+        if as_json:
+            requests.post(url, json=data, timeout=REQUEST_TIMEOUT)
+        else:
+            data = compress_block_payload(data)
+            requests.post(url, data=data, timeout=REQUEST_TIMEOUT)
     except Exception as e:
         print(f'Could not send request to node {url}')
 
@@ -101,8 +107,8 @@ def broadcast_block(block_payload, nodes=None, exclude_nodes=None):
             continue
         url = 'http://' + peer['address'] + ':' + str(NEWRL_PORT)
         try:
-            send_request_in_thread(url + '/receive-block', {'block': block_payload})
-            # requests.post(url + '/receive-block', json={'block': block_payload}, timeout=REQUEST_TIMEOUT)
+            # send_request_in_thread(url + '/receive-block', {'block': block_payload})
+            send_request_in_thread(url + '/receive-block-binary', block_payload, as_json=False)
         except Exception as e:
             print(f'Error sending block to peer: {url}')
             print(e)
@@ -119,7 +125,7 @@ def get_random_peers(exclude_nodes=None):
     if exclude_nodes:
         peers = get_excluded_peers_to_broadcast(peers, exclude_nodes)
     node_count = min(MAX_BROADCAST_NODES, len(peers))
-    random.seed(get_corrected_time_ms())
+    random.seed()
     peers = random.sample(peers, k=node_count)
     return peers
 

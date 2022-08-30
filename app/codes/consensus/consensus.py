@@ -84,8 +84,7 @@ def check_community_consensus(block):
         append_receipt_to_block(block, receipt)
 
     receipt_counts = validate_block_receipts(block)
-
-    committee = get_committee_for_current_block()
+    committee = block['data']['committee']
 
     # TODO - Deal with the case when minimum number of committee members are not avalable
     # if len(committee) < 3:
@@ -93,14 +92,15 @@ def check_community_consensus(block):
     #        return True
     # Block is received from sentinel node after a timeout.
     if len(committee) == 1:
-        if committee[0]['wallet_address'] == Configuration.config("SENTINEL_NODE_WALLET"):  # Todo - Check if block is empty
+        if committee[0] == Configuration.config("SENTINEL_NODE_WALLET"):  # Todo - Check if block is empty
+            logger.info('Consensus satisfied as sentinel node is the miner')
             return True
         else:
             return False
     if len(committee) < MINIMUM_ACCEPTANCE_VOTES:
         return False
 
-    if receipt_counts['positive_receipt_count'] + 1 > MINIMUM_ACCEPTANCE_RATIO * COMMITTEE_SIZE:
+    if receipt_counts['positive_receipt_count'] + 1 >= MINIMUM_ACCEPTANCE_VOTES:
         # TODO - Check if time elapsed has exceeded receipt cut off. Do not accept otherwise
         # This is to give every node sometime to send their receipts for the block
         return True

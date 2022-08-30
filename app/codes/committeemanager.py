@@ -13,16 +13,25 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def get_number_from_hash(block_hash):
+    """
+    Return a number from a string determinstically
+    """
+    # return hash(block_hash) % 1000000
+    return ord(block_hash[0])
+
+
 def weighted_random_choices(population, weights, k):
     if len(population) < k:
         raise Exception('Population less than selection count')
     
     selections = []
-
+    # previous_idx = 0
     while len(selections) < k:
-        random.seed(0)
+        # random.seed(previous_idx)
         choice = random.choices(population, weights=weights)[0]
         index = population.index(choice)
+        # previous_idx = index
         selections.append(choice)
         del population[index]
         del weights[index]
@@ -43,7 +52,7 @@ def get_miner_for_current_block(last_block=None):
         logger.info('Inadequate committee. Sentinel node is the miner.')
         return {'wallet_address': SENTINEL_NODE_WALLET}
 
-    random.seed(last_block['index'])
+    random.seed(get_number_from_hash(last_block['hash']))
     return random.choice(committee_list)
 
     # return committee_list[0]
@@ -92,7 +101,7 @@ def get_committee_for_current_block(last_block=None):
     if not last_block:
         return [{'wallet_address': SENTINEL_NODE_WALLET}]
 
-    random.seed(last_block['index'])
+    random.seed(get_number_from_hash(last_block['hash']))
 
     miners = get_eligible_miners()
 

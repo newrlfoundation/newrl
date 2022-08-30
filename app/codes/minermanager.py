@@ -103,6 +103,11 @@ def am_i_in_current_committee(last_block=None):
     return True
 
 
+def am_i_in_block_committee(block):
+    my_wallet_address = get_wallet()['address']
+    return my_wallet_address in block['committee']
+
+
 def get_miner_info():
     return {
         'current_block_miner': get_miner_for_current_block(),
