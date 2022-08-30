@@ -7,6 +7,7 @@ import logging
 
 import ecdsa
 import os
+from app.codes.crypto import calculate_hash
 
 from app.codes.fs.mempool_manager import get_mempool_transaction
 from app.codes.p2p.transport import send
@@ -133,7 +134,8 @@ def validate_block_receipts(block):
 def validate_block(block):
     if not validate_block_data(block['data']):
         return False
-
+    if calculate_hash(block['data']) != block['hash']:
+        return False
     return True
 
 

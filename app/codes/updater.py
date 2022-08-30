@@ -15,7 +15,7 @@ from app.codes.timers import SYNC_STATUS
 from app.ntypes import BLOCK_VOTE_MINER
 
 from .clock.global_time import get_corrected_time_ms, get_time_difference
-from .fs.temp_manager import get_all_receipts_from_storage, get_blocks_for_index_from_storage, store_block_to_temp
+from .fs.temp_manager import get_all_receipts_from_storage, get_blocks_for_index_from_storage, remove_block_from_temp, store_block_to_temp
 from .minermanager import am_i_in_current_committee, broadcast_miner_update, get_committee_for_current_block, get_miner_for_current_block, should_i_mine
 from ..Configuration import Configuration
 from ..nvalues import SENTINEL_NODE_WALLET, TREASURY_WALLET_ADDRESS
@@ -58,9 +58,14 @@ def run_updater(add_to_chain=False):
 
     existing_block_proposals = get_blocks_for_index_from_storage(new_block_index)
     if len(existing_block_proposals) != 0:
-        logger.info(f"Existing block proposal exists with index {new_block_index}. Broadcasting existing one.")
-        broadcast_block_proposal(existing_block_proposals[0])
-        return existing_block_proposals[0]
+        if (existing_block_proposals[0]['data']['timestamp'] < 
+            get_corrected_time_ms() - TIME_MINER_BROADCAST_INTERVAL_SECONDS * 3600):
+            logger.info(f"Deleting stale block proposal with index {new_block_index}")
+            remove_block_from_temp(new_block_index)
+        else:
+            logger.info(f"Existing block proposal exists with index {new_block_index}. Broadcasting existing one.")
+            broadcast_block_proposal(existing_block_proposals[0])
+            return existing_block_proposals[0]
 
     logger.info(f'Proposing new block {new_block_index}')
     filenames = os.listdir(MEMPOOL_PATH)  # this is the mempool
@@ -282,13 +287,13 @@ def global_internal_clock():
                 last_block_ts = int(last_block['timestamp'])
                 time_elapsed_seconds = (current_ts - last_block_ts) / 1000
 
-                if time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 4:
-                    logger.info('I have not received a block for 4 intervals. Querying chain for majority chain.')
-                    sync_chain_from_peers()
-                    current_ts = get_corrected_time_ms()
-                    last_block = get_last_block()
-                    last_block_ts = int(last_block['timestamp'])
-                    time_elapsed_seconds = (current_ts - last_block_ts) / 1000  # This needs to be calculated again after the sync
+                # if time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 4:
+                #     logger.info('I have not received a block for 4 intervals. Querying chain for majority chain.')
+                #     sync_chain_from_peers()
+                #     current_ts = get_corrected_time_ms()
+                #     last_block = get_last_block()
+                #     last_block_ts = int(last_block['timestamp'])
+                #     time_elapsed_seconds = (current_ts - last_block_ts) / 1000  # This needs to be calculated again after the sync
                 if time_elapsed_seconds < BLOCK_TIME_INTERVAL_SECONDS * 4 and should_i_mine(last_block):
                     logger.info('I am the miner for this block.')
                     # Don't mine a block if half the block time interval has passed. Wait for sentinel node.

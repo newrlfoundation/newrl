@@ -82,7 +82,7 @@ def receive_block(block):
     block_index = block['index']
     if block_index > get_last_block_index() + 1:
         logger.info('Node not in sync. Cannot add block')
-        # sync_chain_from_peers()
+        sync_chain_from_peers()
         return
 
     if blockchain.block_exists(block_index):
@@ -103,7 +103,8 @@ def receive_block(block):
     # store_block_proposal(block)
     
     if not validate_block_miner(block['data']):
-        # Store proposal to penalise false miner
+        # Store proposal to penalise false miner. But a dishonest node can flood with blocks
+        # causing chain to grow a lot as a DoS attack
         return False
 
     if not validate_block(block):
