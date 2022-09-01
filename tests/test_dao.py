@@ -71,6 +71,13 @@ def create_wallet():
     print('Test passed.')
     return wallet
 
+def get_pid(wallet):
+    response = requests.get(
+        NODE_URL+"/get-wallet", params={'wallet_address': wallet["address"]})
+    assert response.status_code == 200
+    response_val = response.json()
+    assert response_val["person_id"]
+    return response_val["person_id"]
 
 def create_token(wallet, owner, token_name, token_code, amount):
     response = requests.post(NODE_URL+'/add-token', json={
@@ -122,6 +129,8 @@ wallet_founder1 = create_wallet()
 wallet_founder2 = create_wallet()
 wallet_founder3 = create_wallet()
 wallet_member1 = create_wallet()
+member_pid = get_pid(wallet_member1)
+
 wallet_dao = create_wallet()
 dao_token_name = "dao_token".join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
@@ -151,6 +160,7 @@ def test_create_mem_dao():
                 "dao_wallet_address": wallet_dao["address"],
                 "max_members": 999999999,
                 "max_voting_time": 300000,
+                "total_votes": 3,
                 "signatories": {
                     "vote_on_proposal": None,
                     "delete_member": [
@@ -337,12 +347,7 @@ def test_initialize_dao():
 def test_proposal_add_member():
 
     #get member pid
-    response = requests.get(
-        NODE_URL+"/get-wallet", params={'wallet_address': wallet_founder3["address"]})
-    assert response.status_code == 200
-    response_val = response.json()
-    assert response_val["person_id"]
-    member_pid = response_val["person_id"]
+    global member_pid
 
     req = {
         "sc_address": mem_dao_address,
@@ -358,7 +363,7 @@ def test_proposal_add_member():
             },
             "block_index_reference": 234543,
             "voting_start_ts": 123324324,
-            "voting_end_ts": 123325324
+            "voting_end_ts": 123325324,
         }
     }
 
@@ -417,7 +422,7 @@ def test_proposal_add_member():
     assert response_val["data"]
     proposal_length_new = len(response_val["data"])
     assert proposal_length_new == proposal_length+1
-    proposal_id_resp =  response_val["data"][0][2]
+    proposal_id_resp =  response_val["data"][0][1]
     proposal_id = proposal_id_resp
 
 
@@ -479,44 +484,58 @@ def test_vote_proposal_add_memeber():
     current_yes_votes = response_val["data"][5]
     assert current_yes_votes == 1
 
-    # #vote 2
-    # req = {
-    #     "sc_address": mem_dao_address,
-    #     "function_called": "vote_on_proposal",
-    #     "signers": [
-    #         wallet_founder3['address']
-    #     ],
-    #     "params": {
-    #         "proposal_id": proposal_id,
-    #         "vote": 1
-    #     }
-    # }
-    # response = requests.post(NODE_URL+"/call-sc", json=req
-    #                          )
-    # assert response.status_code == 200
-    # unsigned_transaction = response.json()
-    # assert unsigned_transaction['transaction']
-    # assert len(unsigned_transaction['signatures']) == 0
+    #vote 2
+    req = {
+        "sc_address": mem_dao_address,
+        "function_called": "vote_on_proposal",
+        "signers": [
+            wallet_founder3['address']
+        ],
+        "params": {
+            "proposal_id": proposal_id,
+            "vote": 1
+        }
+    }
+    response = requests.post(NODE_URL+"/call-sc", json=req
+                             )
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    assert unsigned_transaction['transaction']
+    assert len(unsigned_transaction['signatures']) == 0
 
-    # response = requests.post(NODE_URL+'/sign-transaction', json={
-    #     "wallet_data": wallet_founder3,
-    #     "transaction_data": unsigned_transaction
-    # })
+    response = requests.post(NODE_URL+'/sign-transaction', json={
+        "wallet_data": wallet_founder3,
+        "transaction_data": unsigned_transaction
+    })
 
-    # assert response.status_code == 200
-    # signed_transaction = response.json()
-    # assert signed_transaction['transaction']
-    # assert signed_transaction['signatures']
-    # assert len(signed_transaction['signatures']) == 1
+    assert response.status_code == 200
+    signed_transaction = response.json()
+    assert signed_transaction['transaction']
+    assert signed_transaction['signatures']
+    assert len(signed_transaction['signatures']) == 1
 
-    # response = requests.post(
-    #     NODE_URL+'/validate-transaction', json=signed_transaction)
-    # assert response.status_code == 200
+    response = requests.post(
+        NODE_URL+'/validate-transaction', json=signed_transaction)
+    assert response.status_code == 200
     
-    # if TEST_ENV == 'local':
-    #     response = requests.post(
-    #         NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
-    # else:
-    #     print('Waiting to mine block')
-    #     time.sleep(BLOCK_WAIT_TIME)
+    if TEST_ENV == 'local':
+        response = requests.post(
+            NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+    else:
+        print('Waiting to mine block')
+        time.sleep(BLOCK_WAIT_TIME)
 
+    params = {
+        'table_name': "proposal_data",
+        'contract_address': mem_dao_address,
+        'unique_column': "proposal_id",
+        'unique_value': proposal_id
+    }
+    response = requests.get(NODE_URL+"/sc-state", params=params)
+    assert response.status_code == 200
+    response_val = response.json()
+    assert response_val is not None
+    current_yes_votes = response_val["data"][5]
+    assert current_yes_votes == 2
+
+    
