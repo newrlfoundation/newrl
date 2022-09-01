@@ -9,11 +9,12 @@ import copy
 import multiprocessing
 
 from app.codes import blockchain
+from app.ntypes import BLOCK_CONSENSUS_INVALID, BLOCK_CONSENSUS_NA, BLOCK_CONSENSUS_VALID, BLOCK_STATUS_INVALID_MINED, BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID
 from ..clock.global_time import get_corrected_time_ms
 from app.codes.crypto import calculate_hash
 from app.codes.minermanager import am_i_in_block_committee, am_i_in_current_committee, get_committee_for_current_block
 from app.codes.p2p.outgoing import broadcast_receipt, broadcast_block
-from app.codes.receiptmanager import check_receipt_exists_in_db
+from app.codes.receiptmanager import check_receipt_exists_in_db, validate_receipt
 # from app.codes.utils import store_block_proposal
 from app.constants import COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
 from app.codes.p2p.peers import get_peers
@@ -21,7 +22,7 @@ from app.codes.p2p.peers import get_peers
 from app.codes.validator import validate_block, validate_block_data, validate_block_transactions, validate_receipt_signature
 from app.codes.timers import TIMERS
 from app.codes.fs.temp_manager import append_receipt_to_block_in_storage, check_receipt_exists_in_temp, get_blocks_for_index_from_storage, store_block_to_temp, store_receipt_to_temp
-from app.codes.consensus.consensus import check_community_consensus, is_timeout_block_from_sentinel_node, validate_block_miner, generate_block_receipt, \
+from app.codes.consensus.consensus import get_committee_consensus, validate_empty_block, validate_block_miner_committee, generate_block_receipt, \
     add_my_receipt_to_block
 from app.migrations.init_db import revert_chain
 from app.nvalues import SENTINEL_NODE_WALLET
@@ -89,12 +90,14 @@ def receive_block(block):
         logger.info('Block alredy exist in chain. Ignoring.')
         return False
     
+    # Check block for index for index and hash already in temp. If yes append receipts from local block from to the received block
     logger.info(f'Received new block: {block}')
 
 
     broadcast_exclude_nodes = block['peers_already_broadcasted'] if 'peers_already_broadcasted' in block else None
     original_block = copy.deepcopy(block)
-    if is_timeout_block_from_sentinel_node(block['data']):
+    # Check for sentinel node empty block
+    if validate_empty_block(block, check_sentinel_receipt=True):
         logger.info('Accepting timeout block from sentinel node')
         accept_block(block, block['hash'])
         broadcast_block(original_block)
@@ -102,47 +105,77 @@ def receive_block(block):
 
     # store_block_proposal(block)
     
-    if not validate_block_miner(block['data']):
+    if not validate_block_miner_committee(block):
         # Store proposal to penalise false miner. But a dishonest node can flood with blocks
         # causing chain to grow a lot as a DoS attack
         return False
 
-    if not validate_block(block):
-        logger.info('Invalid block received.')
-        if am_i_in_block_committee(block['data']):
-            logger.info('Sending receipts for invalid block.')
-            receipt_for_invalid_block = generate_block_receipt(block['data'], vote=0)
-            committee = get_committee_for_current_block()
-            broadcast_receipt(receipt_for_invalid_block, committee)
-        return False
-
-    if check_community_consensus(block):
-        logger.info('Received block is after consensus. Accepting and broadcasting.')
+    consensus = get_committee_consensus(block)
+    if consensus == BLOCK_CONSENSUS_VALID:
+        logger.info('Received block is after consensus')
+        if not validate_block(block):
+            logger.info('Invalid block received after valid consensus. Committee maybe malicious. Ignoring.')
+            # if am_i_in_block_committee(block['data']):
+            #     logger.info('Sending receipts for invalid block.')
+            #     receipt_for_invalid_block = generate_block_receipt(block['data'], vote=0)
+            #     committee = get_committee_for_current_block()
+            #     broadcast_receipt(receipt_for_invalid_block, committee)
+            return False
         original_block = copy.deepcopy(block)
         accept_block(block, block['hash'])
         broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
-    elif am_i_in_block_committee(block['data']):
-        my_receipt = add_my_receipt_to_block(block)
-        if check_community_consensus(block):
-            logger.info('Block satisfies consensus after adding my receipt. Accepting and broadcasting.')
-            original_block = copy.deepcopy(block)
-            if accept_block(block, block['hash']):
-                broadcast_block(original_block)
-        else:
-            committee = get_committee_for_current_block()
-            if (len(committee) < MINIMUM_ACCEPTANCE_VOTES and
-                block['data']['creator_wallet'] == SENTINEL_NODE_WALLET):
-                    logger.info('Inadequate committee for block. Accepting from sentinel node.')
-                    accept_block(block, block['hash'])
-                    broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
-                    return
-            if my_receipt:
-                logger.info('Broadcasting my receipt')
-                broadcast_receipt(my_receipt, committee)
-            logger.info('Stored block to temp')
-            store_block_to_temp(block)
+    elif consensus == BLOCK_CONSENSUS_INVALID:
+        if not validate_empty_block(block):
+            logger.warn('Committee empty block received is not valid. Ignoring.')
+            return False
+        
+        logger.info('Committee empty block received for invalid block proposal by valid miner. Accepting and broadcasting.')
+        original_block = copy.deepcopy(block)
+        if accept_block(block, block['hash']):
+            broadcast_block(original_block)
+    else:  # Consensus not available
+        if am_i_in_current_committee():
+            if validate_block(block):
+                my_receipt = add_my_receipt_to_block(block, vote=BLOCK_VOTE_VALID)
+                consensus_adding_my_receipt = get_committee_consensus(block)
+                if consensus_adding_my_receipt == BLOCK_CONSENSUS_VALID:
+                    logger.info('Block satisfies valid consensus after adding my receipt. Accepting and broadcasting.')
+                    original_block = copy.deepcopy(block)
+                    if accept_block(block, block['hash']):
+                        broadcast_block(original_block)
+                elif consensus_adding_my_receipt == BLOCK_CONSENSUS_NA:
+                    committee = get_committee_for_current_block()
+                    broadcast_receipt(my_receipt, nodes=committee)
+                else:  # Not possible
+                    logger.warn('Unexpected behaviour after adding my valid vote. Consensus became invalid. Not broadcasting')
+                    return False
+            else:
+                # Generate empty block. 
+                blockchain = blockchain.Blockchain()
+                block = blockchain.mine_empty_block(block_status=BLOCK_STATUS_INVALID_MINED)
+                store_block_to_temp(block)
+                my_receipt = generate_block_receipt(block, vote=BLOCK_VOTE_INVALID)
+                store_receipt_to_temp(my_receipt)
+                committee = get_committee_for_current_block()
+                time.sleep(1)
+                broadcast_receipt(my_receipt, nodes=committee)
+
+    return
+    #     else:
+    #         committee = get_committee_for_current_block()
+    #         if (len(committee) < MINIMUM_ACCEPTANCE_VOTES and
+    #             block['data']['creator_wallet'] == SENTINEL_NODE_WALLET):
+    #                 logger.info('Inadequate committee for block. Accepting from sentinel node.')
+    #                 accept_block(block, block['hash'])
+    #                 broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
+    #                 return
+    #         if my_receipt:
+    #             logger.info('Broadcasting my receipt')
+    #             broadcast_receipt(my_receipt, committee)
+    #         logger.info('Stored block to temp')
+    #         store_block_to_temp(block)
     
-    return True
+    # return True
 
 
 def sync_chain_from_node(url, block_index=None):
@@ -313,12 +346,16 @@ def accept_block(block, hash):
 
 def receive_receipt(receipt):
     logger.info('Recieved receipt: %s', receipt)
-    if not validate_receipt_signature(receipt):
-        logger.info('Invalid receipt signature')
+    if not validate_receipt(receipt):
+        logger.info('Invalid receipt. Ignoring')
         return False
 
     receipt_data = receipt['data']
     block_index = receipt_data['block_index']
+
+    # TODO - Add more committee, miner validation
+    if block_index == get_last_block_index() + 1:
+        return False
 
     if check_receipt_exists_in_temp(
             receipt_data['block_index'],
@@ -340,7 +377,9 @@ def receive_receipt(receipt):
     if len(blocks) != 0:
         blocks_appended = append_receipt_to_block_in_storage(receipt)
         for block in blocks_appended:
-            if check_community_consensus(block):
+            consensus = get_committee_consensus(block)
+            if not consensus == BLOCK_CONSENSUS_NA:
+                logger.info(f"Consensus achieved {consensus} for block {block['index']} and hash {block['hash']}. Broadcasting to network.")
                 original_block = copy.deepcopy(block)
                 if not SYNC_STATUS['IS_SYNCING']:
                     accept_block(block, block['hash'])

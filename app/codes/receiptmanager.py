@@ -1,11 +1,17 @@
 """Receipt manager"""
 
 import sqlite3
+import logging
 
-from app.codes.fs.temp_manager import get_all_receipts_from_storage, remove_receipt_from_temp
+from app.codes.fs.temp_manager import get_all_receipts_from_storage, remove_receipt_from_temp, store_receipt_to_temp
+from app.codes.kycwallet import get_address_from_public_key
+from app.codes.signmanager import verify_sign
 from .statereader import get_public_key_from_wallet_address
 from ..constants import NEWRL_DB
 
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def get_receipts_included_in_block_from_db(block_index):
@@ -104,3 +110,24 @@ def get_receipt_in_temp_not_in_chain(exclude_block, cur=None):
             receipts_not_included.append(receipt)
 
     return receipts_not_included
+
+
+def validate_receipt(receipt):
+    if not verify_sign(receipt['data'], receipt['public_key']):
+        logger.warn('Invalid signature for receipt')
+        return False
+    
+    signer_address = get_address_from_public_key(receipt['public_key'])
+    if receipt['data']['wallet_address'] != signer_address:
+        logger.warn('Receipt signing address not matching the address in data')
+        return False
+    
+    public_key_in_db = get_public_key_from_wallet_address(signer_address)
+    if public_key_in_db != receipt['public_key']:
+        logger.warn('Receipt wallet address not present in db')
+        return False
+
+
+def save_receipts_from_block_to_temp(block):
+    for receipt in block['receipts']:
+        store_receipt_to_temp(receipt)

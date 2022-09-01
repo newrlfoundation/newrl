@@ -65,6 +65,15 @@ async def receive_receipt_api(req: ReceiptAdditionRequest):
 def get_last_block_index_api():
     return get_last_block_index()
 
+@router.get("/get-random-majority-chain-peers", tags=[p2p_tag])
+def get_majority_peers_api():
+    # TODO - Return a list of majority nodes
+    return [{
+        'url': '',
+        'block_index': '',
+        'block_hash': ''
+    }]
+
 @router.get("/find-forking-block-with-majority", tags=[p2p_tag])
 def find_forking_block_with_majority_api():
     return find_forking_block_with_majority()
