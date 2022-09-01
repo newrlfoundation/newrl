@@ -379,7 +379,25 @@ def get_sc_state(table_name, contract_address, unique_column, unique_value):
             "address", contract_address,1).execute_query_single_result({unique_column: unique_value, "address": contract_address})
 
         con.close()
-        return {"status": "SUCCESS", 'data' : data}
+        resp = {"status": "SUCCESS", 'data': data}
+        return resp
+    except Exception as e:
+        logger.exception(e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/sc-states", tags=[system])
+def get_sc_state(table_name, contract_address):
+    try:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        repo = FetchRepository(cur)
+
+        data = repo.select_Query().add_table_name(table_name).where_clause("address", contract_address, 1).execute_query_multiple_result({"address": contract_address})
+
+        con.close()
+        resp = {"status": "SUCCESS", 'data': data}
+        return resp
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
