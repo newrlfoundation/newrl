@@ -2,6 +2,8 @@
 
 import logging
 
+from app.codes.committeemanager import get_committee_wallet_list_for_current_block
+
 from ..receiptmanager import validate_receipt
 from ..kycwallet import get_address_from_public_key
 from ...ntypes import BLOCK_VOTE_MINER, BLOCK_VOTE_VALID
@@ -126,7 +128,7 @@ def validate_block_miner_committee(block):
         logger.info(f"Invalid miner {creator_wallet} for block. Expected {expected_miner}")
         return False
     
-    expected_commitee = get_committee_for_current_block()
+    expected_commitee = get_committee_wallet_list_for_current_block()
     if set(block['data']['committee']) != set(expected_commitee):
         logger.info(f"Invalid committee {block['data']['committee']} for block. Expected {expected_commitee}")
         return False
@@ -142,7 +144,7 @@ def validate_block_miner_committee(block):
         if signer_address not in expected_commitee:
             logger.warn('Receipt signing wallet not in committee')
             return False
-        if receipt['data'] == BLOCK_VOTE_MINER:
+        if receipt['data']['vote'] == BLOCK_VOTE_MINER:
             if signer_address != expected_miner:
                 logger.warn('Miner vote with non-expected miner found in receipts')
                 return False
@@ -151,9 +153,9 @@ def validate_block_miner_committee(block):
                 return False
             miner_vote_found = True
         
-        if not miner_vote_found:
-            logger.warn('Miner vote not found in receipts')
-            return False
+    if not miner_vote_found:
+        logger.warn('Miner vote not found in receipts')
+        return False
     
     return True
 
@@ -169,7 +171,7 @@ def validate_empty_block(block, check_sentinel_receipt=False):
 
     # Check sentinel node signature
     if check_sentinel_receipt:
-        if len(block['receipts'] != 1):
+        if len(block['receipts']) != 1:
             logger.warn('Sentinel timeout block having more than 1 receipt')
             return False
         

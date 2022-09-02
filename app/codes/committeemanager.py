@@ -64,14 +64,14 @@ def get_miner_for_current_block(last_block=None):
         return {'wallet_address': SENTINEL_NODE_WALLET}
 
     random.seed(get_number_from_hash(last_block['hash']))
-
+    miner = random.choice(committee_list)
     miner_committee_cache = {
         'current_block_hash': last_block['hash'],
-        'current_miner': random.choice(committee_list),
+        'current_miner': miner,
         'current_committee': committee_list,
         'timestamp': get_corrected_time_ms(),
     }
-    return random.choice(committee_list)
+    return miner
 
     # return committee_list[0]
 

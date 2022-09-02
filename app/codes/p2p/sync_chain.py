@@ -91,7 +91,7 @@ def receive_block(block):
         return False
     
     # Check block for index for index and hash already in temp. If yes append receipts from local block from to the received block
-    logger.info(f'Received new block: {block}')
+    logger.info(f'Received new block: {json.dumps(block)}')
 
 
     broadcast_exclude_nodes = block['peers_already_broadcasted'] if 'peers_already_broadcasted' in block else None
@@ -134,6 +134,7 @@ def receive_block(block):
         if accept_block(block, block['hash']):
             broadcast_block(original_block)
     else:  # Consensus not available
+        store_block_to_temp(block)
         if am_i_in_current_committee():
             if validate_block(block):
                 my_receipt = add_my_receipt_to_block(block, vote=BLOCK_VOTE_VALID)
@@ -151,8 +152,8 @@ def receive_block(block):
                     return False
             else:
                 # Generate empty block. 
-                blockchain = blockchain.Blockchain()
-                block = blockchain.mine_empty_block(block_status=BLOCK_STATUS_INVALID_MINED)
+                chain = blockchain.Blockchain()
+                block = chain.mine_empty_block(block_status=BLOCK_STATUS_INVALID_MINED)
                 store_block_to_temp(block)
                 my_receipt = generate_block_receipt(block, vote=BLOCK_VOTE_INVALID)
                 store_receipt_to_temp(my_receipt)
@@ -354,7 +355,7 @@ def receive_receipt(receipt):
     block_index = receipt_data['block_index']
 
     # TODO - Add more committee, miner validation
-    if block_index == get_last_block_index() + 1:
+    if block_index > get_last_block_index() + 1:
         return False
 
     if check_receipt_exists_in_temp(
@@ -384,6 +385,7 @@ def receive_receipt(receipt):
                 if not SYNC_STATUS['IS_SYNCING']:
                     accept_block(block, block['hash'])
                 broadcast_block(original_block)
+                break
 
     # committee = get_committee_for_current_block()
     # broadcast_receipt(receipt, committee)

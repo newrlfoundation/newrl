@@ -113,7 +113,7 @@ def get_receipt_in_temp_not_in_chain(exclude_block, cur=None):
 
 
 def validate_receipt(receipt):
-    if not verify_sign(receipt['data'], receipt['public_key']):
+    if not verify_sign(receipt['data'], receipt['signature'], receipt['public_key']):
         logger.warn('Invalid signature for receipt')
         return False
     
@@ -126,6 +126,8 @@ def validate_receipt(receipt):
     if public_key_in_db != receipt['public_key']:
         logger.warn('Receipt wallet address not present in db')
         return False
+    
+    return True
 
 
 def save_receipts_from_block_to_temp(block):
