@@ -145,7 +145,7 @@ def is_miner_committee_cached(last_block_hash):
     timestamp = get_corrected_time_ms()
 
     if (miner_committee_cache['current_block_hash'] == last_block_hash
-        and miner_committee_cache['timestamp'] < timestamp + BLOCK_TIME_INTERVAL_SECONDS * 1000):
+        and miner_committee_cache['timestamp'] < timestamp - BLOCK_TIME_INTERVAL_SECONDS * 1000):
         return True
     return False
 
