@@ -11,7 +11,7 @@ from app.codes.crypto import calculate_hash
 
 from app.codes.fs.mempool_manager import get_mempool_transaction
 from app.codes.p2p.transport import send
-from app.ntypes import BLOCK_VOTE_VALID
+from app.ntypes import BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID
 from .utils import get_last_block_hash
 from .transactionmanager import Transactionmanager
 from ..constants import IS_TEST, MEMPOOL_PATH
@@ -104,9 +104,10 @@ def get_node_trust_score(public_key):
     return 1
 
 
-def validate_block_receipts(block):
+def count_block_receipts(block):
     total_receipt_count = 0
     positive_receipt_count = 0
+    negative_receipt_count = 0  # TODO
     for receipt in block['receipts']:
         total_receipt_count += 1
 
@@ -116,11 +117,11 @@ def validate_block_receipts(block):
         if not validate_receipt_signature(receipt):
             continue
 
-        if receipt['data']['block_index'] != block['index'] or receipt['data']['vote'] < 1:
+        if receipt['data']['block_index'] != block['index']:
             continue
-
-        # trust_score = get_node_trust_score(receipt['public_key'])
-        # valid_probability = 0 if trust_score < 0 else (trust_score + 2) / 5
+    
+        if receipt['data']['vote'] == BLOCK_VOTE_INVALID:
+            negative_receipt_count += 1
 
         if receipt['data']['vote'] == BLOCK_VOTE_VALID:
             positive_receipt_count += 1
@@ -128,6 +129,7 @@ def validate_block_receipts(block):
     return {
         'total_receipt_count': total_receipt_count,
         'positive_receipt_count': positive_receipt_count,
+        'negative_receipt_count': negative_receipt_count
     }
 
 

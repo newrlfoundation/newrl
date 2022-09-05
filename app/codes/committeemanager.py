@@ -3,7 +3,7 @@ import random
 import logging
 
 from ..nvalues import SENTINEL_NODE_WALLET
-from ..constants import COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
+from ..constants import BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
 from .clock.global_time import get_corrected_time_ms
 from .utils import get_last_block_hash
 from app.codes.scoremanager import get_scores_for_wallets
@@ -11,6 +11,13 @@ from app.codes.scoremanager import get_scores_for_wallets
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+miner_committee_cache = {
+    'current_block_hash': '',
+    'current_miner': SENTINEL_NODE_WALLET,
+    'current_committee': [],
+    'timestamp': 0
+}
 
 
 def get_number_from_hash(block_hash):
@@ -40,11 +47,15 @@ def weighted_random_choices(population, weights, k):
 
 
 def get_miner_for_current_block(last_block=None):
+    global miner_committee_cache
     if last_block is None:
         last_block = get_last_block_hash()
 
     if not last_block:
         return {'wallet_address': SENTINEL_NODE_WALLET}
+
+    if is_miner_committee_cached(last_block['hash']):
+        return miner_committee_cache['current_miner']
 
     committee_list = get_committee_for_current_block()
 
@@ -53,7 +64,14 @@ def get_miner_for_current_block(last_block=None):
         return {'wallet_address': SENTINEL_NODE_WALLET}
 
     random.seed(get_number_from_hash(last_block['hash']))
-    return random.choice(committee_list)
+    miner = random.choice(committee_list)
+    miner_committee_cache = {
+        'current_block_hash': last_block['hash'],
+        'current_miner': miner,
+        'current_committee': committee_list,
+        'timestamp': get_corrected_time_ms(),
+    }
+    return miner
 
     # return committee_list[0]
 
@@ -95,11 +113,15 @@ def get_eligible_miners():
     return miners
 
 def get_committee_for_current_block(last_block=None):
+    global miner_committee_cache
     if last_block is None:
         last_block = get_last_block_hash()
 
     if not last_block:
         return [{'wallet_address': SENTINEL_NODE_WALLET}]
+
+    if is_miner_committee_cached(last_block['hash']):
+        return miner_committee_cache['current_committee']
 
     random.seed(get_number_from_hash(last_block['hash']))
 
@@ -116,3 +138,17 @@ def get_committee_for_current_block(last_block=None):
     committee = weighted_random_choices(miners, weights, committee_size)
     committee = sorted(committee, key=lambda d: d['wallet_address']) 
     return committee
+
+
+def is_miner_committee_cached(last_block_hash):
+    global miner_committee_cache
+    timestamp = get_corrected_time_ms()
+
+    if (miner_committee_cache['current_block_hash'] == last_block_hash
+        and miner_committee_cache['timestamp'] < timestamp - BLOCK_TIME_INTERVAL_SECONDS * 1000):
+        return True
+    return False
+
+
+def get_committee_wallet_list_for_current_block():
+    return list(map(lambda c: c['wallet_address'], get_committee_for_current_block()))
