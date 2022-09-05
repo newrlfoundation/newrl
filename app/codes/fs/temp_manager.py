@@ -49,7 +49,7 @@ def store_block_to_temp(block, folder=TMP_PATH):
     block_index = block['index'] if 'index' in block else 'block_index'
     block_hash = block['hash']
     # existing_files_for_block = glob.glob(f'{folder}/block_{block_index}_*.json')
-    new_file_name = f'{folder}/block_{block_index}_{block_hash}.json'
+    new_file_name = f'{folder}block_{block_index}_{block_hash}.json'
     with open(new_file_name, 'w') as _file:
         json.dump(block, _file)
     return new_file_name
@@ -86,10 +86,14 @@ def append_receipt_to_block(block, new_receipt):
 
 
 def append_receipt_to_block_in_storage(receipt):
+    """
+    Append receipt to the blocks with specific index and return them
+    """
     block_folder=TMP_PATH
     block_index = receipt['data']['block_index']
+    block_hash = receipt['data']['block_hash']
     blocks = []
-    for block_file in glob.glob(f'{block_folder}/block_{block_index}_*.json'):
+    for block_file in glob.glob(f'{block_folder}/block_{block_index}_{block_hash}.json'):
         with open(block_file, 'r') as _rfile:
             block = json.load(_rfile)
         if append_receipt_to_block(block, receipt):

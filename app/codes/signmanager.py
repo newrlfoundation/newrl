@@ -51,3 +51,11 @@ def sign_object(private_key, data):
     msgsignbytes = sk.sign(msg)
     msgsign = base64.b64encode(msgsignbytes).decode('utf-8')
     return msgsign
+
+
+def verify_sign(data, signature, public_key):
+    public_key_bytes = base64.b64decode(public_key)
+    sign_trans_bytes = base64.decodebytes(signature.encode('utf-8'))
+    verifying_key = ecdsa.VerifyingKey.from_string(public_key_bytes, curve=ecdsa.SECP256k1)
+    message = json.dumps(data).encode()
+    return verifying_key.verify(sign_trans_bytes, message)
