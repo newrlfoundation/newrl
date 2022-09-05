@@ -176,7 +176,7 @@ def validate_receipt_for_committee(receipt,
     return True
 
 
-def validate_empty_block(block, check_sentinel_receipt=False):
+def validate_empty_block(block, check_from_sentinel_node=False):
     """
     Validate if the block is a timeout block with
         1. No transactions
@@ -186,7 +186,7 @@ def validate_empty_block(block, check_sentinel_receipt=False):
     block_data = block['data']
 
     # Check sentinel node signature
-    if check_sentinel_receipt:
+    if check_from_sentinel_node:
         if len(block['receipts']) != 1:
             return False
         
@@ -207,6 +207,8 @@ def validate_empty_block(block, check_sentinel_receipt=False):
     block_cuttoff_triggered = time_ms_elapsed_since_last_block > (BLOCK_TIME_INTERVAL_SECONDS + BLOCK_RECEIVE_TIMEOUT_SECONDS) * 1000
     expected_empty_block_timestamp = int(last_block['timestamp']) + (BLOCK_TIME_INTERVAL_SECONDS + NO_BLOCK_TIMEOUT) * 1000
     if (block_data['proof'] == 42 
-        and len(block_data['text']['transactions']) == 0 and block_cuttoff_triggered
-        and block_data['timestamp'] == expected_empty_block_timestamp):
+        and len(block_data['text']['transactions']) == 0
+        and block_cuttoff_triggered):
+        if not check_from_sentinel_node and block_data['timestamp'] == expected_empty_block_timestamp:
+            return False
         return True

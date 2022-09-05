@@ -98,7 +98,7 @@ def receive_block(block):
     broadcast_exclude_nodes = block['peers_already_broadcasted'] if 'peers_already_broadcasted' in block else None
     original_block = copy.deepcopy(block)
     # Check for sentinel node empty block
-    if validate_empty_block(block, check_sentinel_receipt=True):
+    if validate_empty_block(block, check_from_sentinel_node=True):
         logger.info('Accepting timeout block from sentinel node')
         accept_block(block, block['hash'])
         broadcast_block(original_block)

@@ -49,7 +49,7 @@ def store_block_to_temp(block, folder=TMP_PATH):
     block_index = block['index'] if 'index' in block else 'block_index'
     block_hash = block['hash']
     # existing_files_for_block = glob.glob(f'{folder}/block_{block_index}_*.json')
-    new_file_name = f'{folder}/block_{block_index}_{block_hash}.json'
+    new_file_name = f'{folder}block_{block_index}_{block_hash}.json'
     with open(new_file_name, 'w') as _file:
         json.dump(block, _file)
     return new_file_name
