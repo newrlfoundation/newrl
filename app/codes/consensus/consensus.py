@@ -184,6 +184,8 @@ def validate_empty_block(block, check_from_sentinel_node=False):
         3. timestamp = BLOCK_TIME_INTERVAL_SECONDS + NO_BLOCK_TIMEOUT
     """
     block_data = block['data']
+    if (block_data['proof'] != 42 or len(block_data['text']['transactions']) != 0):
+        return False
 
     # Check sentinel node signature
     if check_from_sentinel_node:
@@ -206,9 +208,7 @@ def validate_empty_block(block, check_from_sentinel_node=False):
     time_ms_elapsed_since_last_block = get_corrected_time_ms() - int(last_block['timestamp'])
     block_cuttoff_triggered = time_ms_elapsed_since_last_block > (BLOCK_TIME_INTERVAL_SECONDS + BLOCK_RECEIVE_TIMEOUT_SECONDS) * 1000
     expected_empty_block_timestamp = int(last_block['timestamp']) + (BLOCK_TIME_INTERVAL_SECONDS + NO_BLOCK_TIMEOUT) * 1000
-    if (block_data['proof'] == 42 
-        and len(block_data['text']['transactions']) == 0
-        and block_cuttoff_triggered):
+    if block_cuttoff_triggered:
         if not check_from_sentinel_node and block_data['timestamp'] == expected_empty_block_timestamp:
             return False
         return True

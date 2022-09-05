@@ -1,8 +1,7 @@
 import time
 import requests
 
-from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME
-from tests.setup import TEST_ENV
+from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
 
 def test_add_wallet():
     response = requests.get(NODE_URL + '/generate-wallet-address')
