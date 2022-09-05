@@ -11,13 +11,13 @@ from fastapi.responses import HTMLResponse
 from starlette.responses import FileResponse
 from app.codes.helpers.FetchRespository import FetchRepository
 from app.codes.p2p.sync_chain import find_forking_block, get_block_hashes, get_blocks
-from app.codes.scoremanager import get_trust_score
+from app.codes.scoremanager import get_incoming_trust_scores, get_outgoing_trust_scores, get_trust_score, get_trust_score_for_wallets
 
 from app.codes.transactionmanager import Transactionmanager
 from app.constants import NEWRL_DB
 from app.nvalues import NETWORK_TRUST_MANAGER_PID
 
-from .request_models import AddWalletRequest, BalanceRequest, BalanceType, CallSC, CreateTokenRequest, CreateWalletRequest, GetTokenRequest, RunSmartContractRequest, TransferRequest, CreateSCRequest, TscoreRequest
+from .request_models import AddWalletRequest, BalanceRequest, BalanceType, CallSC, CreateTokenRequest, CreateWalletRequest, GetTokenRequest, RunSmartContractRequest, TransferRequest, CreateSCRequest, TrustScoreUpdateRequest
 from app.codes.chainscanner import Chainscanner, download_chain, download_state, get_block, get_contract, get_token, get_transaction, get_wallet
 from app.codes.kycwallet import add_wallet, generate_wallet_address, get_address_from_public_key, get_digest, generate_wallet
 from app.codes.tokenmanager import create_token_transaction
@@ -93,7 +93,7 @@ def get_contract_api(contract_address: str):
     return contract
 
 
-@router.get("/get-trust-score", tags=[v2_tag])
+@router.get("/get-trustscore-pid", tags=[v2_tag])
 def get_trust_score_api(
         destination_person_id: str,
         source_person_id: str=Configuration.config("NETWORK_TRUST_MANAGER_PID")):
@@ -102,6 +102,37 @@ def get_trust_score_api(
     if trust_score is None:
         raise HTTPException(status_code=400, detail="Trust score not available")
     return {'trust_score': trust_score}
+
+
+@router.get("/get-trustscore-wallets", tags=[v2_tag])
+def get_trust_score_api(
+        src_wallet_address: str,
+        dst_wallet_address: str):
+    """Get a trust score. Default source_person_id is network trust manager"""
+    trust_score = get_trust_score_for_wallets(src_wallet_address, dst_wallet_address)
+    if trust_score is None:
+        raise HTTPException(status_code=400, detail="Trust score not available")
+    return {'status': 'SUCCESS', 'trust_score': trust_score}
+
+
+@router.get("/get-incoming-trustscores", tags=[v2_tag])
+def get_trust_score_api(
+        dst_wallet_address: str):
+    """Get a trust score. Default source_person_id is network trust manager"""
+    trust_score = get_incoming_trust_scores(dst_wallet_address)
+    if trust_score is None:
+        raise HTTPException(status_code=400, detail="Trust score not available")
+    return {'status': 'SUCCESS', 'trust_score': trust_score}
+
+
+@router.get("/get-outgoing-trustscores", tags=[v2_tag])
+def get_trust_score_api(
+        src_wallet_address: str):
+    """Get a trust score. Default source_person_id is network trust manager"""
+    trust_score = get_outgoing_trust_scores(src_wallet_address)
+    if trust_score is None:
+        raise HTTPException(status_code=400, detail="Trust score not available")
+    return {'status': 'SUCCESS', 'trust_score': trust_score}
 
 
 @router.post("/get-balance", tags=[legacy])
@@ -295,7 +326,7 @@ def call_sc(sc_request: CallSC):
     return tdatanew
 
 @router.post("/update-trustscore", tags=[v2_tag])
-def update_ts(ts_request: TscoreRequest):
+def update_trustscore_wallet(ts_request: TrustScoreUpdateRequest):
     """Used to update trust score of person1 for person 2 """
 
     txspecdata = {
