@@ -9,6 +9,7 @@ import copy
 import multiprocessing
 
 from app.codes import blockchain
+from app.codes.utils import get_last_block_hash
 from app.ntypes import BLOCK_CONSENSUS_INVALID, BLOCK_CONSENSUS_NA, BLOCK_CONSENSUS_VALID, BLOCK_STATUS_INVALID_MINED, BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID
 from ..clock.global_time import get_corrected_time_ms
 from app.codes.crypto import calculate_hash
@@ -23,7 +24,7 @@ from app.codes.validator import validate_block, validate_block_data, validate_bl
 from app.codes.timers import TIMERS
 from app.codes.fs.temp_manager import append_receipt_to_block_in_storage, check_receipt_exists_in_temp, get_blocks_for_index_from_storage, store_block_to_temp, store_receipt_to_temp
 from app.codes.consensus.consensus import get_committee_consensus, validate_empty_block, validate_block_miner_committee, generate_block_receipt, \
-    add_my_receipt_to_block
+    add_my_receipt_to_block, validate_receipt_for_committee
 from app.migrations.init_db import revert_chain
 from app.nvalues import SENTINEL_NODE_WALLET
 from app.codes.timers import SYNC_STATUS
@@ -196,7 +197,7 @@ def sync_chain_from_node(url, block_index=None):
         quick_sync(url + '/get-newrl-db')
         return True
     block_idx = my_last_block + 1
-    block_batch_size = 50  # Fetch blocks in batches
+    block_batch_size = 10  # Fetch blocks in batches
     while block_idx <= their_last_block_index:
         failed_for_invalid_block = False
         blocks_to_request = list(range(block_idx, 1 + min(their_last_block_index, block_idx + block_batch_size)))
@@ -347,16 +348,9 @@ def accept_block(block, hash):
 
 def receive_receipt(receipt):
     logger.info('Recieved receipt: %s', receipt)
-    if not validate_receipt(receipt):
-        logger.info('Invalid receipt. Ignoring')
-        return False
 
     receipt_data = receipt['data']
     block_index = receipt_data['block_index']
-
-    # TODO - Add more committee, miner validation
-    if block_index > get_last_block_index() + 1:
-        return False
 
     if check_receipt_exists_in_temp(
             receipt_data['block_index'],
@@ -370,8 +364,23 @@ def receive_receipt(receipt):
         logger.info('Receipt already exists')
         return False
 
-    # if blockchain.block_exists(block_index):
-    #     return False
+    last_block = get_last_block_hash()
+
+    if not am_i_in_current_committee(last_block):
+        logger.warn('I am not in committee. Cannot process receipt. Ignoring')
+        return False
+
+    if block_index != last_block['index'] + 1:
+        logger.warn('Received receipt not for next block. Ignoring')
+        return False
+    
+    if not validate_receipt(receipt):
+        logger.info('Invalid receipt. Ignoring')
+        return False
+
+    if not validate_receipt_for_committee(receipt):
+        logger.warn('Received receipt invalid for consensus. Ignoring')
+        return False
 
     store_receipt_to_temp(receipt)
     blocks = get_blocks_for_index_from_storage(block_index)
