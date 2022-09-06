@@ -3,10 +3,14 @@ import random
 import string
 import time
 import requests
+import pytest
 
 from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
 
-dao_manager_address = "ct9dc895fe5905dc73a2273e70be077bf3e94ea3b7"
+
+
+
+
 def create_wallet():
     # def test_create_wallet():
     response = requests.get(NODE_URL+"/generate-wallet-address")
@@ -124,15 +128,38 @@ def create_token(wallet, owner, token_name, token_code, amount):
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
+@pytest.fixture
+def dao_details():
+    wallet_founder1 = create_wallet()
+    wallet_founder2 = create_wallet()
+    wallet_founder3 = create_wallet()
+    wallet_member1 = create_wallet()
+    member_pid = get_pid(wallet_member1)
+    wallet_dao = create_wallet()
+    dao_token_name = "dao_token".join(random.choices(
+    string.ascii_uppercase + string.digits, k=10))
+    dao_details = {
+        'wallet_founder1': wallet_founder1,
+        'wallet_founder2': wallet_founder2,
+        'wallet_founder3': wallet_founder3,
+        'wallet_member1': wallet_member1,
+        'member_pid': member_pid,
+        'wallet_dao': wallet_dao,
+        'dao_token_name': dao_token_name
+    }
+
+    return dao_details
 
 wallet_founder1 = create_wallet()
 wallet_founder2 = create_wallet()
 wallet_founder3 = create_wallet()
 wallet_member1 = create_wallet()
 member_pid = get_pid(wallet_member1)
-
 wallet_dao = create_wallet()
-dao_token_name = "dao_token".join(random.choices(string.ascii_uppercase + string.digits, k=10))
+dao_token_name = "dao_token".join(random.choices(
+    string.ascii_uppercase + string.digits, k=10))
+dao_manager_address = "ct9dc895fe5905dc73a2273e70be077bf3e94ea3b7"
+dao_name = "dao_"+str(random.randrange(111111, 999999, 5))
 
 def test_create_mem_dao():
     response_ct_add = requests.get(NODE_URL+"/generate-contract-address")
@@ -267,7 +294,7 @@ def test_create_mem_dao():
 
 mem_dao_address = test_create_mem_dao()
 proposal_id = ""
-
+# mem_dao_address = ""
 def test_initialize_dao():
     
     req_json = {
@@ -277,7 +304,6 @@ def test_initialize_dao():
             wallet_founder1['address']
         ],
         "params": {}
-
     }
     response = requests.post(NODE_URL+'/call-sc', json=req_json
     )
