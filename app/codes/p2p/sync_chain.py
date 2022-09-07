@@ -111,6 +111,7 @@ def receive_block(block):
         # causing chain to grow a lot as a DoS attack
         return False
 
+
     consensus = get_committee_consensus(block)
     if consensus == BLOCK_CONSENSUS_VALID:
         logger.info('Received block is after consensus')
@@ -122,6 +123,7 @@ def receive_block(block):
             #     committee = get_committee_for_current_block()
             #     broadcast_receipt(receipt_for_invalid_block, committee)
             return False
+
         original_block = copy.deepcopy(block)
         accept_block(block, block['hash'])
         broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
@@ -327,9 +329,6 @@ def ask_peers_for_block(block_index):
 
 def accept_block(block, hash):
     global TIMERS
-    if not validate_block_transactions(block['data']):
-        logger.info('Transaction validation failed')
-        return False
 
     # if hash is None:
     #     hash = calculate_hash(block['data'])

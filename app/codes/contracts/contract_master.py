@@ -6,6 +6,8 @@
 #import ecdsa
 #from Crypto.Hash import keccak
 #import os
+from abc import abstractmethod
+import abc
 import json
 import datetime
 import time
@@ -17,7 +19,8 @@ from app.codes.helpers.TransactionCreator import TransactionCreator
 from ...constants import NEWRL_DB
 from ..db_updater import *
 
-class ContractMaster():
+
+class ContractMaster(abc.ABC):
     codehash=""    #this is the hash of the entire document excluding this line, it is same for all instances of this class
     def __init__(self, template, version, contractaddress=None):
         self.address=contractaddress    #this is for instances of this class created for tx creation and other non-chain work
@@ -194,4 +197,11 @@ class ContractMaster():
         contractparams['oracleids']=[]
         contractparams['contractspecs']={}
         contractparams['legalparams']={}  
-        return contractparams                 
+        return contractparams       
+
+    @abstractmethod
+    def validate(self):
+        pass
+
+
+

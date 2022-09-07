@@ -1,4 +1,7 @@
 """Transaction management functions"""
+import importlib
+from logging import Logger
+import logging
 from re import A
 import time
 import ecdsa
@@ -9,7 +12,9 @@ import datetime
 import base64
 import sqlite3
 
-from app.codes.db_updater import get_wallet_token_balance
+from app.codes.db_updater import get_contract_from_address, get_wallet_token_balance
+from app.codes.helpers.CustomExceptions import ContractValidationError
+from app.codes.helpers.FetchRespository import FetchRepository
 
 
 from ..ntypes import TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
@@ -17,6 +22,7 @@ from ..ntypes import TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, T
 from ..constants import ALLOWED_CUSTODIANS_FILE, MEMPOOL_PATH, NEWRL_DB
 from .utils import get_time_ms
 
+logger = logging.getLogger(__name__)
 
 class Transactionmanager:
     def __init__(self):
@@ -321,7 +327,7 @@ class Transactionmanager:
             if 'participants' in self.transaction['specific_data']['params']:
                 for wallet in self.transaction['specific_data']['params']['participants']:
                     if not is_wallet_valid(wallet):
-                        self.validity = 0
+                        self.validity = 0          
             if 'value' in self.transaction['specific_data']['params']:
                 for value in self.transaction['specific_data']['params']['value']:
                     print(value)
@@ -465,9 +471,41 @@ class Transactionmanager:
         else:
             return False  # this includes the case where valid=-1 i.e. yet to be validated
 
+    def contract_validate(self):
+        transaction = self.transaction
+        specific_data = transaction['specific_data']
+        funct_called = specific_data["function"]
+        if funct_called == "setup":
+            return True
+        funct_name = "validate"
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        contract = get_contract_from_address(cur, specific_data['address'])
+  
+        try:
+            module = importlib.import_module(
+                ".codes.contracts." + contract['name'], package="app")
+            sc_class = getattr(module, contract['name'])
+            sc_instance = sc_class(specific_data['address'])
+            funct = getattr(sc_instance, funct_name)
+            fetchRepository = FetchRepository(cur)
+            funct(specific_data, fetchRepository)
+        except TypeError as e:
+            logger.warn(f"Validate method not implemented for {sc_class}")
+            return True
+        except ContractValidationError as e:
+            logger.error(f"Contract validation failed {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Error validating the contract call {e}")
+            return False
+
+        return True
 #	def legalvalidator(self):
         # check the token restrictions on ownertype and check the type of the recipient
 
+
+    
 
 def get_public_key_from_address(address):
     con = sqlite3.connect(NEWRL_DB)
