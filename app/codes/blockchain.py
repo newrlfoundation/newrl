@@ -7,9 +7,10 @@ import json
 import sqlite3
 
 from app.codes.clock.global_time import get_corrected_time_ms
-from app.codes.committeemanager import get_committee_for_current_block, get_miner_for_current_block
+from app.codes.committeemanager import get_committee_for_current_block, get_committee_wallet_list_for_current_block, get_miner_for_current_block
 # from app.codes.minermanager import get_committee_wallet_addresses
 from app.codes.receiptmanager import get_receipts_included_in_block_from_db, update_receipts_in_state
+from app.ntypes import BLOCK_STATUS_MINING_TIMEOUT, BLOCK_STATUS_VALID
 
 from .fs.temp_manager import remove_block_from_temp
 from ..constants import BLOCK_TIME_INTERVAL_SECONDS, NEWRL_DB, NO_BLOCK_TIMEOUT
@@ -154,6 +155,7 @@ class Blockchain:
             'index': last_block_index + 1,
             'timestamp': get_corrected_time_ms(),
             'proof': 0,
+            'status': BLOCK_STATUS_VALID,
             'text': text,
             'creator_wallet': get_node_wallet_address(),
             'expected_miner': expected_miner,
@@ -162,7 +164,7 @@ class Blockchain:
         }
         return block
 
-    def mine_empty_block(self, new_block_timestamp=None):
+    def mine_empty_block(self, new_block_timestamp=None, block_status=BLOCK_STATUS_MINING_TIMEOUT):
         """Mine an empty block"""
         print("Mining empty block")
         con = sqlite3.connect(NEWRL_DB)
@@ -176,7 +178,7 @@ class Blockchain:
         last_block_timestamp = last_block[2] if last_block is not None else 0
 
         expected_miner = get_miner_for_current_block()['wallet_address']
-        committee = list(map(lambda c: c['wallet_address'], get_committee_for_current_block()))
+        committee = get_committee_wallet_list_for_current_block()
 
         EMPTY_BLOCK_NONCE = 42
 
@@ -187,6 +189,7 @@ class Blockchain:
             'index': last_block_index + 1,
             'timestamp': new_block_timestamp,
             'proof': EMPTY_BLOCK_NONCE,
+            'status': block_status,
             'text': {"transactions": [], "signatures": []},
             'creator_wallet': None,
             'expected_miner': expected_miner,

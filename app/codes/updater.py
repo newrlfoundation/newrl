@@ -12,7 +12,7 @@ from app.codes.p2p.sync_chain import sync_chain_from_peers
 from app.codes.timers import SYNC_STATUS
 
 # from app.codes.receiptmanager import get_receipts_for_block_from_db
-from app.ntypes import BLOCK_VOTE_MINER
+from app.ntypes import BLOCK_STATUS_CONSENSUS_TIMEOUT, BLOCK_STATUS_MINING_TIMEOUT, BLOCK_VOTE_MINER
 
 from .clock.global_time import get_corrected_time_ms, get_time_difference
 from .fs.temp_manager import get_all_receipts_from_storage, get_blocks_for_index_from_storage, remove_block_from_temp, store_block_to_temp
@@ -294,11 +294,17 @@ def global_internal_clock():
                 #     last_block = get_last_block()
                 #     last_block_ts = int(last_block['timestamp'])
                 #     time_elapsed_seconds = (current_ts - last_block_ts) / 1000  # This needs to be calculated again after the sync
-                if time_elapsed_seconds < BLOCK_TIME_INTERVAL_SECONDS * 4 and should_i_mine(last_block):
+                if time_elapsed_seconds < BLOCK_TIME_INTERVAL_SECONDS * 2 and should_i_mine(last_block):
                     logger.info('I am the miner for this block.')
                     # Don't mine a block if half the block time interval has passed. Wait for sentinel node.
                     if TIMERS['mining_timer'] is None or not TIMERS['mining_timer'].is_alive():
                         start_mining_clock(last_block_ts)
+                # elif (
+                #     time_elapsed_seconds > 2 * BLOCK_TIME_INTERVAL_SECONDS
+                #     and am_i_in_current_committee()
+                #     and time_elapsed_seconds < BLOCK_TIME_INTERVAL_SECONDS * 8
+                #     ):
+                #     committee_mine_empty()
                 elif am_i_sentinel_node():
                     if should_i_mine(last_block):
                         start_mining_clock(last_block_ts)
@@ -350,6 +356,35 @@ def sentitnel_node_mine_empty():
     }
     store_block_to_temp(block_payload)
     broadcast_block(block_payload=block_payload)
+
+
+def committee_mine_empty():
+    previous_block = get_last_block()
+    if previous_block is None:
+        new_block_index = 1
+    else:
+        new_block_index = previous_block['index'] + 1
+    block_proposals_in_temp = get_blocks_for_index_from_storage(new_block_index)
+    
+    if len(block_proposals_in_temp) > 0:
+        block_status = BLOCK_STATUS_MINING_TIMEOUT
+    else:
+        block_status = BLOCK_STATUS_CONSENSUS_TIMEOUT
+    
+    blockchain = Blockchain()
+    block = blockchain.mine_empty_block(block_status=block_status)
+    block_receipt = generate_block_receipt(block)
+    block_payload = {
+        'index': block['index'],
+        'hash': calculate_hash(block),
+        'data': block,
+        'receipts': [block_receipt]
+    }
+    store_block_to_temp(block_payload)
+
+    committee = get_committee_for_current_block()
+    # broadcast_block(block_payload, nodes=committee)
+    broadcast_receipt(block_receipt, nodes=committee)
 
 
 def get_timers():
