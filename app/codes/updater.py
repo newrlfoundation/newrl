@@ -59,7 +59,7 @@ def run_updater(add_to_chain=False):
     existing_block_proposals = get_blocks_for_index_from_storage(new_block_index)
     if len(existing_block_proposals) != 0:
         if (existing_block_proposals[0]['data']['timestamp'] < 
-            get_corrected_time_ms() - TIME_MINER_BROADCAST_INTERVAL_SECONDS * 3600):
+            get_corrected_time_ms() - BLOCK_TIME_INTERVAL_SECONDS * 16 * 1000):
             logger.info(f"Deleting stale block proposal with index {new_block_index}")
             remove_block_from_temp(new_block_index)
         else:
@@ -287,13 +287,13 @@ def global_internal_clock():
                 last_block_ts = int(last_block['timestamp'])
                 time_elapsed_seconds = (current_ts - last_block_ts) / 1000
 
-                # if time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 4:
-                #     logger.info('I have not received a block for 4 intervals. Querying chain for majority chain.')
-                #     sync_chain_from_peers()
-                #     current_ts = get_corrected_time_ms()
-                #     last_block = get_last_block()
-                #     last_block_ts = int(last_block['timestamp'])
-                #     time_elapsed_seconds = (current_ts - last_block_ts) / 1000  # This needs to be calculated again after the sync
+                if time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 4:
+                    logger.info('I have not received a block for 4 intervals. Querying chain for majority chain.')
+                    sync_chain_from_peers()
+                    current_ts = get_corrected_time_ms()
+                    last_block = get_last_block()
+                    last_block_ts = int(last_block['timestamp'])
+                    time_elapsed_seconds = (current_ts - last_block_ts) / 1000  # This needs to be calculated again after the sync
                 if time_elapsed_seconds < BLOCK_TIME_INTERVAL_SECONDS * 2 and should_i_mine(last_block):
                     logger.info('I am the miner for this block.')
                     # Don't mine a block if half the block time interval has passed. Wait for sentinel node.
@@ -341,9 +341,14 @@ def sentitnel_node_mine_empty():
     existing_block_proposals = get_blocks_for_index_from_storage(new_block_index)
     
     if len(existing_block_proposals) != 0:
-        logger.info(f"Existing block proposal exists with index {new_block_index}. Broadcasting existing one.")
-        broadcast_block_proposal(existing_block_proposals[0])
-        return existing_block_proposals[0]
+        if (existing_block_proposals[0]['data']['timestamp'] < 
+            get_corrected_time_ms() - BLOCK_TIME_INTERVAL_SECONDS * 16 * 1000):
+            logger.info(f"Deleting stale block proposal with index {new_block_index}")
+            remove_block_from_temp(new_block_index)
+        else:
+            logger.info(f"Existing block proposal exists with index {new_block_index}. Broadcasting existing one.")
+            broadcast_block_proposal(existing_block_proposals[0])
+            return existing_block_proposals[0]
     blockchain = Blockchain()
     current_time_ms = get_corrected_time_ms()
     block = blockchain.mine_empty_block(current_time_ms)
@@ -367,9 +372,9 @@ def committee_mine_empty():
     block_proposals_in_temp = get_blocks_for_index_from_storage(new_block_index)
     
     if len(block_proposals_in_temp) > 0:
-        block_status = BLOCK_STATUS_MINING_TIMEOUT
-    else:
         block_status = BLOCK_STATUS_CONSENSUS_TIMEOUT
+    else:
+        block_status = BLOCK_STATUS_MINING_TIMEOUT
     
     blockchain = Blockchain()
     block = blockchain.mine_empty_block(block_status=block_status)

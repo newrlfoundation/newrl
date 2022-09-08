@@ -125,12 +125,12 @@ def validate_block_miner_committee(block):
         return True
 
     if creator_wallet != expected_miner:
-        logger.info(f"Invalid miner {creator_wallet} for block. Expected {expected_miner}")
+        logger.warn(f"Invalid miner {creator_wallet} for block. Expected {expected_miner}")
         return False
     
     expected_commitee = get_committee_wallet_list_for_current_block()
     if set(block['data']['committee']) != set(expected_commitee):
-        logger.info(f"Invalid committee {block['data']['committee']} for block. Expected {expected_commitee}")
+        logger.warn(f"Invalid committee {block['data']['committee']} for block. Expected {expected_commitee}")
         return False
     
     # Signature checks

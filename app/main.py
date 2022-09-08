@@ -14,7 +14,7 @@ from .codes.p2p.sync_chain import sync_chain_from_peers
 from .constants import NEWRL_PORT, IS_TEST
 from .codes.p2p.peers import init_bootstrap_nodes, update_my_address, update_software
 from .codes.clock.global_time import sync_timer_clock_with_global
-from .codes.updater import global_internal_clock, start_miner_broadcast_clock, start_mining_clock
+from .codes.updater import am_i_sentinel_node, global_internal_clock, start_miner_broadcast_clock, start_mining_clock
 
 from .routers import blockchain, system, p2p, transport
 
@@ -77,7 +77,11 @@ def app_startup():
         logging.critical(e, exc_info=True)
 
     if not IS_TEST:
-        start_miner_broadcast_clock()
+        if not am_i_sentinel_node():
+            logger.info('Participating in mining')
+            start_miner_broadcast_clock()
+            return
+
         global_internal_clock()
     
 

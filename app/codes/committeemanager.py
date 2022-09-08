@@ -55,6 +55,7 @@ def get_miner_for_current_block(last_block=None):
         return {'wallet_address': SENTINEL_NODE_WALLET}
 
     if is_miner_committee_cached(last_block['hash']):
+        logger.info(f'Using cached committee. Cache: {str(miner_committee_cache)}')
         return miner_committee_cache['current_miner']
 
     committee_list = get_committee_for_current_block()
@@ -145,7 +146,7 @@ def is_miner_committee_cached(last_block_hash):
     timestamp = get_corrected_time_ms()
 
     if (miner_committee_cache['current_block_hash'] == last_block_hash
-        and miner_committee_cache['timestamp'] > timestamp - BLOCK_TIME_INTERVAL_SECONDS * 1000):
+        and miner_committee_cache['timestamp'] > timestamp - BLOCK_TIME_INTERVAL_SECONDS * 1000 / 2):
         return True
     return False
 
