@@ -180,8 +180,6 @@ def fund_wallet_nwrl(wallet,address,amount):
     balance_token1_resp = response_token1.json()
     balance_token1 = balance_token1_resp['balance']
     assert balance_token1 == amount
-    print("S")    
-    #TODO asswert balance    
 
 # @pytest.fixture
 # def dao_details():
@@ -850,7 +848,6 @@ def test_vote_on_proposal():
     response_val = response.json()
     assert response_val is not None
     current_yes_votes = response_val["data"][5]
-    print("s")
     assert current_yes_votes == 10
     
     #vote 2
@@ -905,7 +902,6 @@ def test_vote_on_proposal():
     response_val = response.json()
     assert response_val is not None
     current_yes_votes = response_val["data"][5]
-    print("s")
     assert current_yes_votes == 20
 
     #assert proposal status
@@ -1048,7 +1044,6 @@ def test_vote_on_proposal_payout():
     response_val = response.json()
     assert response_val is not None
     current_yes_votes = response_val["data"][5]
-    print("s")
     assert current_yes_votes == 10
 
     #vote 2
@@ -1103,7 +1098,6 @@ def test_vote_on_proposal_payout():
     response_val = response.json()
     assert response_val is not None
     current_yes_votes = response_val["data"][5]
-    print("s")
     assert current_yes_votes == 20
 
     #assert proposal status
@@ -1119,6 +1113,17 @@ def test_vote_on_proposal_payout():
     assert response_val is not None
     current_status = response_val["data"][9]
     assert current_status == 'accepted'
+    
+    response_token1 = requests.post(NODE_URL+'/get-balance', json={
+        "balance_type": "TOKEN_IN_WALLET",
+        "token_code": company_token_name,
+        "wallet_address": wallet_founder1['address']
+    })
+    assert response_token1.status_code == 200
+    balance_token1_resp = response_token1.json()
+    balance_token1 = balance_token1_resp['balance']
+    assert balance_token1 == 3
+
 
 # def test_proposal_add_member():
 
