@@ -80,7 +80,6 @@ def app_startup():
         if not am_i_sentinel_node():
             logger.info('Participating in mining')
             start_miner_broadcast_clock()
-            return
 
         global_internal_clock()
     
