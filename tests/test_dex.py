@@ -6,13 +6,6 @@ import requests
 
 from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
 
-pool_token1_code = "nINR"
-pool_token2_code = "nUSDC"
-pool_ratio = "1:4"
-pool_fee = 0.005
-ot_token_code = "LPT"+''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
-ot_token_name = "LPT" + \
-    ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
 def create_wallet():
 # def test_create_wallet():
@@ -124,7 +117,30 @@ def create_token(wallet, owner , token_name,token_code, amount):
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
+pool_token1_code = "nINR"
+pool_token2_code = "nUSDC"
+pool_ratio = "1:4"
+pool_fee = 0.005
+ot_token_code = "LPT_"+str(random.randrange(111111, 999999, 5))
+ot_token_name = ot_token_code
 
+def get_dex_datails():
+    pool_token1_code = "nINR"
+    pool_token2_code = "nUSDC"
+    pool_ratio = "1:4"
+    pool_fee = 0.005
+    ot_token_code = "LPT_"+str(random.randrange(111111, 999999, 5))
+    ot_token_name = ot_token_code
+    
+    dex_details = {
+        "pool_token1_code": pool_token1_code,
+        "pool_token2_code": pool_token2_code,
+        "pool_ratio": pool_ratio,
+        "pool_fee": pool_fee,
+        "ot_token_code": ot_token_code,
+        "ot_token_name": ot_token_name,
+         }
+    return dex_details
 
 def test_create_dex():
     response_ct_add = requests.get(NODE_URL+"/generate-contract-address")
