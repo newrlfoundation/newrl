@@ -1,4 +1,7 @@
+import json
+import logging
 import random
+import time
 import requests
 from threading import Thread
 
@@ -9,6 +12,9 @@ from ...constants import IS_TEST, MAX_BROADCAST_NODES, NEWRL_PORT, REQUEST_TIMEO
 from ..p2p.utils import get_my_address, get_peers
 from ..p2p.utils import is_my_address
 
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def propogate_transaction_to_peers(transaction, exclude_nodes=None):
     if IS_TEST:
@@ -25,7 +31,7 @@ def propogate_transaction_to_peers(transaction, exclude_nodes=None):
         'peers_already_broadcasted': get_excluded_node_list(peers, exclude_nodes)
     }
 
-    print('Broadcasting transaction to peers', peers)
+    logger.info(f"Broadcasting transaction to peers {peers}")
     for peer in peers:
         if is_my_address(peer['address']):
             continue
@@ -34,8 +40,35 @@ def propogate_transaction_to_peers(transaction, exclude_nodes=None):
             thread = Thread(target=send_request, args = (url + '/receive-transaction', payload))
             thread.start()
         except Exception as e:
-            print(f'Error broadcasting block to peer: {url}')
-            print(e)
+            logger.error(f"Error broadcasting transaction to peer: {url} Error - {str(e)}")
+
+
+def propogate_transaction_batch_to_peers(transactions, exclude_nodes=None):
+    if IS_TEST:
+        return
+    peers = get_peers()
+    if exclude_nodes:
+        peers = get_excluded_peers_to_broadcast(peers, exclude_nodes)
+
+    node_count = min(MAX_BROADCAST_NODES, len(peers))
+    peers = random.sample(peers, k=node_count)
+    
+    payload = {
+        'transactions': transactions,
+        'peers_already_broadcasted': get_excluded_node_list(peers, exclude_nodes)
+    }
+
+    logger.info(f"Broadcasting transaction to peers {peers}")
+    for peer in peers:
+        if is_my_address(peer['address']):
+            continue
+        url = 'http://' + peer['address'] + ':' + str(NEWRL_PORT)
+        try:
+            thread = Thread(target=send_request, args = (url + '/receive-transactions', payload))
+            thread.start()
+        except Exception as e:
+            logger.error(f"Error broadcasting block to peer: {url} Error - {str(e)}")
+
 
 def send_request_in_thread(url, data, as_json=True):
     thread = Thread(target=send_request, args = (url, data, as_json))
@@ -51,17 +84,17 @@ def send_request(url, data, as_json=True):
             data = compress_block_payload(data)
             requests.post(url, data=data, timeout=REQUEST_TIMEOUT)
     except Exception as e:
-        print(f'Could not send request to node {url}')
+        logger.error(f"Error broadcasting block to peer: {url} Error - {str(e)}")
 
 def send(payload):
     response = requests.post(TRANSPORT_SERVER + '/send', json=payload, timeout=REQUEST_TIMEOUT)
     if response.status_code != 200:
-        print('Error sending')
+        logger.error(f"Error sending")
     return response.text
 
 
 def broadcast_receipt(receipt, nodes):
-    print('Broadcasting receipt to nodes')
+    logger.info('Broadcasting receipt to nodes')
     if IS_TEST:
         return
 
@@ -71,13 +104,13 @@ def broadcast_receipt(receipt, nodes):
         if is_my_address(node['network_address']):
             continue
         url = 'http://' + node['network_address'] + ':' + str(NEWRL_PORT)
-        print('Sending receipt to node', url)
+        logger.info(f"Sending receipt to node {url}")
         payload = {'receipt': receipt}
         try:
             thread = Thread(target=send_request, args=(url + '/receive-receipt', payload))
             thread.start()
         except Exception as e:
-            print(f'Could not send receipt to node: {url}')
+            logger.error(f"Error broadcasting receipt to peer: {url} Error - {str(e)}")
 
 
 def broadcast_block(block_payload, nodes=None, exclude_nodes=None):
@@ -95,7 +128,7 @@ def broadcast_block(block_payload, nodes=None, exclude_nodes=None):
     else:
         peers = get_random_peers(exclude_nodes)
 
-    print('Broadcasting block to peers', peers)
+    logger.info(f"Broadcasting block to peers {peers}")
     peers_i_am_broadcasting = get_excluded_node_list(peers, exclude_nodes)
     my_address = get_my_address()
     if my_address in peers_i_am_broadcasting:
@@ -110,8 +143,7 @@ def broadcast_block(block_payload, nodes=None, exclude_nodes=None):
             # send_request_in_thread(url + '/receive-block', {'block': block_payload})
             send_request_in_thread(url + '/receive-block-binary', block_payload, as_json=False)
         except Exception as e:
-            print(f'Error sending block to peer: {url}')
-            print(e)
+            logger.error(f"Error broadcasting block-binary to peer: {url} Error - {str(e)}")
     return True
 
 
@@ -125,7 +157,7 @@ def get_random_peers(exclude_nodes=None):
     if exclude_nodes:
         peers = get_excluded_peers_to_broadcast(peers, exclude_nodes)
     node_count = min(MAX_BROADCAST_NODES, len(peers))
-    random.seed()
+    random.seed(int(time.time()))
     peers = random.sample(peers, k=node_count)
     return peers
 

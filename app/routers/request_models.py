@@ -111,3 +111,8 @@ class ReceiptAdditionRequest(BaseModel):
 
 class TransactionAdditionRequest(BaseModel):
     signed_transaction: dict
+
+
+class TransactionBatchPayload(BaseModel):
+    transactions: List[dict]
+    peers_already_broadcasted: List[str] = []
