@@ -7,10 +7,6 @@ import pytest
 
 from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
 
-
-
-
-
 def create_wallet():
     # def test_create_wallet():
     response = requests.get(NODE_URL+"/generate-wallet-address")
@@ -128,8 +124,7 @@ def create_token(wallet, owner, token_name, token_code, amount):
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-@pytest.fixture
-def dao_details():
+def get_dao_details():
     wallet_founder1 = create_wallet()
     wallet_founder2 = create_wallet()
     wallet_founder3 = create_wallet()
@@ -137,7 +132,9 @@ def dao_details():
     member_pid = get_pid(wallet_member1)
     wallet_dao = create_wallet()
     dao_token_name = "dao_token".join(random.choices(
-    string.ascii_uppercase + string.digits, k=10))
+        string.ascii_uppercase + string.digits, k=10))
+    dao_manager_address = "ct9dc895fe5905dc73a2273e70be077bf3e94ea3b7"
+    dao_name = "dao_mem_"+str(random.randrange(111111, 999999, 5))
     dao_details = {
         'wallet_founder1': wallet_founder1,
         'wallet_founder2': wallet_founder2,
@@ -145,23 +142,24 @@ def dao_details():
         'wallet_member1': wallet_member1,
         'member_pid': member_pid,
         'wallet_dao': wallet_dao,
-        'dao_token_name': dao_token_name
+        'dao_token_name': dao_token_name,
+        'dao_manager_address' : dao_manager_address,
+        'dao_name' : dao_name
     }
 
     return dao_details
 
-wallet_founder1 = create_wallet()
-wallet_founder2 = create_wallet()
-wallet_founder3 = create_wallet()
-wallet_member1 = create_wallet()
-member_pid = get_pid(wallet_member1)
-wallet_dao = create_wallet()
-dao_token_name = "dao_token".join(random.choices(
-    string.ascii_uppercase + string.digits, k=10))
-dao_manager_address = "ct9dc895fe5905dc73a2273e70be077bf3e94ea3b7"
-dao_name = "dao_"+str(random.randrange(111111, 999999, 5))
+def test_create_mem_dao(request):
+    dao_details = get_dao_details()
+    request.config.cache.set('dao_details', dao_details)
+    wallet_founder1 = dao_details["wallet_founder1"]
+    wallet_founder2 = dao_details["wallet_founder2"]
+    wallet_founder3 = dao_details["wallet_founder3"]
+    dao_manager_address = dao_details["dao_manager_address"]
+    wallet_dao = dao_details["wallet_dao"]
+    dao_token_name = dao_details["dao_token_name"]
+    dao_name = dao_details["dao_name"]
 
-def test_create_mem_dao():
     response_ct_add = requests.get(NODE_URL+"/generate-contract-address")
     assert response_ct_add.status_code == 200
     ct_address = response_ct_add.json()
@@ -173,7 +171,7 @@ def test_create_mem_dao():
             wallet_founder1['address']
         ],
         "params": {
-            "dao_name": "membership_dao_ver1",
+            "dao_name": dao_name,
             "dao_address": ct_address,
             "founders": [
                 wallet_founder1['address'],
@@ -290,13 +288,16 @@ def test_create_mem_dao():
             contracts_in_state = True
             break
     assert contracts_in_state
-    return ct_address
+    request.config.cache.set('mem_dao_address', ct_address)
 
-mem_dao_address = test_create_mem_dao()
-proposal_id = ""
-# mem_dao_address = ""
-def test_initialize_dao():
-    
+def test_initialize_dao(request):
+    dao_details = request.config.cache.get('dao_details', None)
+    wallet_founder1 = dao_details["wallet_founder1"]
+    wallet_founder2 = dao_details["wallet_founder2"]
+    wallet_founder3 = dao_details["wallet_founder3"]
+    dao_token_name = dao_details["dao_token_name"]
+    mem_dao_address = request.config.cache.get('mem_dao_address', None)
+
     req_json = {
         "sc_address": mem_dao_address,
         "function_called": "initialize_membership",
@@ -369,11 +370,16 @@ def test_initialize_dao():
         response_val = response.json()
         assert response_val["data"]
 
+def test_proposal_add_member(request):
+    dao_details = request.config.cache.get('dao_details', None)
+    wallet_founder1 = dao_details["wallet_founder1"]
+    wallet_founder2 = dao_details["wallet_founder2"]
+    wallet_founder3 = dao_details["wallet_founder3"]
+    dao_token_name = dao_details["dao_token_name"]
+    member_pid = dao_details["member_pid"]
 
-def test_proposal_add_member():
+    mem_dao_address = request.config.cache.get('mem_dao_address', None)
 
-    #get member pid
-    global member_pid
 
     req = {
         "sc_address": mem_dao_address,
@@ -449,12 +455,18 @@ def test_proposal_add_member():
     proposal_length_new = len(response_val["data"])
     assert proposal_length_new == proposal_length+1
     proposal_id_resp =  response_val["data"][0][1]
-    proposal_id = proposal_id_resp
+    request.config.cache.set('proposal_id_add_member', proposal_id_resp)
 
-
-def test_vote_proposal_add_memeber():
-    global proposal_id
-    #vote 1
+def test_vote_proposal_add_memeber(request):
+    dao_details = request.config.cache.get('dao_details', None)
+    wallet_founder1 = dao_details["wallet_founder1"]
+    wallet_founder2 = dao_details["wallet_founder2"]
+    wallet_founder3 = dao_details["wallet_founder3"]
+    dao_token_name = dao_details["dao_token_name"]
+    member_pid = dao_details["member_pid"]
+    proposal_id = request.config.cache.get('proposal_id_add_member', None)
+    mem_dao_address = request.config.cache.get(
+        'mem_dao_address', None)  # vote 1
     req = {
         "sc_address": mem_dao_address,
         "function_called": "vote_on_proposal",
