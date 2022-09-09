@@ -2,6 +2,7 @@ import json
 import logging
 import sqlite3
 from types import new_class
+from typing import List
 
 from fastapi import APIRouter
 from fastapi.datastructures import UploadFile
@@ -26,6 +27,7 @@ from app.codes.utils import get_last_block_hash, save_file_and_get_path
 from app.codes import validator
 from app.codes import signmanager
 from app.codes import updater
+from app.codes.aggregator import process_transaction_batch
 from app.codes.contracts.contract_master import create_contract_address
 from ..Configuration import Configuration
 
@@ -373,6 +375,23 @@ def submit_transaction(transaction_data: dict):
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
     return {"status": "SUCCESS", "response": response}
+
+
+@router.post("/submit-transaction-batch", tags=[v2_tag])
+def submit_transactions(transaction_list: List[dict]):
+    """
+        Submit a list of signed transactions to 
+    """
+    try:
+        new_transactions = process_transaction_batch(transaction_list)
+        response = {
+            'accepted_transactions': len(new_transactions)
+        }
+    except Exception as e:
+        logger.exception(e)
+        raise HTTPException(status_code=500, detail=str(e))
+    return {"status": "SUCCESS", "response": response}
+
     
 @router.post("/validate-transaction", tags=[v2_tag])
 def validate_transaction(transaction_data: dict):

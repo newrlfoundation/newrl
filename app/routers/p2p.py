@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from fastapi.exceptions import HTTPException
 from starlette.requests import Request
 from fastapi.responses import FileResponse
+from app.codes.aggregator import process_transaction_batch
 from app.codes.blockchain import get_blocks_in_range
 
 from app.codes.chainscanner import download_chain, download_state, get_transaction
@@ -16,7 +17,7 @@ from app.codes.p2p.sync_mempool import get_mempool_transactions, list_mempool_tr
 from app.codes.p2p.peers import call_api_on_peers
 from app.codes.utils import create_db_snapshot
 from app.constants import NEWRL_DB
-from .request_models import BlockAdditionRequest, BlockRequest, ReceiptAdditionRequest, TransactionAdditionRequest, TransactionsRequest
+from .request_models import BlockAdditionRequest, BlockRequest, ReceiptAdditionRequest, TransactionAdditionRequest, TransactionBatchPayload, TransactionsRequest
 from app.codes.auth.auth import get_node_wallet_address, get_node_wallet_public
 from app.codes.validator import validate as validate_transaction
 from app.codes.minermanager import get_miner_info
@@ -49,6 +50,10 @@ def get_blocks_in_range_api(start_index: int, end_index: int):
 @router.post("/receive-transaction", tags=[p2p_tag])
 async def receive_transaction_api(req: TransactionAdditionRequest):
     return validate_transaction(req.signed_transaction, propagate=True)
+
+@router.post("/receive-transactions", tags=[p2p_tag])
+async def receive_transactions_api(req: TransactionBatchPayload):
+    return process_transaction_batch(req.transactions, req.peers_already_broadcasted)
 
 @router.post("/receive-block", tags=[p2p_tag])
 async def receive_block_api(req: BlockAdditionRequest):

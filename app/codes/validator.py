@@ -14,7 +14,7 @@ from app.codes.p2p.transport import send
 from app.ntypes import BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID
 from .utils import get_last_block_hash
 from .transactionmanager import Transactionmanager
-from ..constants import IS_TEST, MEMPOOL_PATH
+from ..constants import IS_TEST, MAX_TRANSACTION_SIZE, MEMPOOL_PATH
 from .p2p.outgoing import propogate_transaction_to_peers
 
 
@@ -25,8 +25,11 @@ logger = logging.getLogger(__name__)
 def validate(transaction, propagate=False, validate_economics=True):
     existing_transaction = get_mempool_transaction(transaction['transaction']['trans_code'])
     if existing_transaction is not None:
-        return {'valid': True, 'msg': 'Already validated and in mempool'}
+        return {'valid': True, 'msg': 'Already validated and in mempool', 'new_transaction': False}
 
+    if len(json.dumps(transaction)) > MAX_TRANSACTION_SIZE:
+        return {'valid': False, 'msg': 'Transaction size exceeded', 'new_transaction': True}
+    
     transaction_manager = Transactionmanager()
     transaction_manager.set_transaction_data(transaction)
     signatures_valid = transaction_manager.verifytransigns()
@@ -50,13 +53,8 @@ def validate(transaction, propagate=False, validate_economics=True):
             if not transaction_manager.contract_validate():
                 msg = "Contract Validation Failed"
                 valid = False
-    # if  economics_valid and signatures_valid:
-    #     msg = "Transaction is valid"
-    #     valid = True
-    # if not economics_valid:
-    #     msg = "Transaction economic validation failed"
     
-    check = {'valid': valid, 'msg': msg}
+    check = {'valid': valid, 'msg': msg, 'new_transaction': True}
 
     if valid:  # Economics and signatures are both valid
         transaction_file = f"{MEMPOOL_PATH}transaction-{transaction_manager.transaction['type']}-{transaction_manager.transaction['trans_code']}.json"
