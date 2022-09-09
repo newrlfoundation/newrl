@@ -142,6 +142,7 @@ def get_committee_for_current_block(last_block=None):
 
 
 def is_miner_committee_cached(last_block_hash):
+    return False  # For testing
     global miner_committee_cache
     timestamp = get_corrected_time_ms()
 
