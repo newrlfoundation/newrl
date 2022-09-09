@@ -31,6 +31,7 @@ from .consensus.consensus import generate_block_receipt
 from .db_updater import transfer_tokens_and_update_balances, get_wallet_token_balance
 from .p2p.outgoing import broadcast_block, broadcast_receipt, send_request_in_thread
 from .auth.auth import get_wallet
+from .fs.mempool_manager import mempool_cleanup
 from .timers import TIMERS
 
 logging.basicConfig(level=logging.INFO)
@@ -314,6 +315,7 @@ def global_internal_clock():
                         sentitnel_node_mine_empty()
 
                 check_and_create_snapshot_in_thread(last_block['index'])
+                mempool_cleanup()
                 # elif am_i_in_current_committee(last_block):
                 #     if TIMERS['block_receive_timeout'] is None or not TIMERS['block_receive_timeout'].is_alive():
                 #         start_empty_block_mining_clock(last_block_ts)

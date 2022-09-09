@@ -57,6 +57,7 @@ NO_BLOCK_TIMEOUT = 10  # No block received timeout in seconds
 NO_RECEIPT_COMMITTEE_TIMEOUT = 10  # Timeout in seconds
 NETWORK_BLOCK_TIMEOUT = 25
 MAX_BROADCAST_NODES = 13
+MEMPOOL_TRANSACTION_LIFETIME_SECONDS = 3600  # Mempool transactions will be removed after 1 hour
 
 # Variables
 MY_ADDRESS_FILE = DATA_PATH + 'my_address.json'

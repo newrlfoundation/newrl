@@ -4,7 +4,8 @@ import glob
 import json
 import os
 
-from ...constants import MEMPOOL_PATH, TMP_PATH
+from ...constants import MEMPOOL_PATH, MEMPOOL_TRANSACTION_LIFETIME_SECONDS, TMP_PATH
+from ..clock.global_time import get_corrected_time_ms
 
 def get_receipts_from_storage(block_index, folder=TMP_PATH):
     """Returns a list of receipts matching a block index from mempool"""
@@ -73,3 +74,13 @@ def clear_temp():
     
     for f in filenames:
         os.remove(f)
+
+
+def mempool_cleanup():
+    transaction_files = glob.glob(f'{MEMPOOL_PATH}transaction-*.json')
+
+    for transaction_file in transaction_files:
+        with open(transaction_file, 'r') as _file:
+            t = json.load(_file)
+            if t['transaction']['timestamp'] < get_corrected_time_ms() - MEMPOOL_TRANSACTION_LIFETIME_SECONDS * 1000:
+                os.remove(transaction_file)
