@@ -49,7 +49,7 @@ COINBASE_SC = "coinbase_sc_address"
 TRANSPORT_SERVER = 'http://localhost:8095'
 
 GLOBAL_INTERNAL_CLOCK_SECONDS = 5  # The time period between blocks
-TIME_BETWEEN_BLOCKS_SECONDS = 30  # The time period between blocks
+TIME_BETWEEN_BLOCKS_SECONDS = 10  # The time period between blocks
 COMMITTEE_SIZE = 10
 MINIMUM_ACCEPTANCE_VOTES = 6
 MINIMUM_ACCEPTANCE_RATIO = 0.51

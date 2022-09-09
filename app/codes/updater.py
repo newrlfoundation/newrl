@@ -288,14 +288,14 @@ def global_internal_clock():
                 last_block_ts = int(last_block['timestamp'])
                 time_elapsed_seconds = (current_ts - last_block_ts) / 1000
 
-                if time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 4:
-                    logger.info('I have not received a block for 4 intervals. Querying chain for majority chain.')
+                if time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 2:
+                    logger.info('I have not received a block for 2 intervals. Querying chain for majority chain.')
                     sync_chain_from_peers()
                     current_ts = get_corrected_time_ms()
                     last_block = get_last_block()
                     last_block_ts = int(last_block['timestamp'])
                     time_elapsed_seconds = (current_ts - last_block_ts) / 1000  # This needs to be calculated again after the sync
-                if time_elapsed_seconds < BLOCK_TIME_INTERVAL_SECONDS * 2 and should_i_mine(last_block):
+                if time_elapsed_seconds < BLOCK_TIME_INTERVAL_SECONDS * 4 and should_i_mine(last_block):
                     logger.info('I am the miner for this block.')
                     # Don't mine a block if half the block time interval has passed. Wait for sentinel node.
                     if TIMERS['mining_timer'] is None or not TIMERS['mining_timer'].is_alive():

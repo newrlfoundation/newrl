@@ -473,7 +473,7 @@ def get_majority_random_node():
     peers = random.sample(peers, k=min(len(peers), COMMITTEE_SIZE))
     for peer in peers:
         url = 'http://' + peer['address'] + ':' + str(NEWRL_PORT)
-        logger.info(f"Querying {url} for block hash")
+        # logger.info(f"Querying {url} for block hash")
 
         hash = get_last_block_hash_from_url_retry(url)
         if hash:

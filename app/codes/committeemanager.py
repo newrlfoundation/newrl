@@ -128,8 +128,8 @@ def get_committee_for_current_block(last_block=None):
 
     miners = get_eligible_miners()
 
-    if len(miners) == 0:
-        logger.info("No committee for current block. Using sentinel node.")
+    if len(miners) < MINIMUM_ACCEPTANCE_VOTES:
+        logger.info("Current committee cannot form consensus. Using sentinel node.")
         return [{'wallet_address': SENTINEL_NODE_WALLET}]
 
     committee_size = min(COMMITTEE_SIZE, len(miners))
