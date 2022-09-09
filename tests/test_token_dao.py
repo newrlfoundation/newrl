@@ -180,53 +180,57 @@ def fund_wallet_nwrl(wallet,address,amount):
     balance_token1_resp = response_token1.json()
     balance_token1 = balance_token1_resp['balance']
     assert balance_token1 == amount
+    
+def get_dao_details():
+    wallet_founder1 = create_wallet()
+    wallet_founder1_pid = get_pid(wallet_founder1)
+    wallet_founder2 = create_wallet()
+    wallet_founder2_pid = get_pid(wallet_founder2)
+    wallet_founder3 = create_wallet()
+    wallet_founder3_pid = get_pid(wallet_founder3)
+    wallet_member1 = create_wallet()
+    wallet_company_founder = create_wallet()
+    company_token_name = "CMP_"+str(random.randrange(111111, 999999, 5))
+    create_token(wallet_company_founder,
+                wallet_company_founder["address"], company_token_name, company_token_name, 200)
+    member_pid = get_pid(wallet_member1)
+    wallet_dao = create_wallet()
+    fund_wallet_nwrl(WALLET, wallet_founder1['address'], 10)
+    fund_wallet_nwrl(WALLET, wallet_founder2['address'], 10)
+    fund_wallet_nwrl(WALLET, wallet_founder3['address'], 10)
+    dao_token_name = "dao_token"+str(random.randrange(111111, 999999, 5))
+    dao_manager_address = "ct9dc895fe5905dc73a2273e70be077bf3e94ea3b7"
+    dao_name = "dao_"+str(random.randrange(111111, 999999, 5))
+    dao_details = {
+        'wallet_founder1': wallet_founder1,
+        'wallet_founder1_pid' : wallet_founder1_pid,
+        'wallet_founder2': wallet_founder2,
+        'wallet_founder2_pid': wallet_founder2_pid,
+        'wallet_founder3': wallet_founder3,
+        'wallet_founder3_pid': wallet_founder3_pid,
+        'wallet_member1': wallet_member1,
+        'member_pid': member_pid,
+        'wallet_dao': wallet_dao,
+        'dao_token_name': dao_token_name,
+        "dao_name": dao_name,
+        "dao_manager_address" : dao_manager_address,
+        "company_token_name": company_token_name,
+        "wallet_company_founder": wallet_company_founder
+        
+    }
 
-# @pytest.fixture
-# def dao_details():
-#     wallet_founder1 = create_wallet()
-#     wallet_founder2 = create_wallet()
-#     wallet_founder3 = create_wallet()
-#     wallet_member1 = create_wallet()
-#     member_pid = get_pid(wallet_member1)
-#     wallet_dao = create_wallet()
-#     dao_token_name = "dao_token".join(random.choices(
-#     string.ascii_uppercase + string.digits, k=10))
-#     dao_details = {
-#         'wallet_founder1': wallet_founder1,
-#         'wallet_founder2': wallet_founder2,
-#         'wallet_founder3': wallet_founder3,
-#         'wallet_member1': wallet_member1,
-#         'member_pid': member_pid,
-#         'wallet_dao': wallet_dao,
-#         'dao_token_name': dao_token_name
-#     }
+    return dao_details
 
-#     return dao_details
+def test_create_token_dao(request):
+    dao_details = get_dao_details()
+    request.config.cache.set('dao_details', dao_details)
+    wallet_founder1 = dao_details["wallet_founder1"]
+    wallet_founder2 = dao_details["wallet_founder2"]
+    wallet_founder3 = dao_details["wallet_founder3"]
+    dao_manager_address = dao_details["dao_manager_address"]
+    dao_name = dao_details["dao_name"]
+    dao_token_name = dao_details["dao_token_name"]
 
-wallet_founder1 = create_wallet()
-wallet_founder1_pid = get_pid(wallet_founder1)
-wallet_founder2 = create_wallet()
-wallet_founder2_pid = get_pid(wallet_founder2)
-wallet_founder3 = create_wallet()
-wallet_founder3_pid = get_pid(wallet_founder3)
-wallet_member1 = create_wallet()
-wallet_company_founder = create_wallet()
-company_token_name = "CMP_"+str(random.randrange(111111, 999999, 5))
-create_token(wallet_company_founder,
-             wallet_company_founder["address"], company_token_name, company_token_name, 200)
-member_pid = get_pid(wallet_member1)
-wallet_dao = create_wallet()
-fund_wallet_nwrl(WALLET, wallet_founder1['address'], 10)
-fund_wallet_nwrl(WALLET, wallet_founder2['address'], 10)
-fund_wallet_nwrl(WALLET, wallet_founder3['address'], 10)
-proposal_id = ""
-
-# TODO change random logic
-dao_token_name = "dao_token"+str(random.randrange(111111, 999999, 5))
-dao_manager_address = "ct9dc895fe5905dc73a2273e70be077bf3e94ea3b7"
-dao_name = "dao_"+str(random.randrange(111111, 999999, 5))
-
-def test_create_token_dao():
     response_ct_add = requests.get(NODE_URL+"/generate-contract-address")
     assert response_ct_add.status_code == 200
     ct_address = response_ct_add.json()
@@ -352,15 +356,16 @@ def test_create_token_dao():
             contracts_in_state = True
             break
     assert contracts_in_state
-    return ct_address
+    request.config.cache.set('token_dao_address', ct_address)
 
-token_dao_address = test_create_token_dao()
-proposal_id = ""
-# mem_dao_address = ""
-# def test_initialize_dao():
+def test_issue_dao_tokens(request):
+    dao_details = request.config.cache.get('dao_details', None)
+    wallet_founder1 = dao_details["wallet_founder1"]
+    wallet_founder2 = dao_details["wallet_founder2"]
+    wallet_founder3 = dao_details["wallet_founder3"]
+    dao_token_name = dao_details["dao_token_name"]
 
-def test_issue_dao_tokens():
-    
+    token_dao_address = request.config.cache.get('token_dao_address', None)
 
     # Issue to member1
     req = {
@@ -512,7 +517,7 @@ def test_issue_dao_tokens():
     balance_token_ot = response_token_dao.json()['balance']
     assert balance_token_ot == 10    
 
-    #assert member 2 balance
+    # #assert member 2 balance
     response_token_dao = requests.post(NODE_URL+'/get-balance', json={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": dao_token_name,
@@ -532,8 +537,17 @@ def test_issue_dao_tokens():
     balance_token_ot = response_token_dao.json()['balance']
     assert balance_token_ot == 10
 
+def test_lock_tokens(request):
+    dao_details = request.config.cache.get('dao_details', None)
+    wallet_founder1 = dao_details["wallet_founder1"]
+    wallet_founder1_pid = dao_details["wallet_founder1_pid"]
+    wallet_founder2 = dao_details["wallet_founder2"]
+    wallet_founder2_pid = dao_details["wallet_founder2_pid"]
+    wallet_founder3 = dao_details["wallet_founder3"]
+    wallet_founder3_pid = dao_details["wallet_founder3_pid"]
 
-def test_lock_tokens():
+    dao_token_name = dao_details["dao_token_name"]
+    token_dao_address = request.config.cache.get('token_dao_address', None)
 
     #member 1 lock
     req = {
@@ -714,7 +728,12 @@ def test_lock_tokens():
     assert response_val["data"]
     assert response_val['data'][5] == 10
 
-def test_proposal_invest():
+def test_proposal_invest(request):
+    dao_details = request.config.cache.get('dao_details', None)
+    company_token_name = dao_details["company_token_name"]
+    token_dao_address = request.config.cache.get('token_dao_address', None)
+    wallet_company_founder = dao_details["wallet_company_founder"]
+
     req = {
         "sc_address": token_dao_address,
         "function_called": "create_proposal",
@@ -790,11 +809,14 @@ def test_proposal_invest():
     proposal_length_new = len(response_val["data"])
     assert proposal_length_new == 1
     proposal_id_resp = response_val["data"][0][1]
-    global proposal_id
-    proposal_id = proposal_id_resp
-
-def test_vote_on_proposal():
-    global proposal_id
+    request.config.cache.set('proposal_id_invest', proposal_id_resp)
+    
+def test_vote_on_proposal_invest(request):
+    dao_details = request.config.cache.get('dao_details', None)
+    wallet_founder1 = dao_details["wallet_founder1"]
+    wallet_founder2 = dao_details["wallet_founder2"]
+    token_dao_address = request.config.cache.get('token_dao_address', None)
+    proposal_id = request.config.cache.get('proposal_id_invest', None)
     #vote 1
     req = {
         "sc_address": token_dao_address,
@@ -918,10 +940,11 @@ def test_vote_on_proposal():
     current_status = response_val["data"][9]
     assert current_status == 'accepted'
 
-
-
-
-def test_proposal_payout():
+def test_proposal_payout(request):
+    dao_details = request.config.cache.get('dao_details', None)
+    wallet_founder1 = dao_details["wallet_founder1"]
+    company_token_name = dao_details["company_token_name"]
+    token_dao_address = request.config.cache.get('token_dao_address', None)
     req = {
         "sc_address": token_dao_address,
         "function_called": "create_proposal",
@@ -984,14 +1007,17 @@ def test_proposal_payout():
     proposal_length_new = len(response_val["data"])
     assert proposal_length_new == 2
     proposal_id_resp = response_val["data"][1][1]
-    global proposal_id
-    proposal_id = proposal_id_resp
+    request.config.cache.set('proposal_id_payout', proposal_id_resp)
 
-    pass
+def test_vote_on_proposal_payout(request):
+    dao_details = request.config.cache.get('dao_details', None)
+    wallet_founder1 = dao_details["wallet_founder1"]
+    wallet_founder2 = dao_details["wallet_founder2"]
 
+    company_token_name = dao_details["company_token_name"]
+    token_dao_address = request.config.cache.get('token_dao_address', None)
+    proposal_id = request.config.cache.get('proposal_id_payout', None)
 
-def test_vote_on_proposal_payout():
-    global proposal_id
     #vote 1
     req = {
         "sc_address": token_dao_address,
@@ -1123,195 +1149,3 @@ def test_vote_on_proposal_payout():
     balance_token1_resp = response_token1.json()
     balance_token1 = balance_token1_resp['balance']
     assert balance_token1 == 3
-
-
-# def test_proposal_add_member():
-
-#     req = {
-#         "sc_address": mem_dao_address,
-#         "function_called": "create_proposal",
-#         "signers": [
-#             wallet_founder1['address']
-#         ],
-#         "params": {
-#             "function_called": "add_member",
-#             "params":
-#             {
-#                 "member_person_id": member_pid
-#             },
-#             "block_index_reference": 234543,
-#             "voting_start_ts": 123324324,
-#             "voting_end_ts": 123325324,
-#         }
-#     }
-
-#     response = requests.post(NODE_URL+"/call-sc", json= req
-#     )
-
-#     assert response.status_code == 200
-#     unsigned_transaction = response.json()
-#     assert unsigned_transaction['transaction']
-#     assert len(unsigned_transaction['signatures']) == 0
-
-#     response = requests.post(NODE_URL+'/sign-transaction', json={
-#         "wallet_data": wallet_founder1,
-#         "transaction_data": unsigned_transaction
-#     })
-
-#     assert response.status_code == 200
-#     signed_transaction = response.json()
-#     assert signed_transaction['transaction']
-#     assert signed_transaction['signatures']
-#     assert len(signed_transaction['signatures']) == 1
-
-#     #TODO refactor get proposal id logic (proposal id is auto gen now)
-#     #getdao pid
-
-#     params = {
-#         'table_name': "proposal_data",
-#         'contract_address': mem_dao_address,
-#     }
-#     response = requests.get(NODE_URL+"/sc-states", params=params)
-#     assert response.status_code == 200
-#     response_val = response.json()
-#     assert response_val["data"] is not None
-#     proposal_length = len(response_val["data"])
-
-#     response = requests.post(
-#         NODE_URL+'/validate-transaction', json=signed_transaction)
-#     assert response.status_code == 200
-
-#     if TEST_ENV == 'local':
-#         response = requests.post(
-#             NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
-#     else:
-#         print('Waiting to mine block')
-#         time.sleep(BLOCK_WAIT_TIME)
-
-#     global proposal_id
-#     #TODO asset new state creation instead of len
-#     params = {
-#             'table_name': "proposal_data",
-#             'contract_address': mem_dao_address,
-#         }
-#     response = requests.get(NODE_URL+"/sc-states", params=params)
-#     assert response.status_code == 200
-#     response_val = response.json()
-#     assert response_val["data"]
-#     proposal_length_new = len(response_val["data"])
-#     assert proposal_length_new == proposal_length+1
-#     proposal_id_resp =  response_val["data"][0][1]
-#     proposal_id = proposal_id_resp
-
-
-# def test_vote_proposal_add_memeber():
-#     global proposal_id
-#     #vote 1
-#     req = {
-#         "sc_address": mem_dao_address,
-#         "function_called": "vote_on_proposal",
-#         "signers": [
-#             wallet_founder2['address']
-#         ],
-#         "params": {
-#             "proposal_id": proposal_id,
-#             "vote": 1
-#         }
-#     }
-#     response = requests.post(NODE_URL+"/call-sc", json= req
-#     )
-#     assert response.status_code == 200
-#     unsigned_transaction = response.json()
-#     assert unsigned_transaction['transaction']
-#     assert len(unsigned_transaction['signatures']) == 0
-
-#     response = requests.post(NODE_URL+'/sign-transaction', json={
-#         "wallet_data": wallet_founder2,
-#         "transaction_data": unsigned_transaction
-#     })
-
-#     assert response.status_code == 200
-#     signed_transaction = response.json()
-#     assert signed_transaction['transaction']
-#     assert signed_transaction['signatures']
-#     assert len(signed_transaction['signatures']) == 1
-
-#     response = requests.post(
-#             NODE_URL+'/validate-transaction', json=signed_transaction)
-#     assert response.status_code == 200
-
-   
-#     if TEST_ENV == 'local':
-#         response = requests.post(
-#             NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
-#     else:
-#         print('Waiting to mine block')
-#         time.sleep(BLOCK_WAIT_TIME)
-    
-
-#     params = {
-#         'table_name': "proposal_data",
-#         'contract_address': mem_dao_address,
-#         'unique_column': "proposal_id",
-#         'unique_value': proposal_id
-#     }
-#     response = requests.get(NODE_URL+"/sc-state", params=params)
-#     assert response.status_code == 200
-#     response_val = response.json()
-#     assert response_val is not None
-#     current_yes_votes = response_val["data"][5]
-#     assert current_yes_votes == 1
-
-#     #vote 2
-#     req = {
-#         "sc_address": mem_dao_address,
-#         "function_called": "vote_on_proposal",
-#         "signers": [
-#             wallet_founder3['address']
-#         ],
-#         "params": {
-#             "proposal_id": proposal_id,
-#             "vote": 1
-#         }
-#     }
-#     response = requests.post(NODE_URL+"/call-sc", json=req
-#                              )
-#     assert response.status_code == 200
-#     unsigned_transaction = response.json()
-#     assert unsigned_transaction['transaction']
-#     assert len(unsigned_transaction['signatures']) == 0
-
-#     response = requests.post(NODE_URL+'/sign-transaction', json={
-#         "wallet_data": wallet_founder3,
-#         "transaction_data": unsigned_transaction
-#     })
-
-#     assert response.status_code == 200
-#     signed_transaction = response.json()
-#     assert signed_transaction['transaction']
-#     assert signed_transaction['signatures']
-#     assert len(signed_transaction['signatures']) == 1
-
-#     response = requests.post(
-#         NODE_URL+'/validate-transaction', json=signed_transaction)
-#     assert response.status_code == 200
-    
-#     if TEST_ENV == 'local':
-#         response = requests.post(
-#             NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
-#     else:
-#         print('Waiting to mine block')
-#         time.sleep(BLOCK_WAIT_TIME)
-
-#     params = {
-#         'table_name': "proposal_data",
-#         'contract_address': mem_dao_address,
-#         'unique_column': "proposal_id",
-#         'unique_value': proposal_id
-#     }
-#     response = requests.get(NODE_URL+"/sc-state", params=params)
-#     assert response.status_code == 200
-#     response_val = response.json()
-#     assert response_val is not None
-#     current_yes_votes = response_val["data"][5]
-#     assert current_yes_votes == 2
