@@ -11,12 +11,11 @@ def calculate_hash(block):
 
 
 def sign_object(private_key, data):
-    """Sign an object using private key"""
-    pvtkeybytes = base64.b64decode(private_key)
+    pvtkeybytes = bytes.fromhex(private_key)
     msg = json.dumps(data).encode()
     sk = ecdsa.SigningKey.from_string(pvtkeybytes, curve=ecdsa.SECP256k1)
     msgsignbytes = sk.sign(msg)
-    msgsign = base64.b64encode(msgsignbytes).decode('utf-8')
+    msgsign = msgsignbytes.hex()
     return msgsign
 
 

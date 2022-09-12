@@ -112,13 +112,15 @@ class Transactionmanager:
         msg = json.dumps(self.transaction).encode()
         signing_key = ecdsa.SigningKey.from_string(private_key_bytes, curve=ecdsa.SECP256k1)
         msgsignbytes = signing_key.sign(msg)
-        msgsign = base64.b64encode(msgsignbytes).decode('utf-8')
+        # msgsign = base64.b64encode(msgsignbytes).decode('utf-8')
+        msgsign = msgsignbytes.hex()
         self.signatures.append({'wallet_address': address, 'msgsign': msgsign})
-        return signing_key.sign(msg)
+        return msgsignbytes
 
     def verify_sign(self, sign_trans, public_key_bytes):
         """The pubkey above is in bytes form"""
-        sign_trans_bytes = base64.decodebytes(sign_trans.encode('utf-8'))
+        # sign_trans_bytes = base64.decodebytes(sign_trans.encode('utf-8'))
+        sign_trans_bytes = bytes.fromhex(sign_trans)
         verifying_key = ecdsa.VerifyingKey.from_string(public_key_bytes, curve=ecdsa.SECP256k1)
         message = json.dumps(self.transaction).encode()
         return verifying_key.verify(sign_trans_bytes, message)
@@ -152,7 +154,7 @@ class Transactionmanager:
                 return False
     #		print("encoded pubkey from json file: ",pubkey)
             # here we decode the base64 form to get pubkeybytes
-            pubkeybytes = base64.b64decode(pubkey)
+            pubkeybytes = bytes.fromhex(pubkey)
         #	print("decoded bytes of pubkey",pubkeybytes)
     #		print("now verifying ",msgsign)
             if not self.verify_sign(msgsign, pubkeybytes):
