@@ -16,7 +16,6 @@ from .utils import get_my_address
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-auth_data = get_auth()
 
 
 def clear_peer_db():

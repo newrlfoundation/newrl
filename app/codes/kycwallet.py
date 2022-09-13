@@ -54,11 +54,8 @@ def get_address_from_public_key(public_key):
 def generate_wallet_address():
     private_key_bytes = os.urandom(32)
     key_data = {'public': None, 'private': None, 'address': None}
-    skey = ecdsa.SigningKey.generate(curve=ecdsa.SECP256k1)
-    vkey = skey.get_verifying_key()
     key = ecdsa.SigningKey.from_string(
         private_key_bytes, curve=ecdsa.SECP256k1).verifying_key
-
     key_bytes = key.to_string()
 
     private_key_hex = private_key_bytes.hex()

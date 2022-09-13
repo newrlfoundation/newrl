@@ -499,6 +499,7 @@ class Transactionmanager:
             logger.error(f"Contract validation failed {e}")
             return False
         except Exception as e:
+            logger.error(f"{type(e)}")
             logger.error(f"Error validating the contract call {e}")
             return False
 
