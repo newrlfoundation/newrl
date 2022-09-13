@@ -112,7 +112,6 @@ class Transactionmanager:
         msg = json.dumps(self.transaction).encode()
         signing_key = ecdsa.SigningKey.from_string(private_key_bytes, curve=ecdsa.SECP256k1)
         msgsignbytes = signing_key.sign(msg)
-        # msgsign = base64.b64encode(msgsignbytes).decode('utf-8')
         msgsign = msgsignbytes.hex()
         self.signatures.append({'wallet_address': address, 'msgsign': msgsign})
         return msgsignbytes
