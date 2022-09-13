@@ -493,10 +493,14 @@ class Transactionmanager:
         except TypeError as e:
             logger.warn(f"Validate method not implemented for {sc_class}")
             return True
+        except AttributeError as e:
+            logger.warn(f"Validate method not implemented for {sc_class}")
+            return True
         except ContractValidationError as e:
             logger.error(f"Contract validation failed {e}")
             return False
         except Exception as e:
+            logger.error(f"{type(e)}")
             logger.error(f"Error validating the contract call {e}")
             return False
 
