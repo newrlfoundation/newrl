@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 import logging
+from random import randint
 import sqlite3
 import time
 import threading
@@ -252,7 +253,8 @@ def start_miner_broadcast_clock():
         broadcast_miner_update()
     except Exception as e:
         logger.info(f'Could not broadcast miner update {e}')
-    timer = threading.Timer(TIME_MINER_BROADCAST_INTERVAL_SECONDS, start_miner_broadcast_clock)
+    random_wait_seconds = randint(TIME_MINER_BROADCAST_INTERVAL_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS * 2)
+    timer = threading.Timer(random_wait_seconds, start_miner_broadcast_clock)
     timer.start()
 
 

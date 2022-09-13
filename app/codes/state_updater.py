@@ -71,7 +71,8 @@ def update_db_states(cur, block):
                     transaction_data,
                     transaction_code,
                     transaction['timestamp'],
-                    signature
+                    signature,
+                    newblockindex,
                 )
             else:
                 logger.info(f'Fee payment failed for transaction {transaction_code}')
@@ -84,7 +85,7 @@ def update_db_states(cur, block):
 
 
 def update_state_from_transaction(cur, transaction_type, transaction_data, transaction_code, transaction_timestamp,
-                                  transaction_signer=None):
+                                  transaction_signer=None, block_index=None):
     if transaction_type == TRANSACTION_WALLET_CREATION:  # this is a wallet creation transaction
         add_wallet_pid(cur, transaction_data)
 
@@ -150,6 +151,7 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
             transaction_data['wallet_address'],
             transaction_data['network_address'],
             transaction_data['broadcast_timestamp'],
+            block_index
         )
     if transaction_type == TRANSACTION_SC_UPDATE:
         cr = CentralRepository(cur, cur)
