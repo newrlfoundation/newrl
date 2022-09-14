@@ -19,7 +19,7 @@ from app.codes.helpers.FetchRespository import FetchRepository
 
 from ..ntypes import TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
 
-from ..constants import ALLOWED_CUSTODIANS_FILE, MEMPOOL_PATH, NEWRL_DB
+from ..constants import CUSTODIAN_OWNER_TYPE, MEMPOOL_PATH, NEWRL_DB
 from .utils import get_time_ms
 
 logger = logging.getLogger(__name__)
@@ -223,9 +223,8 @@ class Transactionmanager:
         if self.transaction['type'] == TRANSACTION_WALLET_CREATION:
             custodian = self.transaction['specific_data']['custodian_wallet']
             walletaddress = self.transaction['specific_data']['wallet_address']
-            if not is_wallet_valid(custodian):
-                print("No custodian address found")
-            #	self.transaction['valid']=0
+            if not is_custodian_wallet(custodian):
+                logger.warn('Invalid custodian wallet')
                 self.validity = 0
             else:
                 # print("Valid custodian address")
@@ -247,22 +246,6 @@ class Transactionmanager:
                         self.validity = 0
                     else:
                         self.validity = 1
-                    # additional check for allowed custodian addresses; valid only for new wallet, not linked ones
-                        if os.path.exists(ALLOWED_CUSTODIANS_FILE):
-                            print(
-                                "Found allowed_custodians file; checking against it.")
-                            custallowflag = False
-                            with open(ALLOWED_CUSTODIANS_FILE, "r") as custfile:
-                                allowedcust = json.load(custfile)
-                            for cust in allowedcust:
-                                if custodian == cust['address']:
-                                    print("Address ", custodian,
-                                          " is allowed as a custodian.")
-                                    custallowflag = True
-                            if not custallowflag:
-                                print("Could not find address ", custodian,
-                                      " amongst allowed custodians.")
-                                self.validity = 0
 
     #	self.validity=0
         if self.transaction['type'] == TRANSACTION_TOKEN_CREATION:  # token addition transaction
@@ -351,6 +334,14 @@ class Transactionmanager:
                 self.transaction['specific_data']['asset1_number'], token1mp)
             sender1valid = False
             sender2valid = False
+
+            if (
+                self.transaction['specific_data']['asset1_number'] < 0
+                or self.transaction['specific_data']['asset2_number'] < 0
+                ):
+                logger.warn('Token quantity cannot be negative')
+                self.validity = 0
+                return False
 
             # for ttype=5, there is no tokencode for asset2 since it is off-chain, there is no amount either
             if ttype == 4:  # some attributes of transaction apply only for bilateral transfer and not unilateral
@@ -546,6 +537,21 @@ def is_wallet_valid(address):
         return False
 
     return True
+
+
+def is_custodian_wallet(address):
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
+        
+    wallet_cursor = cur.execute(
+        'SELECT owner_type FROM wallets WHERE wallet_address=?', (address, ))
+    wallet = wallet_cursor.fetchone()
+    con.close()
+    
+    if wallet is None:
+        return False
+    
+    return wallet[0] == CUSTODIAN_OWNER_TYPE
 
 
 def get_wallets_from_pid(personidinput):

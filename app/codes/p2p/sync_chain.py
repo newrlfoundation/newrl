@@ -266,7 +266,7 @@ def sync_chain_from_peers(force_sync=False):
             if not sync_success:
                 forking_block = find_forking_block(url)
                 logger.info(f'Chains forking from block {forking_block}. Need to revert.')
-                # revert_chain(forking_block)
+                revert_chain(forking_block)
         else:
             logger.info('No node available to sync')
     except Exception as e:
@@ -492,37 +492,37 @@ def get_majority_random_node():
     # revert_chain(find_forking_block(candidate_node_url))
     # sync_chain_from_node(candidate_node_url)
 
-def get_majority_random_node_parallel():  # TODO - Need to fix for memory leakage
-    """Return a random node from the majority fork"""
-    logger.info('Finding a majority node')
-    peers = get_peers()
-    hashes = []
-    candidate_hash = ''
-    candidate_hash_count = 0
-    candidate_node_url = ''
-    random.seed(get_corrected_time_ms())
-    peers = random.sample(peers, k=min(len(peers), COMMITTEE_SIZE))
+# def get_majority_random_node_parallel():  # TODO - Need to fix for memory leakage
+#     """Return a random node from the majority fork"""
+#     logger.info('Finding a majority node')
+#     peers = get_peers()
+#     hashes = []
+#     candidate_hash = ''
+#     candidate_hash_count = 0
+#     candidate_node_url = ''
+#     random.seed(get_corrected_time_ms())
+#     peers = random.sample(peers, k=min(len(peers), COMMITTEE_SIZE))
 
-    pool = multiprocessing.Pool(5)
-    hash_urls = pool.map(get_hash, peers)
-    for hash_url in hash_urls:
-        block_hash = hash_url[0]
-        url = hash_url[1]
-        if block_hash:
-            hashes.append(block_hash)
-            if block_hash == candidate_hash:
-                candidate_hash_count += 1
-            else:
-                candidate_hash_count -= 1
-            if candidate_hash_count < 0:
-                candidate_hash = block_hash
-                candidate_hash_count = 0
-                candidate_node_url = url
+#     pool = multiprocessing.Pool(5)
+#     hash_urls = pool.map(get_hash, peers)
+#     for hash_url in hash_urls:
+#         block_hash = hash_url[0]
+#         url = hash_url[1]
+#         if block_hash:
+#             hashes.append(block_hash)
+#             if block_hash == candidate_hash:
+#                 candidate_hash_count += 1
+#             else:
+#                 candidate_hash_count -= 1
+#             if candidate_hash_count < 0:
+#                 candidate_hash = block_hash
+#                 candidate_hash_count = 0
+#                 candidate_node_url = url
 
-    logger.info(f'Majority hash is {candidate_hash} and a random url is {candidate_node_url}')
-    return candidate_node_url
-    # revert_chain(find_forking_block(candidate_node_url))
-    # sync_chain_from_node(candidate_node_url)
+#     logger.info(f'Majority hash is {candidate_hash} and a random url is {candidate_node_url}')
+#     return candidate_node_url
+#     # revert_chain(find_forking_block(candidate_node_url))
+#     # sync_chain_from_node(candidate_node_url)
 
 
 def find_forking_block(node_url):
@@ -534,7 +534,7 @@ def find_forking_block(node_url):
     while start_idx >= 0:
         end_idx = start_idx + batch_size
         hash_tree = get_block_tree_from_url_retry(node_url, start_idx, end_idx)
-        my_blocks = get_blocks(list(range(start_idx, end_idx)))
+        my_blocks = get_block_hashes(start_idx, end_idx)
 
         idx = end_idx - 1 - start_idx
 
