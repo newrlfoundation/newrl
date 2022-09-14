@@ -179,6 +179,7 @@ def init_db():
                     wallet_address text,
                     network_address text NOT NULL,
                     last_broadcast_timestamp integer,
+                    block_index integer,
                     UNIQUE (wallet_address)
                     )
                     ''')

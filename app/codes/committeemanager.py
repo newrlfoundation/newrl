@@ -79,7 +79,7 @@ def get_miner_for_current_block(last_block=None):
 
 
 def get_eligible_miners():
-    # last_block = get_last_block_hash()
+    last_block = get_last_block_hash()
     # last_block_epoch = 0
     # try:
     #     # Need try catch to support older block timestamps
@@ -91,19 +91,22 @@ def get_eligible_miners():
     # else:
     #     cutfoff_epoch = 0
     # last_block_epoch = int(last_block['timestamp'])
-    cutfoff_epoch = get_corrected_time_ms() - TIME_MINER_BROADCAST_INTERVAL_SECONDS * 2 * 1000
+    # cutfoff_epoch = get_corrected_time_ms() - TIME_MINER_BROADCAST_INTERVAL_SECONDS * 2 * 1000
+    cutfoff_block = last_block['index'] - 1000
 
     con = sqlite3.connect(NEWRL_DB)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
     miner_cursor = cur.execute(
         '''
-        select wallet_address, network_address, last_broadcast_timestamp from miners
+        select wallet_address, network_address, last_broadcast_timestamp, block_index
+        from miners
         join person_wallet on person_id = dest_person_id
-        join trust_scores on wallet_address = wallet_id and last_broadcast_timestamp > ?
+        join trust_scores on wallet_address = wallet_id
+        and block_index > ?
         where score > 0
         order by wallet_address asc
-        ''', (cutfoff_epoch, )).fetchall()
+        ''', (cutfoff_block, )).fetchall()
     # miner_cursor = cur.execute(
     #     '''SELECT wallet_address, network_address, last_broadcast_timestamp 
     #     FROM miners 
