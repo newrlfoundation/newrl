@@ -28,17 +28,17 @@ def get_number_from_hash(block_hash):
     return ord(block_hash[0])
 
 
-def weighted_random_choices(population, weights, k):
+def weighted_random_choices(population, weights, k, seed_prefix):
     if len(population) < k:
         raise Exception('Population less than selection count')
     
     selections = []
-    # previous_idx = 0
+    previous_idx = 0
     while len(selections) < k:
-        # random.seed(previous_idx)
+        random.seed(seed_prefix + previous_idx)
         choice = random.choices(population, weights=weights)[0]
         index = population.index(choice)
-        # previous_idx = index
+        previous_idx = index
         selections.append(choice)
         del population[index]
         del weights[index]
@@ -127,8 +127,6 @@ def get_committee_for_current_block(last_block=None):
     if is_miner_committee_cached(last_block['hash']):
         return miner_committee_cache['current_committee']
 
-    random.seed(get_number_from_hash(last_block['hash']))
-
     miners = get_eligible_miners()
 
     if len(miners) < MINIMUM_ACCEPTANCE_VOTES:
@@ -139,7 +137,11 @@ def get_committee_for_current_block(last_block=None):
     # committee = random.sample(miners, k=committee_size)
     miner_wallets = list(map(lambda m: m['wallet_address'], miners))
     weights = get_scores_for_wallets(miner_wallets)
-    committee = weighted_random_choices(miners, weights, committee_size)
+    committee = weighted_random_choices(
+        miners,
+        weights,
+        committee_size,
+        get_number_from_hash(last_block['hash']))
     committee = sorted(committee, key=lambda d: d['wallet_address']) 
     return committee
 
