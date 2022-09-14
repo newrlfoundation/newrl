@@ -19,7 +19,7 @@ from .fs.temp_manager import get_all_receipts_from_storage, get_blocks_for_index
 from .minermanager import am_i_in_current_committee, broadcast_miner_update, get_committee_for_current_block, get_miner_for_current_block, should_i_mine
 from ..Configuration import Configuration
 from ..nvalues import SENTINEL_NODE_WALLET, TREASURY_WALLET_ADDRESS
-from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, GLOBAL_INTERNAL_CLOCK_SECONDS, IS_TEST, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, NEWRL_PORT, NO_BLOCK_TIMEOUT, NO_RECEIPT_COMMITTEE_TIMEOUT, REQUEST_TIMEOUT, MEMPOOL_PATH, SOFTWARE_VERSION, TIME_BETWEEN_BLOCKS_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS
+from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, GLOBAL_INTERNAL_CLOCK_SECONDS, IS_TEST, MIN_SYNC_INTERVAL_MS, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, NEWRL_PORT, NO_BLOCK_TIMEOUT, NO_RECEIPT_COMMITTEE_TIMEOUT, REQUEST_TIMEOUT, MEMPOOL_PATH, SOFTWARE_VERSION, TIME_BETWEEN_BLOCKS_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS
 from .p2p.peers import get_peers
 from .p2p.utils import is_my_address
 from .utils import BufferedLog, get_time_ms
@@ -288,14 +288,18 @@ def global_internal_clock():
                 last_block_ts = int(last_block['timestamp'])
                 time_elapsed_seconds = (current_ts - last_block_ts) / 1000
 
-                if time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 2:
+                if (time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 4
+                    and current_ts - TIMERS['last_sync_timestamp'] > MIN_SYNC_INTERVAL_MS
+                    ):
                     logger.info('I have not received a block for 2 intervals. Querying chain for majority chain.')
+                    TIMERS['last_sync_timestamp'] = current_ts
                     sync_chain_from_peers()
+                    logger.info(f'Sync completed in %d s. Continuing global clock tick.', (get_corrected_time_ms() - current_ts) / 1000)
                     current_ts = get_corrected_time_ms()
                     last_block = get_last_block()
                     last_block_ts = int(last_block['timestamp'])
                     time_elapsed_seconds = (current_ts - last_block_ts) / 1000  # This needs to be calculated again after the sync
-                if time_elapsed_seconds < BLOCK_TIME_INTERVAL_SECONDS * 4 and should_i_mine(last_block):
+                if time_elapsed_seconds < BLOCK_TIME_INTERVAL_SECONDS * 6 and should_i_mine(last_block):
                     logger.info('I am the miner for this block.')
                     # Don't mine a block if half the block time interval has passed. Wait for sentinel node.
                     if TIMERS['mining_timer'] is None or not TIMERS['mining_timer'].is_alive():
