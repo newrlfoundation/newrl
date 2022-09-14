@@ -1,5 +1,6 @@
 import random
 import sqlite3
+import os
 import glob
 import subprocess
 import threading
@@ -49,3 +50,12 @@ def check_and_create_snapshot_in_thread(block_index):
     thread = threading.Thread(target=create_block_snapshot,
         args = (block_index, ))
     thread.start()
+
+
+def get_or_create_db_snapshot():
+    snapshot_file = NEWRL_DB + '.snapshot'
+    if os.isfile(snapshot_file):
+        return snapshot_file
+    
+    create_db_snapshot()
+    return snapshot_file
