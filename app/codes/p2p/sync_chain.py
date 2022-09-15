@@ -201,20 +201,14 @@ def sync_chain_from_node(url, block_index=None):
     block_idx = my_last_block + 1
     block_batch_size = 10  # Fetch blocks in batches
     while block_idx <= their_last_block_index:
-        failed_for_invalid_block = False
         blocks_to_request = list(range(block_idx, 1 + min(their_last_block_index, block_idx + block_batch_size)))
         blocks_request = {'block_indexes': blocks_to_request}
         logger.info(f'Asking block node {url} for blocks {blocks_request}')
         blocks_data = get_block_from_url_retry(url, blocks_request)
 
         for block in blocks_data:
-            # block['index'] = block['block_index']
-            # block['timestamp'] = int(block['timestamp'])
             hash = block['hash']  # TODO - Use calculate hash
-            # hash = calculate_hash(block)
-            # block.pop('hash', None)
-            # block.pop('transactions_hash', None)
-            # block.pop('block_index', None)
+
             for idx, tx in enumerate(block['text']['transactions']):
                 specific_data = tx['transaction']['specific_data']
                 while isinstance(specific_data, str):
@@ -228,17 +222,15 @@ def sync_chain_from_node(url, block_index=None):
                 block['text']['transactions'][idx]['signatures'] = signatures
 
             if not validate_block_data(block):
-                logger.info('Invalid block. Aborting sync.')
-                failed_for_invalid_block = True
+                logger.warn('Invalid block. Aborting sync.')
                 return False
-            con = sqlite3.connect(NEWRL_DB)
-            cur = con.cursor()
-            blockchain.add_block(cur, block, hash)
-            con.commit()
-            con.close()
-
-        if failed_for_invalid_block:
-            break
+            else:
+                logger.info('Adding block %d', block['index'])
+                con = sqlite3.connect(NEWRL_DB)
+                cur = con.cursor()
+                blockchain.add_block(cur, block, hash)
+                con.commit()
+                con.close()
 
         block_idx += block_batch_size + 1
 
@@ -266,7 +258,7 @@ def sync_chain_from_peers(force_sync=False):
             if not sync_success:
                 forking_block = find_forking_block(url)
                 logger.info(f'Chains forking from block {forking_block}. Need to revert.')
-                # revert_chain(forking_block)
+                revert_chain(forking_block)
         else:
             logger.info('No node available to sync')
     except Exception as e:

@@ -229,7 +229,6 @@ def add_block(cur, block, block_hash, is_state_reconstruction=False):
     block_index = block['block_index'] if 'block_index' in block else block['index']
     # transactions_hash = block['transactions_hash'] if 'transactions_hash' in block else ''
     # transactions_hash = calculate_hash(block['text']['transactions'])
-    print('Adding block', block_index)
     if not isinstance(block['committee'], str):
         block['committee'] = json.dumps(block['committee'])
     db_block_data = (
