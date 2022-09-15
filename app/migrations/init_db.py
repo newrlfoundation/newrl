@@ -314,13 +314,16 @@ def revert_chain(block_index):
         logger.info('Syncing with network. Reverting anyway.')
         # logger.info('Syncing with network. Aborting revert.')
         # return
-    revert_to_last_snapshot()
-    return
+    # revert_to_last_snapshot()
+    # return
     SYNC_STATUS['IS_SYNCING'] = True
     try:
         if block_index == 0:
             clear_db()
         else:
+            revert_to_last_snapshot()
+            SYNC_STATUS['IS_SYNCING'] = False
+            return
             con = sqlite3.connect(NEWRL_DB)
             cur = con.cursor()
             cur.execute(f'DELETE FROM blocks WHERE block_index > {block_index}')

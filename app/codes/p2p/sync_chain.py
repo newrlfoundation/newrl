@@ -201,20 +201,14 @@ def sync_chain_from_node(url, block_index=None):
     block_idx = my_last_block + 1
     block_batch_size = 10  # Fetch blocks in batches
     while block_idx <= their_last_block_index:
-        failed_for_invalid_block = False
         blocks_to_request = list(range(block_idx, 1 + min(their_last_block_index, block_idx + block_batch_size)))
         blocks_request = {'block_indexes': blocks_to_request}
         logger.info(f'Asking block node {url} for blocks {blocks_request}')
         blocks_data = get_block_from_url_retry(url, blocks_request)
 
         for block in blocks_data:
-            # block['index'] = block['block_index']
-            # block['timestamp'] = int(block['timestamp'])
             hash = block['hash']  # TODO - Use calculate hash
-            # hash = calculate_hash(block)
-            # block.pop('hash', None)
-            # block.pop('transactions_hash', None)
-            # block.pop('block_index', None)
+
             for idx, tx in enumerate(block['text']['transactions']):
                 specific_data = tx['transaction']['specific_data']
                 while isinstance(specific_data, str):
@@ -228,17 +222,15 @@ def sync_chain_from_node(url, block_index=None):
                 block['text']['transactions'][idx]['signatures'] = signatures
 
             if not validate_block_data(block):
-                logger.info('Invalid block. Aborting sync.')
-                failed_for_invalid_block = True
+                logger.warn('Invalid block. Aborting sync.')
                 return False
-            con = sqlite3.connect(NEWRL_DB)
-            cur = con.cursor()
-            blockchain.add_block(cur, block, hash)
-            con.commit()
-            con.close()
-
-        if failed_for_invalid_block:
-            break
+            else:
+                logger.info('Adding block %d', block['index'])
+                con = sqlite3.connect(NEWRL_DB)
+                cur = con.cursor()
+                blockchain.add_block(cur, block, hash)
+                con.commit()
+                con.close()
 
         block_idx += block_batch_size + 1
 
@@ -465,32 +457,28 @@ def get_majority_random_node():
     """Return a random node from the majority fork"""
     logger.info('Finding a majority node')
     peers = get_peers()
-    hashes = []
-    candidate_hash = ''
-    candidate_hash_count = 0
-    candidate_node_url = ''
+    hash_url_map = {}
+    
     random.seed(get_corrected_time_ms())
-    peers = random.sample(peers, k=min(len(peers), COMMITTEE_SIZE))
-    for peer in peers:
-        url = 'http://' + peer['address'] + ':' + str(NEWRL_PORT)
-        # logger.info(f"Querying {url} for block hash")
 
+    while len(hash_url_map) < COMMITTEE_SIZE and len(peers) > 0:
+        peer_idx = random.choice(range(len(peers)))
+        url = 'http://' + peers[peer_idx]['address'] + ':' + str(NEWRL_PORT)
+        del peers[peer_idx]
         hash = get_last_block_hash_from_url_retry(url)
         if hash:
-            hashes.append(hash)
-            if hash == candidate_hash:
-                candidate_hash_count += 1
+            if hash in hash_url_map:
+                hash_url_map[hash].append(url)
+                if len(hash_url_map[hash]) > COMMITTEE_SIZE * 0.8:
+                    random_majority_node_url = random.choice(hash_url_map[hash])
+                    logger.info(f'Majority hash is {hash} and a random url is {random_majority_node_url}')
+                    return random_majority_node_url
             else:
-                candidate_hash_count -= 1
-            if candidate_hash_count < 0:
-                candidate_hash = hash
-                candidate_hash_count = 0
-                candidate_node_url = url
+                hash_url_map[hash] = [url]
 
-    logger.info(f'Majority hash is {candidate_hash} and a random url is {candidate_node_url}')
-    return candidate_node_url
-    # revert_chain(find_forking_block(candidate_node_url))
-    # sync_chain_from_node(candidate_node_url)
+    logger.warn('Could not find a majority chain')
+    return None
+
 
 # def get_majority_random_node_parallel():  # TODO - Need to fix for memory leakage
 #     """Return a random node from the majority fork"""

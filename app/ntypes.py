@@ -11,6 +11,7 @@ TRANSACTION_SC_UPDATE = 8
 NEWRL_TOKEN_CODE = 'NWRL'
 NUSD_TOKEN_CODE = 'NUSD'
 NEWRL_TOKEN_NAME = 'Newrl'
+NEWRL_TOKEN_DECIMAL = 6
 
 BLOCK_VOTE_VALID = 1  # Valid block by committee members
 BLOCK_VOTE_INVALID = 5  # Invalid block and also for proposing an empty block

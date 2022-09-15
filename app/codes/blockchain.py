@@ -229,7 +229,6 @@ def add_block(cur, block, block_hash, is_state_reconstruction=False):
     block_index = block['block_index'] if 'block_index' in block else block['index']
     # transactions_hash = block['transactions_hash'] if 'transactions_hash' in block else ''
     # transactions_hash = calculate_hash(block['text']['transactions'])
-    print('Adding block', block_index)
     if not isinstance(block['committee'], str):
         block['committee'] = json.dumps(block['committee'])
     db_block_data = (
@@ -259,9 +258,9 @@ def add_block(cur, block, block_hash, is_state_reconstruction=False):
     remove_block_from_temp(block_index)
 
 
-def get_last_block_index():
+def get_last_block_index(db_url=NEWRL_DB):
     """Get last block index from db"""
-    con = sqlite3.connect(NEWRL_DB)
+    con = sqlite3.connect(db_url)
     cur = con.cursor()
     last_block_cursor = cur.execute(
         'SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1'
