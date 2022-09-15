@@ -3,8 +3,7 @@ import sqlite3
 
 from app.codes.utils import get_person_id_for_wallet_address
 from app.constants import NEWRL_DB
-from app.nvalues import DAO_MANAGER, ASQI_WALLET, MEMBER_WALLET_1, MEMBER_WALLET_2, MEMBER_WALLET_3, MEMBER_WALLET_4, TREASURY_CONTRACT_ADDRESS, FOUNDATION_WALLET, ASQI_DAO_ADDRESS, \
-    NEWRL_DAO_ADDRESS, CONFIG_DAO_ADDRESS
+from app.nvalues import *
 
 
 def migrate():
@@ -27,7 +26,7 @@ def init_Configuration_Dao():
 
 def create_Configuration_Dao(cur, address,name,wallet):
     # address_signatories = [ASQI_WALLET, FOUNDATION_WALLET]
-    address_signatories = [MEMBER_WALLET_1,MEMBER_WALLET_2,MEMBER_WALLET_3,MEMBER_WALLET_4]
+    address_signatories = [MEMBER_WALLET_1,MEMBER_WALLET_2,MEMBER_WALLET_3,MEMBER_WALLET_4,MEMBER_WALLET_5,MEMBER_WALLET_6,MEMBER_WALLET_7]
     signatories = {"vote_on_proposal": None,
                 "delete_member": [
                     -1
