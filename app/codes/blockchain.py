@@ -258,9 +258,9 @@ def add_block(cur, block, block_hash, is_state_reconstruction=False):
     remove_block_from_temp(block_index)
 
 
-def get_last_block_index():
+def get_last_block_index(db_url=NEWRL_DB):
     """Get last block index from db"""
-    con = sqlite3.connect(NEWRL_DB)
+    con = sqlite3.connect(db_url)
     cur = con.cursor()
     last_block_cursor = cur.execute(
         'SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1'

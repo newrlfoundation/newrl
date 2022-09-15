@@ -6,6 +6,8 @@ import subprocess
 import threading
 import logging
 
+from app.codes.blockchain import get_last_block_index
+
 from ..constants import NEWRL_DB
 
 logging.basicConfig(level=logging.INFO)
@@ -41,7 +43,13 @@ def create_block_snapshot(block_index):
     if (
         snapshot_schedule['next_snapshot'] == -1 or 
         block_index == snapshot_schedule['next_snapshot']):
-        # create_db_snapshot(f'.snapshot-{block_index}')
+        snapshot_last_block = get_last_block_index(NEWRL_DB + '.snapshot')
+        db_last_block = get_last_block_index(NEWRL_DB)
+
+        if db_last_block - snapshot_last_block < 500:
+            logger.info('Not creating backup as snapshot is not older than 500 blocks')
+            return
+
         snapshot_schedule['snapshot_creation_in_progress'] = True
         create_db_snapshot(f'.snapshot')
         snapshot_schedule['next_snapshot'] = block_index + random.randint(500, 1000)
@@ -54,9 +62,11 @@ def create_block_snapshot(block_index):
 def check_and_create_snapshot_in_thread(block_index):
     if snapshot_schedule['snapshot_creation_in_progress']:
         return
-    thread = threading.Thread(target=create_block_snapshot,
-        args = (block_index, ))
-    thread.start()
+    # thread = threading.Thread(target=create_block_snapshot,
+    #     args = (block_index, ))
+    # thread.start()
+    # TODO - Check and enable threading
+    create_block_snapshot(block_index)
 
 
 def get_or_create_db_snapshot():
