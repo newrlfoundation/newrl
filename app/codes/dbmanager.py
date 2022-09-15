@@ -47,7 +47,6 @@ def create_block_snapshot(block_index):
         db_last_block = get_last_block_index(NEWRL_DB)
 
         if db_last_block - snapshot_last_block < 500:
-            logger.info('Not creating backup as snapshot is not older than 500 blocks')
             return
 
         snapshot_schedule['snapshot_creation_in_progress'] = True

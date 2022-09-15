@@ -6,6 +6,8 @@ from fastapi import APIRouter
 from fastapi.exceptions import HTTPException
 from starlette.requests import Request
 from fastapi.responses import FileResponse
+
+from app.limiter import limiter
 from app.codes.aggregator import process_transaction_batch
 from app.codes.blockchain import get_blocks_in_range
 
@@ -48,20 +50,28 @@ def get_blocks_in_range_api(start_index: int, end_index: int):
     return get_blocks_in_range(start_index, end_index)
 
 @router.post("/receive-transaction", tags=[p2p_tag])
-async def receive_transaction_api(req: TransactionAdditionRequest):
-    return validate_transaction(req.signed_transaction, propagate=True)
+@limiter.limit("1/second")
+async def receive_transaction_api(request: Request):
+    signed_transaction = (await request.json())['signed_transaction']
+    return validate_transaction(signed_transaction, propagate=True)
 
 @router.post("/receive-transactions", tags=[p2p_tag])
-async def receive_transactions_api(req: TransactionBatchPayload):
-    return process_transaction_batch(req.transactions, req.peers_already_broadcasted)
+@limiter.limit("10/minute")
+async def receive_transactions_api(request: Request):
+    request_body = await request.json()
+    return process_transaction_batch(request_body['transactions'],
+        request_body['peers_already_broadcasted'])
 
 @router.post("/receive-block", tags=[p2p_tag])
-async def receive_block_api(req: BlockAdditionRequest):
-    return receive_block(req.block)
+@limiter.limit("10/minute")
+async def receive_block_api(request: Request):
+    request_body = await request.json()
+    return receive_block(request_body['block'])
 
 @router.post("/receive-receipt", tags=[p2p_tag])
-async def receive_receipt_api(req: ReceiptAdditionRequest):
-    if receive_receipt(req.receipt):
+@limiter.limit("100/minute")
+async def receive_receipt_api(request: Request):
+    if receive_receipt(request['receipt']):
         return {'status': 'SUCCESS'}
     else:
         return {'status': 'FAILURE'}
@@ -98,12 +108,12 @@ def add_peer_api(req: Request, dns_address: str=None):
     else:
         return add_peer(dns_address)
 
-@router.get("/get-newrl-db", tags=[p2p_tag])
+@router.get("/get-newrl-db", tags=[p2p_tag], include_in_schema=False)
 def get_newrldb_api():
     snapshot_file = get_or_create_db_snapshot()
     return FileResponse(snapshot_file)
 
 
-@router.get("/quick-sync-db-from-node", tags=[p2p_tag])
+@router.get("/quick-sync-db-from-node", tags=[p2p_tag], include_in_schema=False)
 def get_newrldb_api(node_url: str):
     quick_sync(node_url + "/get-newrl-db")
