@@ -12,7 +12,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 snapshot_schedule = {
-    'next_snapshot': -1
+    'next_snapshot': -1,
+    'snapshot_creation_in_progress': False
 }
 
 def create_db_snapshot(suffix='.snapshot'):
@@ -36,17 +37,23 @@ def revert_to_last_snapshot():
 
 
 def create_block_snapshot(block_index):
+    global snapshot_schedule
     if (
         snapshot_schedule['next_snapshot'] == -1 or 
         block_index == snapshot_schedule['next_snapshot']):
         # create_db_snapshot(f'.snapshot-{block_index}')
+        snapshot_schedule['snapshot_creation_in_progress'] = True
         create_db_snapshot(f'.snapshot')
         snapshot_schedule['next_snapshot'] = block_index + random.randint(500, 1000)
+        logger.info('Next snapshot creation scheduled for block %d', snapshot_schedule['next_snapshot'])
+        snapshot_schedule['snapshot_creation_in_progress'] = False
     # Set the next_snapshot schedule variable based on block size
     # Next snapshot increase ~ block size
 
 
 def check_and_create_snapshot_in_thread(block_index):
+    if snapshot_schedule['snapshot_creation_in_progress']:
+        return
     thread = threading.Thread(target=create_block_snapshot,
         args = (block_index, ))
     thread.start()

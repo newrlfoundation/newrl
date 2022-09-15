@@ -465,40 +465,27 @@ def get_majority_random_node():
     """Return a random node from the majority fork"""
     logger.info('Finding a majority node')
     peers = get_peers()
-    hashes = []
-    nodes = []
+    hash_url_map = {}
     
     random.seed(get_corrected_time_ms())
 
-    while len(hashes) < COMMITTEE_SIZE:
-        peer = random.choice(peers)
-        url = 'http://' + peer['address'] + ':' + str(NEWRL_PORT)
+    while len(hash_url_map) < COMMITTEE_SIZE and len(peers) > 0:
+        peer_idx = random.choice(range(len(peers)))
+        url = 'http://' + peers[peer_idx]['address'] + ':' + str(NEWRL_PORT)
+        del peers[peer_idx]
         hash = get_last_block_hash_from_url_retry(url)
         if hash:
-            hashes.append(hash)
-            nodes.append(url)
+            if hash in hash_url_map:
+                hash_url_map[hash].append(url)
+                if len(hash_url_map[hash]) > COMMITTEE_SIZE * 0.8:
+                    random_majority_node_url = random.choice(hash_url_map[hash])
+                    logger.info(f'Majority hash is {hash} and a random url is {random_majority_node_url}')
+                    return random_majority_node_url
+            else:
+                hash_url_map[hash] = [url]
 
-    candidate_hash = ''
-    candidate_hash_count = 0
-    for hash in hashes:
-        url = 'http://' + peer['address'] + ':' + str(NEWRL_PORT)
-        # logger.info(f"Querying {url} for block hash")
-
-        if hash == candidate_hash:
-            candidate_hash_count += 1
-        else:
-            candidate_hash_count -= 1
-        if candidate_hash_count < 0:
-            candidate_hash = hash
-            candidate_hash_count = 0
-            candidate_node_url = url
-
-    if hashes.count(candidate_hash) > len(hashes) * 0.8:
-        logger.info(f'Majority hash is {candidate_hash} and a random url is {candidate_node_url}')
-        return candidate_node_url
-    else:
-        logger.warn('Could not find a majority chain')
-        return None
+    logger.warn('Could not find a majority chain')
+    return None
 
 
 def get_majority_random_node_parallel():  # TODO - Need to fix for memory leakage
