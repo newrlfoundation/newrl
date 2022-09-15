@@ -9,11 +9,11 @@ router = APIRouter()
 transport_tag = 'Transport'
 
 
-@router.post("/receive", tags=[transport_tag])
+@router.post("/receive", tags=[transport_tag], include_in_schema=False)
 def recieve_api(payload: dict):
     return receive(payload)
 
-@router.post("/receive-block-binary", tags=[transport_tag])
+@router.post("/receive-block-binary", tags=[transport_tag], include_in_schema=False)
 async def receive_block_binary_api(req: Request):
     body = req.body()
     block = decompress_block_payload(await body)
