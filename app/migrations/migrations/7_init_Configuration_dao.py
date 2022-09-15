@@ -25,8 +25,8 @@ def init_Configuration_Dao():
 
 
 def create_Configuration_Dao(cur, address,name,wallet):
-    # address_signatories = [ASQI_WALLET, FOUNDATION_WALLET]
-    address_signatories = [MEMBER_WALLET_1,MEMBER_WALLET_2,MEMBER_WALLET_3,MEMBER_WALLET_4,MEMBER_WALLET_5,MEMBER_WALLET_6,MEMBER_WALLET_7]
+    address_signatories = MEMBER_WALLET_LIST
+    print(address_signatories[0])
     signatories = {"vote_on_proposal": None,
                 "delete_member": [
                     -1
