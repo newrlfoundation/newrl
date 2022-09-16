@@ -251,7 +251,7 @@ def add_block(cur, block, block_hash, is_state_reconstruction=False):
         INSERT OR IGNORE INTO blocks 
         (block_index, timestamp, proof, status, previous_hash, hash, 
         creator_wallet, expected_miner, committee) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', db_block_data)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', db_block_data)
     update_db_states(cur, block)
     update_trust_scores(cur, block)
     update_receipts_in_state(cur, block)
