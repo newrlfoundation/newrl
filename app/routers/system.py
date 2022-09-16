@@ -10,7 +10,7 @@ from app.codes.log_config import get_past_log_content, logGenerator
 from sse_starlette.sse import EventSourceResponse
 from fastapi.responses import PlainTextResponse
 
-from app.codes.chainscanner import download_chain, download_state
+from app.codes.chainscanner import download_chain, download_state, get_config
 from app.codes.clock.global_time import get_time_stats
 from app.codes.fs.mempool_manager import clear_mempool
 from app.codes.p2p.peers import add_peer, clear_peers, get_peers, remove_dead_peers, update_software
@@ -83,6 +83,10 @@ def initiate_peer_api(address: str):
     "Test only, used to first connect a client"
     return add_peer(address)
 
+@router.get("/config", tags=[p2p_tag])
+def get_config_api():
+    return get_config()
+    
 
 @router.post("/update-software", tags=[p2p_tag])
 def update_software_api(propogate: bool = False):

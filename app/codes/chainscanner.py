@@ -4,7 +4,7 @@ import sqlite3
 
 from ..constants import NEWRL_DB
 from .blockchain import Blockchain
-
+from app.Configuration import Configuration
 
 class Chainscanner():
     def __init__(self):
@@ -101,6 +101,9 @@ def get_transaction(transaction_code):
         return None
     return dict(transaction_cursor)
 
+def get_config():
+    config = Configuration().conf
+    return config
 
 def get_wallet(wallet_address):
     con = sqlite3.connect(NEWRL_DB)

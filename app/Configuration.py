@@ -1,3 +1,4 @@
+import json
 import sqlite3
 
 from app.codes.clock.global_time import get_corrected_time_ms
@@ -28,8 +29,9 @@ class Configuration:
         "STAKE_COOLDOWN_MS": STAKE_COOLDOWN_MS,
         "NEWRL_DAO_ADDRESS": NEWRL_DAO_ADDRESS,
         "ASQI_DAO_ADDRESS": ASQI_DAO_ADDRESS,
-        "TREASURY_CONTRACT_ADDRESS": TREASURY_CONTRACT_ADDRESS
-    }
+        "TREASURY_CONTRACT_ADDRESS": TREASURY_CONTRACT_ADDRESS,
+        "MEMBER_WALLET_LIST" : json.dumps(MEMBER_WALLET_LIST)    
+        }
     setters = ["ZERO_ADDRESS",
                "TREASURY_WALLET_ADDRESS",
                "NETWORK_TRUST_MANAGER_WALLET",
@@ -50,7 +52,9 @@ class Configuration:
                "STAKE_COOLDOWN_MS",
                "MIN_STAKE_AMOUNT",
                "STAKE_PENALTY_RATIO",
-               "STAKE_CT_ADDRESS"]
+               "STAKE_CT_ADDRESS",
+               "MEMBER_WALLET_LIST"
+               ]
 
     @staticmethod
     def config(name):
@@ -84,7 +88,8 @@ class Configuration:
         Configuration.set("NEWRL_DAO_ADDRESS", NEWRL_DAO_ADDRESS)
         Configuration.set("ASQI_DAO_ADDRESS", ASQI_DAO_ADDRESS)
         Configuration.set("TREASURY_CONTRACT_ADDRESS", TREASURY_CONTRACT_ADDRESS)
-        Configuration.set("ASQI_PID", ASQI_PID)
+        Configuration.set("ASQI_PID", ASQI_PID),
+        Configuration.set("MEMBER_WALLET_LIST", json.dumps(MEMBER_WALLET_LIST))
         con = sqlite3.connect(NEWRL_DB)
         cur = con.cursor()
         Configuration.updateDataFromDB(cur)
