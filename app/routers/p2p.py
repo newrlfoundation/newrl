@@ -71,7 +71,9 @@ async def receive_block_api(request: Request):
 @router.post("/receive-receipt", tags=[p2p_tag])
 @limiter.limit("100/minute")
 async def receive_receipt_api(request: Request):
-    if receive_receipt(request['receipt']):
+    request_body = await request.json()
+    receipt = request_body['receipt']
+    if receive_receipt(receipt):
         return {'status': 'SUCCESS'}
     else:
         return {'status': 'FAILURE'}
