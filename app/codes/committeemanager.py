@@ -104,9 +104,10 @@ def get_eligible_miners():
         join person_wallet on person_id = dest_person_id
         join trust_scores on wallet_address = wallet_id
         and block_index > ?
+        and wallet_address != ?
         where score > 0
         order by wallet_address asc
-        ''', (cutfoff_block, )).fetchall()
+        ''', (cutfoff_block, SENTINEL_NODE_WALLET, )).fetchall()
     # miner_cursor = cur.execute(
     #     '''SELECT wallet_address, network_address, last_broadcast_timestamp 
     #     FROM miners 
