@@ -359,7 +359,7 @@ def sentitnel_node_mine_empty():
             return existing_block_proposals[0]
     blockchain = Blockchain()
     current_time_ms = get_corrected_time_ms()
-    block = blockchain.mine_empty_block(current_time_ms, block_status=BLOCK_STATUS_CONSENSUS_TIMEOUT)
+    block = blockchain.mine_empty_block(current_time_ms, block_status=BLOCK_STATUS_MINING_TIMEOUT)
     # if block_exist_from_valid_miner():  #TODO 
     #     block = blockchain.mine_empty_block(current_time_ms, block_status=BLOCK_STATUS_CONSENSUS_TIMEOUT)
     # else:

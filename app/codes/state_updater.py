@@ -22,7 +22,7 @@ from ..nvalues import NETWORK_TRUST_MANAGER_PID, TREASURY_WALLET_ADDRESS
 from app.nvalues import NETWORK_TRUST_MANAGER_PID, MIN_STAKE_AMOUNT, STAKE_PENALTY_RATIO, ZERO_ADDRESS
 
 from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, COMMITTEE_SIZE, INITIAL_NETWORK_TRUST_SCORE, MAX_RECEIPT_HISTORY_BLOCKS, NEWRL_DB
-from ..ntypes import BLOCK_VOTE_MINER, NEWRL_TOKEN_CODE, NEWRL_TOKEN_DECIMAL, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
+from ..ntypes import BLOCK_STATUS_MINING_TIMEOUT, BLOCK_VOTE_MINER, NEWRL_TOKEN_CODE, NEWRL_TOKEN_DECIMAL, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
 
 logger = logging.getLogger(__name__)
 
@@ -210,6 +210,12 @@ def update_trust_scores(cur, block):
         if receipt['data']['block_index'] > block['index'] - MAX_RECEIPT_HISTORY_BLOCKS:
             update_network_trust_score_from_receipt(cur, receipt=receipt)
 
+def update_miners(cur, block):
+    if (
+        block['expected_miner'] != block['creator_wallet']
+        and block['status'] == BLOCK_STATUS_MINING_TIMEOUT
+    ):
+        cur.execute('DELETE FROM miners WHERE wallet_address = ?', (block['expected_miner'], ))
 
 def simplify_transactions(cur, transactions):
   global value_txns

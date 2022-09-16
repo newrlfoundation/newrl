@@ -17,7 +17,7 @@ from .fs.temp_manager import remove_block_from_temp
 from ..constants import BLOCK_TIME_INTERVAL_SECONDS, NEWRL_DB, NO_BLOCK_TIMEOUT
 from .utils import get_time_ms
 from .crypto import calculate_hash
-from .state_updater import update_db_states, update_trust_scores
+from .state_updater import update_db_states, update_miners, update_trust_scores
 from .utils import get_time_ms
 from .auth.auth import get_node_wallet_address
 from .fs.mempool_manager import remove_transaction_from_mempool
@@ -255,6 +255,7 @@ def add_block(cur, block, block_hash, is_state_reconstruction=False):
     update_db_states(cur, block)
     update_trust_scores(cur, block)
     update_receipts_in_state(cur, block)
+    update_miners(cur, block)
 
     for transaction in block['text']['transactions']:
         transaction = transaction['transaction']
