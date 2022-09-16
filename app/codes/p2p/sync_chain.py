@@ -459,6 +459,7 @@ def get_majority_random_node():
     peers = get_peers()
     hash_url_map = {}
     valid_peers = 0
+    queried_peers = 0
     
     random.seed(get_corrected_time_ms())
 
@@ -477,6 +478,9 @@ def get_majority_random_node():
                     return random_majority_node_url
             else:
                 hash_url_map[hash] = [url]
+        queried_peers += 1
+        if valid_peers < COMMITTEE_SIZE and queried_peers > COMMITTEE_SIZE * 2:
+            break    
     if valid_peers < COMMITTEE_SIZE:
         trusted_node = random.choice(NETWORK_TRUSTED_ARCHIVE_NODES)
         url = 'http://' + trusted_node + ':' + str(NEWRL_PORT)
