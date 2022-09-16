@@ -43,7 +43,11 @@ def create_block_snapshot(block_index):
     if (
         snapshot_schedule['next_snapshot'] == -1 or 
         block_index == snapshot_schedule['next_snapshot']):
-        snapshot_last_block = get_last_block_index(NEWRL_DB + '.snapshot')
+        try:
+            snapshot_last_block = get_last_block_index(NEWRL_DB + '.snapshot')
+        except Exception as e:
+            logger.error('Error getting snapshot block size %s', str(e))
+            snapshot_last_block = 0
         db_last_block = get_last_block_index(NEWRL_DB)
 
         if db_last_block - snapshot_last_block < 500:
