@@ -215,6 +215,7 @@ def update_miners(cur, block):
         block['expected_miner'] != block['creator_wallet']
         and block['status'] == BLOCK_STATUS_MINING_TIMEOUT
     ):
+        logger.info('Removing miner %s due to timeout', block['expected_miner'])
         cur.execute('DELETE FROM miners WHERE wallet_address = ?', (block['expected_miner'], ))
 
 def simplify_transactions(cur, transactions):

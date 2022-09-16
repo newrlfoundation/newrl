@@ -200,27 +200,19 @@ def sync_chain_from_node(url, block_index=None):
         quick_sync(url + '/get-newrl-db')
         return True
     block_idx = my_last_block + 1
-    block_batch_size = 10  # Fetch blocks in batches
+    block_batch_size = 100  # Fetch blocks in batches
     while block_idx <= their_last_block_index:
         blocks_to_request = list(range(block_idx, 1 + min(their_last_block_index, block_idx + block_batch_size)))
         blocks_request = {'block_indexes': blocks_to_request}
         logger.info(f'Asking block node {url} for blocks {blocks_request}')
         blocks_data = get_block_from_url_retry(url, blocks_request)
 
-        for block in blocks_data:
-            hash = block['hash']  # TODO - Use calculate hash
+        if len(blocks_data) == 0:
+            logger.warn('Could not get blocks aborting sync')
+            return True  # To prevent revert
 
-            for idx, tx in enumerate(block['text']['transactions']):
-                specific_data = tx['transaction']['specific_data']
-                while isinstance(specific_data, str):
-                    specific_data = json.loads(specific_data)
-                block['text']['transactions'][idx]['transaction']['specific_data'] = specific_data
-                
-                signatures = tx['transaction']['signatures']
-                while isinstance(signatures, str):
-                    signatures = json.loads(signatures)
-                block['text']['transactions'][idx]['transaction']['signatures'] = signatures
-                block['text']['transactions'][idx]['signatures'] = signatures
+        for block in blocks_data:
+            hash = calculate_hash(block)
 
             if not validate_block_data(block):
                 logger.warn('Invalid block. Aborting sync.')

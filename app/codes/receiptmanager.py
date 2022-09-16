@@ -61,12 +61,13 @@ def update_receipts_in_state(cur, block):
             VALUES(?, ?, ?, ?)
         ''', db_receipt_data)
 
-        cur.execute('DELETE FROM receipts where block_index < ?', (block['index'] - MAX_RECEIPT_HISTORY_BLOCKS, ))
 
         remove_receipt_from_temp(
             receipt['data']['block_index'],
             receipt['data']['block_hash'],
             receipt['data']['wallet_address'])
+    
+    cur.execute('DELETE FROM receipts where block_index < ?', (block['index'] - MAX_RECEIPT_HISTORY_BLOCKS, ))
 
 
 def check_receipt_exists_in_db(block_index, block_hash, wallet_address, cur=None):
