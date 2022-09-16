@@ -72,6 +72,7 @@ async def receive_block_api(request: Request):
 @limiter.limit("100/minute")
 async def receive_receipt_api(request: Request):
     request_body = await request.json()
+    print('reciept_request_body', request_body)
     receipt = request_body['receipt']
     if receive_receipt(receipt):
         return {'status': 'SUCCESS'}
