@@ -15,6 +15,7 @@ import sqlite3
 from app.codes.db_updater import get_contract_from_address, get_wallet_token_balance
 from app.codes.helpers.CustomExceptions import ContractValidationError
 from app.codes.helpers.FetchRespository import FetchRepository
+from app.nvalues import MEMBER_WALLET_LIST
 
 
 from ..ntypes import TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
@@ -540,18 +541,17 @@ def is_wallet_valid(address):
 
 
 def is_custodian_wallet(address):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
-        
-    wallet_cursor = cur.execute(
-        'SELECT owner_type FROM wallets WHERE wallet_address=?', (address, ))
-    wallet = wallet_cursor.fetchone()
-    con.close()
-    
-    if wallet is None:
-        return False
-    
-    return wallet[0] == CUSTODIAN_OWNER_TYPE
+    """
+        If address in [initial foundation addresses], return True
+        Check if address is in custodian DAO return True
+        Return false otherwise
+    """
+    if address in MEMBER_WALLET_LIST:
+        return True
+
+    # TODO - Also check for Custodian DAO membership
+
+    return False
 
 
 def get_wallets_from_pid(personidinput):

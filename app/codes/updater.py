@@ -293,7 +293,7 @@ def global_internal_clock():
                 if (time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 4
                     and current_ts - TIMERS['last_sync_timestamp'] > MIN_SYNC_INTERVAL_MS
                     ):
-                    logger.info('I have not received a block for 2 intervals. Querying chain for majority chain.')
+                    logger.info('I have not received a block for 4 intervals. Querying chain for majority chain.')
                     TIMERS['last_sync_timestamp'] = current_ts
                     sync_chain_from_peers()
                     logger.info(f'Sync completed in %d s. Continuing global clock tick.', (get_corrected_time_ms() - current_ts) / 1000)
