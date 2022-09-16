@@ -231,21 +231,25 @@ def add_block(cur, block, block_hash, is_state_reconstruction=False):
     # transactions_hash = block['transactions_hash'] if 'transactions_hash' in block else ''
     # transactions_hash = calculate_hash(block['text']['transactions'])
     if not isinstance(block['committee'], str):
-        block['committee'] = json.dumps(block['committee'])
+        committee = json.dumps(block['committee'])
+    else:
+        committee = block['committee']
+
     db_block_data = (
         block_index,
         block['timestamp'],
         block['proof'],
+        block['status'],
         block['previous_hash'],
         block_hash,
         block['creator_wallet'],
         block['expected_miner'],
-        block['committee'],
+        committee,
         # transactions_hash
     )
     cur.execute('''
         INSERT OR IGNORE INTO blocks 
-        (block_index, timestamp, proof, previous_hash, hash, 
+        (block_index, timestamp, proof, status, previous_hash, hash, 
         creator_wallet, expected_miner, committee) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', db_block_data)
     update_db_states(cur, block)
