@@ -10,11 +10,13 @@ IS_TEST = os.environ.get('NEWRL_TEST') == 'Y'
 
 if NEWRL_ENV == 'testnet':
     BOOTSTRAP_NODES = ['testnet.newrl.net']
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['testnetarchive1.newrl.net', 'testnetarchive2.newrl.net']
     NEWRL_PORT = 8090
     DATA_PATH = 'data_testnet/'
     print('Using testnet constants')
 elif NEWRL_ENV == 'mainnet':
     BOOTSTRAP_NODES = ['mainnet.newrl.net']
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['mainnetarchive1.newrl.net', 'mainnetarchive2.newrl.net']
     NEWRL_PORT = 8456
     DATA_PATH = 'data_mainnet/'
     print('Using mainnet constants')
@@ -25,6 +27,7 @@ elif NEWRL_ENV == 'test':
     print('Using test constants')
 else:
     BOOTSTRAP_NODES = ['testnet.newrl.net']
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['devnetarchive1.newrl.net']
     NEWRL_PORT = 8182
     DATA_PATH = 'data_devnet/'
     print('Using devnet constants')

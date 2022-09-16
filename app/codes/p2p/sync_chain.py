@@ -17,7 +17,7 @@ from app.codes.minermanager import am_i_in_block_committee, am_i_in_current_comm
 from app.codes.p2p.outgoing import broadcast_receipt, broadcast_block
 from app.codes.receiptmanager import check_receipt_exists_in_db, validate_receipt
 # from app.codes.utils import store_block_proposal
-from app.constants import COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
+from app.constants import COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NETWORK_TRUSTED_ARCHIVE_NODES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
 from app.codes.p2p.peers import get_peers
 
 from app.codes.validator import validate_block, validate_block_data, validate_block_transactions, validate_receipt_signature
@@ -458,6 +458,7 @@ def get_majority_random_node():
     logger.info('Finding a majority node')
     peers = get_peers()
     hash_url_map = {}
+    valid_peers = 0
     
     random.seed(get_corrected_time_ms())
 
@@ -467,6 +468,7 @@ def get_majority_random_node():
         del peers[peer_idx]
         hash = get_last_block_hash_from_url_retry(url)
         if hash:
+            valid_peers += 1
             if hash in hash_url_map:
                 hash_url_map[hash].append(url)
                 if len(hash_url_map[hash]) > COMMITTEE_SIZE * 0.8:
@@ -475,8 +477,13 @@ def get_majority_random_node():
                     return random_majority_node_url
             else:
                 hash_url_map[hash] = [url]
+    if valid_peers < COMMITTEE_SIZE:
+        trusted_node = random.choice(NETWORK_TRUSTED_ARCHIVE_NODES)
+        url = 'http://' + trusted_node + ':' + str(NEWRL_PORT)
+        logger.info('Could not find a majority chain. Using archive node %s', url)
+        return url
 
-    logger.warn('Could not find a majority chain')
+    logger.warn('Could not find a majority chain and enough peers responded with hash.')
     return None
 
 
