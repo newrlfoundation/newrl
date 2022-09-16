@@ -203,18 +203,10 @@ def add_tx_to_block(cur, block_index, transactions):
         db_transaction_data = (
             block_index,
             transaction_code,
-            transaction['timestamp'],
-            transaction['type'],
-            transaction['currency'],
-            transaction['fee'],
-            description,
-            transaction['valid'],
-            specific_data,
-            signatures
         )
         cur.execute(f'''INSERT OR IGNORE INTO transactions
-            (block_index, transaction_code, timestamp, type, currency, fee, description, valid, specific_data, signatures)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', db_transaction_data)
+            (block_index, transaction_code)
+            VALUES (?, ?)''', db_transaction_data)
 
 
 def update_token_amount(cur, tid, amt):

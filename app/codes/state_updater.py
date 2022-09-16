@@ -21,7 +21,7 @@ from ..nvalues import NETWORK_TRUST_MANAGER_PID, TREASURY_WALLET_ADDRESS
 
 from app.nvalues import NETWORK_TRUST_MANAGER_PID, MIN_STAKE_AMOUNT, STAKE_PENALTY_RATIO, ZERO_ADDRESS
 
-from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, COMMITTEE_SIZE, INITIAL_NETWORK_TRUST_SCORE, NEWRL_DB
+from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, COMMITTEE_SIZE, INITIAL_NETWORK_TRUST_SCORE, MAX_RECEIPT_HISTORY_BLOCKS, NEWRL_DB
 from ..ntypes import BLOCK_VOTE_MINER, NEWRL_TOKEN_CODE, NEWRL_TOKEN_DECIMAL, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
 
 logger = logging.getLogger(__name__)
@@ -207,7 +207,8 @@ def update_trust_scores(cur, block):
     receipts = block['text']['previous_block_receipts']
 
     for receipt in receipts:
-      update_network_trust_score_from_receipt(cur, receipt=receipt)
+        if receipt['data']['block_index'] > block['index'] - MAX_RECEIPT_HISTORY_BLOCKS:
+            update_network_trust_score_from_receipt(cur, receipt=receipt)
 
 
 def simplify_transactions(cur, transactions):

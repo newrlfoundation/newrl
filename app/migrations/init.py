@@ -1,5 +1,5 @@
 import os
-from ..constants import INCOMING_PATH, MEMPOOL_PATH, TMP_PATH, DATA_PATH, LOG_FILE_PATH
+from ..constants import BLOCK_ARCHIVE_PATH, INCOMING_PATH, MEMPOOL_PATH, TMP_PATH, DATA_PATH, LOG_FILE_PATH
 from ..migrations.init_db import init_db
 from ..migrations.migrate_db import run_migrations
 
@@ -13,6 +13,8 @@ def init_newrl():
         os.mkdir(MEMPOOL_PATH)
     if not os.path.exists(TMP_PATH):
         os.mkdir(TMP_PATH)
+    if not os.path.exists(BLOCK_ARCHIVE_PATH):
+        os.mkdir(BLOCK_ARCHIVE_PATH)
     if not os.path.exists(INCOMING_PATH):
         os.mkdir(INCOMING_PATH)
 

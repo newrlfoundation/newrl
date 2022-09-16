@@ -117,12 +117,9 @@ def init_db():
                     (block_index integer,
                     block_hash text,
                     vote integer,
-                    wallet_address text,
-                    included_block_index text,
-                    signature text,
-                    timestamp integer)
+                    wallet_address text)
                     ''')
-    cur.execute('DROP INDEX IF EXISTS idx_receipts_block_index_hash')
+
     cur.execute('''
                     CREATE UNIQUE INDEX IF NOT EXISTS idx_receipts_block_index_hash
                      ON receipts (block_index, block_hash, wallet_address)
@@ -132,15 +129,7 @@ def init_db():
                     CREATE TABLE IF NOT EXISTS transactions
                     (
                     transaction_code text PRIMARY KEY,
-                    block_index integer,
-                    timestamp integer,
-                    type integer,
-                    currency text,
-                    fee integer,
-                    description text,
-                    valid integer,
-                    specific_data text,
-                    signatures text)
+                    block_index integer)
                     ''')
 
     cur.execute('''

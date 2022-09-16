@@ -9,6 +9,7 @@ import copy
 import multiprocessing
 
 from app.codes import blockchain
+from app.codes.fs.archivemanager import get_block_from_archive
 from app.codes.utils import get_last_block_hash
 from app.ntypes import BLOCK_CONSENSUS_INVALID, BLOCK_CONSENSUS_NA, BLOCK_CONSENSUS_VALID, BLOCK_STATUS_INVALID_MINED, BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID
 from ..clock.global_time import get_corrected_time_ms
@@ -36,9 +37,9 @@ logger = logging.getLogger(__name__)
 def get_blocks(block_indexes):
     blocks = []
     for block_index in block_indexes:
-        block = get_block(block_index)
+        block = get_block_from_archive(block_index)
         if block:
-            blocks.append(get_block(block_index))
+            blocks.append(block)
         else:
             break
     return blocks

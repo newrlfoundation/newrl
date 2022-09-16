@@ -8,6 +8,7 @@ import sqlite3
 
 from app.codes.clock.global_time import get_corrected_time_ms
 from app.codes.committeemanager import get_committee_for_current_block, get_committee_wallet_list_for_current_block, get_miner_for_current_block
+from app.codes.fs.archivemanager import archive_block
 # from app.codes.minermanager import get_committee_wallet_addresses
 from app.codes.receiptmanager import get_receipts_included_in_block_from_db, update_receipts_in_state
 from app.ntypes import BLOCK_STATUS_MINING_TIMEOUT, BLOCK_STATUS_VALID
@@ -255,6 +256,7 @@ def add_block(cur, block, block_hash, is_state_reconstruction=False):
         transaction = transaction['transaction']
         transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction['trans_code']
         remove_transaction_from_mempool(transaction_code)
+    archive_block(block)
     remove_block_from_temp(block_index)
 
 
