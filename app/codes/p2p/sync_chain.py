@@ -143,18 +143,21 @@ def receive_block(block):
         if am_i_in_current_committee():
             if validate_block(block):
                 my_receipt = add_my_receipt_to_block(block, vote=BLOCK_VOTE_VALID)
-                consensus_adding_my_receipt = get_committee_consensus(block)
-                if consensus_adding_my_receipt == BLOCK_CONSENSUS_VALID:
-                    logger.info('Block satisfies valid consensus after adding my receipt. Accepting and broadcasting.')
-                    original_block = copy.deepcopy(block)
-                    if accept_block(block, block['hash']):
-                        broadcast_block(original_block)
-                elif consensus_adding_my_receipt == BLOCK_CONSENSUS_NA:
-                    committee = get_committee_for_current_block()
-                    broadcast_receipt(my_receipt, nodes=committee)
-                else:  # Not possible
-                    logger.warn('Unexpected behaviour after adding my valid vote. Consensus became invalid. Not broadcasting')
-                    return False
+                if my_receipt:
+                    consensus_adding_my_receipt = get_committee_consensus(block)
+                    if consensus_adding_my_receipt == BLOCK_CONSENSUS_VALID:
+                        logger.info('Block satisfies valid consensus after adding my receipt. Accepting and broadcasting.')
+                        original_block = copy.deepcopy(block)
+                        if accept_block(block, block['hash']):
+                            broadcast_block(original_block)
+                    elif consensus_adding_my_receipt == BLOCK_CONSENSUS_NA:
+                        committee = get_committee_for_current_block()
+                        broadcast_receipt(my_receipt, nodes=committee)
+                    else:  # Not possible
+                        logger.warn('Unexpected behaviour after adding my valid vote. Consensus became invalid. Not broadcasting')
+                        return False
+                else:
+                    logger.info('My receipt is already in the received block and no consensus yet.')
             else:
                 # Generate empty block. 
                 chain = blockchain.Blockchain()
@@ -202,18 +205,18 @@ def sync_chain_from_node(url, block_index=None):
         return True
     block_idx = my_last_block
     block_batch_size = 100  # Fetch blocks in batches
-    while block_idx <= their_last_block_index:
+    while True:
         start_block = block_idx + 1
-        end_block = 1 + min(their_last_block_index, block_idx + block_batch_size)
+        end_block = 1 + block_idx + block_batch_size
         
         logger.info(f'Asking block node {url} for blocks from {start_block} to {end_block}')
         blocks_data = get_block_from_url_retry(url, start_block, end_block)
 
         if blocks_data is None or len(blocks_data['blocks']) == 0:
-            logger.warn('Could not get blocks aborting sync')
+            logger.warn('Finished getting blocks from the node')
             return True  # To prevent revert
 
-        for i in range(0, len(blocks_data['blocks']) - 1):
+        for i in range(0, len(blocks_data['blocks'])):
             block = blocks_data['blocks'][i]
             hash = blocks_data['hashes'][i]
 
@@ -450,7 +453,7 @@ def get_last_block_hash_from_url_retry(url):
             )
         return response.json()['hash']
     except Exception as err:
-        logger.info(f'Error getting block hash {err}')
+        logger.info(f'Could not get block hash from {url}')
 
     return None
 
@@ -488,7 +491,7 @@ def get_majority_random_node():
         queried_peers += 1
         if valid_peers < COMMITTEE_SIZE and queried_peers > COMMITTEE_SIZE * 2:
             break    
-    if valid_peers < COMMITTEE_SIZE:
+    if valid_peers < COMMITTEE_SIZE or True:  # TODO - Remove this once network stabilise
         trusted_node = random.choice(NETWORK_TRUSTED_ARCHIVE_NODES)
         url = 'http://' + trusted_node + ':' + str(NEWRL_PORT)
         logger.info('Could not find a majority chain. Using archive node %s', url)
