@@ -30,7 +30,9 @@ class Configuration:
         "NEWRL_DAO_ADDRESS": NEWRL_DAO_ADDRESS,
         "ASQI_DAO_ADDRESS": ASQI_DAO_ADDRESS,
         "TREASURY_CONTRACT_ADDRESS": TREASURY_CONTRACT_ADDRESS,
-        "MEMBER_WALLET_LIST" : json.dumps(MEMBER_WALLET_LIST)    
+        "MEMBER_WALLET_LIST" : json.dumps(MEMBER_WALLET_LIST),
+        "FOUNDATION_CONTRACT_ADDRESS" : FOUNDATION_CONTRACT_ADDRESS,
+        "ASQI_CONTRACT_ADDRESS" : ASQI_CONTRACT_ADDRESS
         }
     setters = ["ZERO_ADDRESS",
                "TREASURY_WALLET_ADDRESS",
@@ -53,7 +55,10 @@ class Configuration:
                "MIN_STAKE_AMOUNT",
                "STAKE_PENALTY_RATIO",
                "STAKE_CT_ADDRESS",
-               "MEMBER_WALLET_LIST"
+               "MEMBER_WALLET_LIST",
+               "ASQI_CONTRACT_ADDRESS",
+               "FOUNDATION_CONTRACT_ADDRESS"
+
                ]
 
     @staticmethod
@@ -112,7 +117,7 @@ class Configuration:
                 keys = ','.join(queryParam.keys())
                 question_marks = ','.join(list('?' * len(queryParam)))
                 values = tuple(queryParam.values())
-                cur.execute('INSERT INTO  configuration (' + keys + ') VALUES (' + question_marks + ')',
+                cur.execute('INSERT OR IGNORE INTO  configuration (' + keys + ') VALUES (' + question_marks + ')',
                             values)
         cur.close()
         con.commit()

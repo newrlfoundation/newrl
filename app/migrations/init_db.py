@@ -221,7 +221,7 @@ def init_db():
                     dao_personid text NOT NULL, 
                     dao_name text NOT NULL,
                     founder_personid text NOT NULL,
-                    dao_sc_address text NOT NULL)
+                    dao_sc_address text  PRIMARY KEY NOT NULL)
                     ''')
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS dao_membership
@@ -254,7 +254,7 @@ def init_db():
                     address text NOT NULL,
                     dao_id  text Not NULL,
                     person_id text Not NULL,
-                    pr  oposal_list TEXT ,
+                    proposal_list TEXT ,
                     status INT,
                     amount_locked INT,
                     wallet_address text
@@ -275,7 +275,7 @@ def init_db():
                         CREATE TABLE IF NOT EXISTS configuration 
                         (
                         address text NOT NULL,
-                        property_key text NOT NULL, 
+                        property_key text PRIMARY KEY NOT NULL, 
                         property_value text Not NULL, 
                         is_editable TEXT , 
                         last_updated TIMESTAMP 

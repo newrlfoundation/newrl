@@ -2,7 +2,8 @@ import json
 import sqlite3
 
 from app.constants import NEWRL_DB
-from app.nvalues import DAO_MANAGER, ASQI_WALLET, TREASURY_CONTRACT_ADDRESS, FOUNDATION_WALLET
+from app.nvalues import DAO_MANAGER, ASQI_WALLET, TREASURY_CONTRACT_ADDRESS, FOUNDATION_WALLET, ASQI_CONTRACT_ADDRESS, \
+    FOUNDATION_CONTRACT_ADDRESS
 
 
 def migrate():
@@ -16,13 +17,15 @@ def init_treasury_contract():
     cur = con.cursor()
 
     create_treasury_contract(cur, TREASURY_CONTRACT_ADDRESS)
+    create_treasury_contract(cur, ASQI_CONTRACT_ADDRESS)
+    create_treasury_contract(cur, FOUNDATION_CONTRACT_ADDRESS)
 
     con.commit()
     con.close()
 
 
 def create_treasury_contract(cur, address):
-    address_signatories = [ASQI_WALLET, FOUNDATION_WALLET]
+    address_signatories = None
     signatories = {"setup": None,
                    "deploy": None,
                    "burn_token": address_signatories,

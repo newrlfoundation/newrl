@@ -10,7 +10,7 @@ import logging
 
 from ...nvalues import STAKE_COOLDOWN_MS, ASQI_WALLET, FOUNDATION_WALLET, ZERO_ADDRESS
 
-
+# TODO : Add emerbship check remove hardcode have more than n/2 +1 Newrl Foundation
 class TreasuryContract(ContractMaster):
     codehash = ""  # this is the hash of the entire document excluding this line, it is same for all instances of this class
     logging.basicConfig(level=logging.INFO)
@@ -23,7 +23,18 @@ class TreasuryContract(ContractMaster):
 
     def burn_token(self,callparamsip,repo:FetchRepository):
         callparams=input_to_dict(callparamsip)
-        if callparams['function_caller'][0]['wallet_address']==ASQI_WALLET or callparams['function_caller'][0]['wallet_address']==FOUNDATION_WALLET:
+        cspecs = input_to_dict(self.contractparams)
+        dao_address = cspecs['dao_address']
+        function_caller = callparams['function_caller']
+        wallet_present = True
+        membership_wallets = []
+        person_ids = self.get_members_from_dao(dao_address, membership_wallets, repo)
+        for i in function_caller:
+            if i not in membership_wallets:
+                if person_ids is not None and get_person_id_for_wallet_address(i) not in person_ids:
+                    wallet_present = False
+
+        if wallet_present:
             amount=callparams['amount']
             transaction_creator=TransactionCreator()
             transfer_proposal_data = {
@@ -44,7 +55,19 @@ class TreasuryContract(ContractMaster):
     def upgrade_transfer(self,callparamsip,repo:FetchRepository):
         trxn=[]
         callparams = input_to_dict(callparamsip)
-        if callparams['function_caller'][0]['wallet_address']==ASQI_WALLET or callparams['function_caller'][0]['wallet_address']==FOUNDATION_WALLET:
+        cspecs = input_to_dict(self.contractparams)
+        dao_address = cspecs['dao_address']
+        function_caller = callparams['function_caller']
+        wallet_present = True
+        membership_wallets = []
+        person_ids = self.get_members_from_dao(dao_address, membership_wallets, repo)
+        for i in function_caller:
+            if i not in membership_wallets:
+                if person_ids is not None and get_person_id_for_wallet_address(i) not in person_ids:
+                    wallet_present = False
+
+
+        if wallet_present:
 
             new_ct_address=callparams['ct_address']
             count=repo.select_count().add_table_name('contracts').where_clause('address',new_ct_address,1).and_clause('status',1,1).execute_query_single_result({"address":new_ct_address,"status":1})
@@ -75,7 +98,17 @@ class TreasuryContract(ContractMaster):
         trxn = []
         total_tokens=0
         callparams=input_to_dict(callparamsip)
-        if callparams['function_caller'][0]['wallet_address']==ASQI_WALLET or callparams['function_caller'][0]['wallet_address']==FOUNDATION_WALLET:
+        cspecs = input_to_dict(self.contractparams)
+        dao_address = cspecs['dao_address']
+        function_caller = callparams['function_caller']
+        wallet_present = True
+        membership_wallets = []
+        person_ids = self.get_members_from_dao(dao_address, membership_wallets, repo)
+        for i in function_caller:
+            if i not in membership_wallets:
+                if person_ids is not None and get_person_id_for_wallet_address(i) not in person_ids:
+                    wallet_present = False
+        if wallet_present:
             user_defined_ratio=callparams.get('amount',100)
             balancesTuple = repo.select_Query('wallet_address,balance').add_table_name('balances').where_clause(
                 'token_code','NWRL', 1).execute_query_multiple_result({"token_code": 'NWRL'})
@@ -110,3 +143,45 @@ class TreasuryContract(ContractMaster):
             return trxn
         else:
             return []
+
+    def transfer(self,callparamsip,repo:FetchRepository):
+        trxn = []
+        callparams = input_to_dict(callparamsip)
+        cspecs = input_to_dict(self.contractparams)
+        dao_address = cspecs['dao_address']
+        function_caller = callparams['function_caller']
+        wallet_present = True
+        membership_wallets = []
+        wallet_to_send = callparams['reciever']
+        amount_to_send = callparams['amount_to_send']
+        asset_code = callparams.get('asset_code','NWRL')
+        person_ids = self.get_members_from_dao(dao_address, membership_wallets, repo)
+        for i in function_caller:
+            if i not in membership_wallets:
+                if person_ids is not None and get_person_id_for_wallet_address(i) not in person_ids:
+                    wallet_present = False
+
+        if wallet_present:
+            transfer_proposal_data = {
+                "transfer_type": 1,
+                "asset1_code": asset_code,
+                "asset2_code": "",
+                "wallet1": self.address,
+                "wallet2": wallet_to_send,
+                "asset1_number": amount_to_send,
+                "asset2_number": 0,
+                "additional_data": {}
+            }
+            transaction_creator = TransactionCreator()
+            trxn.append(transaction_creator.transaction_type_5(transfer_proposal_data))
+        return trxn
+
+    def get_members_from_dao(self, dao_address, membership_wallets, repo):
+        query_param = {"dao_person_id": get_person_id_for_wallet_address(dao_address)}
+        person_ids = repo.select_Query('person_id').add_table_name("dao_membership").where_clause("dao_person_id",
+                                                                                                  query_param[
+                                                                                                      "dao_person_id"],
+                                                                                                  1).execute_query_multiple_result(
+            query_param)
+        membership_wallets.append(json.loads(Configuration.conf("MEMBER_WALLET_LIST")))
+        return person_ids
