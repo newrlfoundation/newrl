@@ -206,7 +206,7 @@ def sync_chain_from_node(url, block_index=None):
         blocks_to_request = list(range(block_idx, min(their_last_block_index, block_idx + block_batch_size)))
         blocks_request = {'block_indexes': blocks_to_request}
         logger.info(f'Asking block node {url} for blocks {blocks_request}')
-        blocks_data = get_block_from_url_retry(url, block_idx, min(their_last_block_index, block_idx + block_batch_size))
+        blocks_data = get_block_from_url_retry(url, block_idx, 1 + min(their_last_block_index, block_idx + block_batch_size))
 
         if blocks_data is None or len(blocks_data['blocks']) == 0:
             logger.warn('Could not get blocks aborting sync')
