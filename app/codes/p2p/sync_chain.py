@@ -202,7 +202,7 @@ def sync_chain_from_node(url, block_index=None):
     block_idx = my_last_block + 1
     block_batch_size = 100  # Fetch blocks in batches
     while block_idx <= their_last_block_index:
-        blocks_to_request = list(range(block_idx, 1 + min(their_last_block_index, block_idx + block_batch_size)))
+        blocks_to_request = list(range(block_idx, min(their_last_block_index, block_idx + block_batch_size)))
         blocks_request = {'block_indexes': blocks_to_request}
         logger.info(f'Asking block node {url} for blocks {blocks_request}')
         blocks_data = get_block_from_url_retry(url, block_idx, min(their_last_block_index, block_idx + block_batch_size))
@@ -230,7 +230,7 @@ def sync_chain_from_node(url, block_index=None):
                 con.commit()
                 con.close()
 
-        block_idx += block_batch_size + 1
+        block_idx += block_batch_size
 
     return their_last_block_index
 
@@ -396,7 +396,7 @@ def get_block_from_url_retry(url, start_index, end_index):
     retry_count = 3
     while response is None:
         try:
-            response = requests.post(
+            response = requests.get(
                     url + f'/get-archived-blocks?start_index={start_index}&end_index={end_index}',
                     timeout=3
                 )
