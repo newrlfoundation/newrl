@@ -299,6 +299,15 @@ def init_db():
     con.close()
 
 
+def revert_chain_quick(revert_to_snapshot=True):
+    SYNC_STATUS['IS_SYNCING'] = True
+    if revert_to_snapshot:
+        revert_to_last_snapshot()
+    else:
+        clear_db()
+    SYNC_STATUS['IS_SYNCING'] = False
+
+
 def revert_chain(block_index):
     """Revert chain to given index"""
     logger.info(f'Reverting chain to local snapshot.')

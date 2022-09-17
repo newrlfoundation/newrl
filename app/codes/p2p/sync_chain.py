@@ -9,6 +9,7 @@ import copy
 import multiprocessing
 
 from app.codes import blockchain
+from app.codes.dbmanager import get_snapshot_last_block_index
 from app.codes.fs.archivemanager import get_block_from_archive
 from app.codes.utils import get_last_block_hash
 from app.ntypes import BLOCK_CONSENSUS_INVALID, BLOCK_CONSENSUS_NA, BLOCK_CONSENSUS_VALID, BLOCK_STATUS_INVALID_MINED, BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID
@@ -26,7 +27,7 @@ from app.codes.timers import TIMERS
 from app.codes.fs.temp_manager import append_receipt_to_block_in_storage, check_receipt_exists_in_temp, get_blocks_for_index_from_storage, store_block_to_temp, store_receipt_to_temp
 from app.codes.consensus.consensus import get_committee_consensus, validate_empty_block, validate_block_miner_committee, generate_block_receipt, \
     add_my_receipt_to_block, validate_receipt_for_committee
-from app.migrations.init_db import revert_chain
+from app.migrations.init_db import revert_chain, revert_chain_quick
 from app.nvalues import SENTINEL_NODE_WALLET
 from app.codes.timers import SYNC_STATUS
 
@@ -256,7 +257,13 @@ def sync_chain_from_peers(force_sync=False):
             if not sync_success:
                 forking_block = find_forking_block(url)
                 logger.info(f'Chains forking from block {forking_block}. Need to revert.')
-                revert_chain(forking_block)
+                snapshot_last_block = get_snapshot_last_block_index()
+                logger.info('Last snapshot block is %s and forking from %s.', snapshot_last_block, forking_block)
+                if snapshot_last_block is not None and snapshot_last_block < forking_block:
+                    revert_chain_quick(revert_to_snapshot=True)
+                else:
+                    revert_chain_quick(revert_to_snapshot=False)
+
         else:
             logger.info('No node available to sync')
     except Exception as e:

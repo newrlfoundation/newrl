@@ -79,3 +79,12 @@ def get_or_create_db_snapshot():
     
     create_db_snapshot()
     return snapshot_file
+
+
+def get_snapshot_last_block_index():
+    try:
+        return get_last_block_index(NEWRL_DB + '.snapshot')
+    except Exception as e:
+        logger.warn('Could not get block index from snapshot')
+        return None
+    
