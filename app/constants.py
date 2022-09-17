@@ -3,7 +3,7 @@ import os
 
 from .ntypes import NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE
 
-SOFTWARE_VERSION = "1.1.8"
+SOFTWARE_VERSION = "1.1.9"
 
 NEWRL_ENV = os.environ.get('NEWRL_ENV')
 IS_TEST = os.environ.get('NEWRL_TEST') == 'Y'
@@ -22,6 +22,7 @@ elif NEWRL_ENV == 'mainnet':
     print('Using mainnet constants')
 elif NEWRL_ENV == 'test':
     BOOTSTRAP_NODES = ['testnet.newrl.net']
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['devnetarchive1.newrl.net']
     NEWRL_PORT = 4018
     DATA_PATH = 'data_test/'
     print('Using test constants')

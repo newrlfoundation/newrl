@@ -83,5 +83,6 @@ else:
         '0xbc54ef523d92b6acaf16a49b328cfffca84503ca',
         '0x3eb52110ced4da0023fb21859db33a42954f7530',
         '0x4dba43d40b869f6ba9f7b0ea5c5ef054debdacc3',
-        '0x667663f36ac08e78bbf259f1361f02dc7dad593b'
+        '0x667663f36ac08e78bbf259f1361f02dc7dad593b',
+        'ct9dc895fe5905dc73a2273e70be077bf3e94ea3b7'
     ]
