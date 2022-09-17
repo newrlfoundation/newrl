@@ -272,6 +272,10 @@ def init_db():
                     )
                     ''')
     cur.execute('''
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_stake_ledger_wallet 
+                    ON stake_ledger (wallet_address)
+                ''')
+    cur.execute('''
                         CREATE TABLE IF NOT EXISTS configuration 
                         (
                         address text NOT NULL,

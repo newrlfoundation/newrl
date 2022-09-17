@@ -2,7 +2,7 @@ import sqlite3
 import random
 import logging
 
-from ..nvalues import SENTINEL_NODE_WALLET
+from ..nvalues import MIN_STAKE_AMOUNT, SENTINEL_NODE_WALLET
 from ..constants import BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
 from .clock.global_time import get_corrected_time_ms
 from .utils import get_last_block_hash
@@ -99,15 +99,17 @@ def get_eligible_miners():
     cur = con.cursor()
     miner_cursor = cur.execute(
         '''
-        select wallet_address, network_address, last_broadcast_timestamp, block_index
-        from miners
-        join person_wallet on person_id = dest_person_id
-        join trust_scores on wallet_address = wallet_id
-        and block_index > ?
-        and wallet_address != ?
-        where score > 0
-        order by wallet_address asc
-        ''', (cutfoff_block, SENTINEL_NODE_WALLET, )).fetchall()
+        select m.wallet_address, network_address, last_broadcast_timestamp, block_index
+        from miners m
+        join person_wallet pw on m.wallet_address = pw.wallet_id
+        join trust_scores ts on pw.person_id = ts.dest_person_id
+        join stake_ledger sl on sl.wallet_address = m.wallet_address
+        and m.block_index > ?
+        and m.wallet_address != ?
+        and sl.amount > ?
+        where ts.score > 0
+        order by m.wallet_address asc
+        ''', (cutfoff_block, SENTINEL_NODE_WALLET, MIN_STAKE_AMOUNT, )).fetchall()
     # miner_cursor = cur.execute(
     #     '''SELECT wallet_address, network_address, last_broadcast_timestamp 
     #     FROM miners 

@@ -32,6 +32,9 @@ class NewrlStakeContract(ContractMaster):
         if callparams['token_amount'] < 0:
             self.logger.info("Amount should pe positive Integer.")
         pid = self.__get_pid_from_wallet_using_repo(repo, wallet_address)
+        if pid is None:
+            self.logger.info('PID not found for wallet %s', wallet_address)
+            return []
         if required_value in callparams["value"]:
             count = repo.select_count().add_table_name("stake_ledger").where_clause("person_id", pid,
                                                                                     1).execute_query_single_result(
@@ -151,17 +154,11 @@ class NewrlStakeContract(ContractMaster):
 
 
     def __get_pid_from_wallet_using_repo(self, repo: FetchRepository, address):
-        spec = repo.select_Query('specific_data').add_table_name('wallets').where_clause('wallet_address', address,
+        pid = repo.select_Query('person_id').add_table_name('person_wallet').where_clause('wallet_id', address,
                                                                                          1).execute_query_single_result(
-            {'wallet_address': address})
-        spec = input_to_dict(spec[0])
-        if 'linked_wallet' in spec:
-            address = spec['parentaddress']
-        pid = repo.select_Query("person_id").add_table_name("person_wallet").where_clause("wallet_id", address,
-                                                                                          1).execute_query_single_result(
-            {"wallet_id": address})
-        if pid is not None:
+            {'wallet_id': address})
+
+        if pid:
             return pid[0]
         return None
-
 #

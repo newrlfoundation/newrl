@@ -15,7 +15,7 @@ from app.codes.chainscanner import download_chain, download_state, get_transacti
 from app.codes.clock.global_time import get_time_stats
 from app.codes.dbmanager import get_or_create_db_snapshot
 from app.codes.p2p.peers import add_peer, clear_peers, get_peers, update_software
-from app.codes.p2p.sync_chain import find_forking_block_with_majority, get_blocks, get_last_block_index, quick_sync, receive_block, receive_receipt, sync_chain_from_peers
+from app.codes.p2p.sync_chain import find_forking_block_with_majority, get_block_hashes, get_blocks, get_last_block_index, quick_sync, receive_block, receive_receipt, sync_chain_from_peers
 from app.codes.p2p.sync_mempool import get_mempool_transactions, list_mempool_transactions, sync_mempool_transactions
 from app.codes.p2p.peers import call_api_on_peers
 from app.constants import NEWRL_DB
@@ -44,6 +44,16 @@ def get_mempool_transactions_api(req: TransactionsRequest):
 @router.post("/get-blocks", tags=[p2p_tag])
 def get_blocks_api(req: BlockRequest):
     return get_blocks(req.block_indexes)
+
+@router.get("/get-archived-blocks", tags=[p2p_tag])
+def get_archived_blocks_api(start_index: int, end_index: int):
+    hashes = get_block_hashes(start_index, end_index + 1)
+    hashes = list(map(lambda b: b['hash'], hashes))
+    response = {
+        'blocks': get_blocks(list(range(start_index, end_index + 1))),
+        'hashes': hashes
+    }
+    return response
 
 @router.get("/get-blocks-in-range", tags=[p2p_tag])
 def get_blocks_in_range_api(start_index: int, end_index: int):

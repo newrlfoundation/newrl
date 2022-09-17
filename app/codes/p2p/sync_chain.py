@@ -205,13 +205,20 @@ def sync_chain_from_node(url, block_index=None):
         blocks_to_request = list(range(block_idx, 1 + min(their_last_block_index, block_idx + block_batch_size)))
         blocks_request = {'block_indexes': blocks_to_request}
         logger.info(f'Asking block node {url} for blocks {blocks_request}')
-        blocks_data = get_block_from_url_retry(url, blocks_request)
+        blocks_data = get_block_from_url_retry(url, block_idx, min(their_last_block_index, block_idx + block_batch_size))
 
-        if len(blocks_data) == 0:
+        if len(blocks_data['blocks']) == 0:
             logger.warn('Could not get blocks aborting sync')
             return True  # To prevent revert
 
-        for block in blocks_data:
+        for i in range(0, len(blocks_data['blocks']) - 1):
+            block = blocks_data['blocks'][i]
+            hash = blocks_data['hashes'][i]
+
+            block_hash = calculate_hash(block)
+            if hash != block_hash:
+                logger.warn('Block hash does not match caculated hash. Aborting sync.')
+
             if not validate_block_data(block):
                 logger.warn('Invalid block. Aborting sync.')
                 return False
@@ -219,7 +226,7 @@ def sync_chain_from_node(url, block_index=None):
                 logger.info('Adding block %d', block['index'])
                 con = sqlite3.connect(NEWRL_DB)
                 cur = con.cursor()
-                blockchain.add_block(cur, block)
+                blockchain.add_block(cur, block, hash)
                 con.commit()
                 con.close()
 
@@ -384,15 +391,14 @@ def receive_receipt(receipt):
     return True
 
 
-def get_block_from_url_retry(url, blocks_request):
+def get_block_from_url_retry(url, start_index, end_index):
     response = None
     retry_count = 3
     while response is None or response.status_code != 200:
         try:
             response = requests.post(
-                    url + '/get-blocks',
-                    json=blocks_request,
-                    timeout=15
+                    url + f'/get-archived-blocks?start_index={start_index}&end_index={end_index}',
+                    timeout=5
                 )
         except Exception as err:
             logger.info(f'Retrying block get {err}')
