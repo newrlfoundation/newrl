@@ -207,7 +207,7 @@ def sync_chain_from_node(url, block_index=None):
         logger.info(f'Asking block node {url} for blocks {blocks_request}')
         blocks_data = get_block_from_url_retry(url, block_idx, min(their_last_block_index, block_idx + block_batch_size))
 
-        if len(blocks_data['blocks']) == 0:
+        if blocks_data is None or len(blocks_data['blocks']) == 0:
             logger.warn('Could not get blocks aborting sync')
             return True  # To prevent revert
 
@@ -394,19 +394,21 @@ def receive_receipt(receipt):
 def get_block_from_url_retry(url, start_index, end_index):
     response = None
     retry_count = 3
-    while response is None or response.status_code != 200:
+    while response is None:
         try:
             response = requests.post(
                     url + f'/get-archived-blocks?start_index={start_index}&end_index={end_index}',
-                    timeout=5
+                    timeout=3
                 )
+            if response.status_code != 200:
+                return None
         except Exception as err:
             logger.info(f'Retrying block get {err}')
             if retry_count < 0:
                 SYNC_STATUS['IS_SYNCING'] = False
                 break
             retry_count -= 1
-            time.sleep(5)
+            time.sleep(1)
     blocks_data = response.json()
     return blocks_data
 
@@ -469,7 +471,7 @@ def get_majority_random_node():
             valid_peers += 1
             if hash in hash_url_map:
                 hash_url_map[hash].append(url)
-                if len(hash_url_map[hash]) > COMMITTEE_SIZE * 0.8:
+                if len(hash_url_map[hash]) > COMMITTEE_SIZE * 0.6:
                     random_majority_node_url = random.choice(hash_url_map[hash])
                     logger.info(f'Majority hash is {hash} and a random url is {random_majority_node_url}')
                     return random_majority_node_url
