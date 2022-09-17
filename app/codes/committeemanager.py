@@ -99,7 +99,7 @@ def get_eligible_miners():
     cur = con.cursor()
     miner_cursor = cur.execute(
         '''
-        select m.wallet_address, network_address, last_broadcast_timestamp, block_index
+        select distinct m.wallet_address, network_address, last_broadcast_timestamp, block_index
         from miners m
         join person_wallet pw on m.wallet_address = pw.wallet_id
         join trust_scores ts on pw.person_id = ts.dest_person_id
