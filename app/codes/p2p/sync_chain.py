@@ -212,8 +212,6 @@ def sync_chain_from_node(url, block_index=None):
             return True  # To prevent revert
 
         for block in blocks_data:
-            hash = calculate_hash(block)
-
             if not validate_block_data(block):
                 logger.warn('Invalid block. Aborting sync.')
                 return False
@@ -221,7 +219,7 @@ def sync_chain_from_node(url, block_index=None):
                 logger.info('Adding block %d', block['index'])
                 con = sqlite3.connect(NEWRL_DB)
                 cur = con.cursor()
-                blockchain.add_block(cur, block, hash)
+                blockchain.add_block(cur, block)
                 con.commit()
                 con.close()
 
@@ -319,7 +317,7 @@ def accept_block(block, hash):
     #     hash = calculate_hash(block['data'])
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
-    blockchain.add_block(cur, block['data'], hash)
+    blockchain.add_block(cur, block['data'])
     con.commit()
     con.close()
 

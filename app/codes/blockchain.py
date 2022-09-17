@@ -219,7 +219,7 @@ class Blockchain:
         return ts
 
 
-def add_block(cur, block, block_hash, is_state_reconstruction=False):
+def add_block(cur, block, is_state_reconstruction=False):
     """Add a block to db, add transactions and update states"""
     if not is_state_reconstruction:
         last_block = get_last_block(cur)
@@ -234,7 +234,7 @@ def add_block(cur, block, block_hash, is_state_reconstruction=False):
         committee = json.dumps(block['committee'])
     else:
         committee = block['committee']
-
+    block_hash = calculate_hash(block)
     db_block_data = (
         block_index,
         block['timestamp'],

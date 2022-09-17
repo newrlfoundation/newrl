@@ -249,7 +249,7 @@ def init_db():
                     )
                     ''')
     cur.execute('''
-                    CREATE TABLE IF NOT EXISTS DAO_TOKEN_LOCK
+                    CREATE TABLE IF NOT EXISTS dao_token_lock
                     (
                     address text NOT NULL,
                     dao_id  text Not NULL,
@@ -297,7 +297,7 @@ def init_db():
 
 def revert_chain(block_index):
     """Revert chain to given index"""
-    logger.info(f'Reverting chain to index {block_index}')
+    logger.info(f'Reverting chain to local snapshot.')
     global SYNC_STATUS
     if SYNC_STATUS['IS_SYNCING']:
         logger.info('Syncing with network. Reverting anyway.')
@@ -350,7 +350,7 @@ def revert_chain(block_index):
         chain = Blockchain()
         for _block_index in range(1, block_index):
             block = chain.get_block(_block_index)
-            add_block(cur, block, block['hash'], is_state_reconstruction=True)
+            add_block(cur, block, is_state_reconstruction=True)
 
         con.commit()
         con.close()

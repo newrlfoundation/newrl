@@ -35,7 +35,7 @@ def revert_to_last_snapshot():
     snapshots = glob.glob(NEWRL_DB + '.snapshot*')
     if len(snapshots) > 0:
         snapshot = snapshots[0]
-        subprocess.call(["mv", snapshot, NEWRL_DB])
+        subprocess.call(["cp", snapshot, NEWRL_DB])
 
 
 def create_block_snapshot(block_index):
