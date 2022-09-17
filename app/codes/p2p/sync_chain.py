@@ -196,17 +196,17 @@ def sync_chain_from_node(url, block_index=None):
         their_last_block_index = block_index
     my_last_block = get_last_block_index()
     logger.info(f'I have {my_last_block} blocks. Node {url} has {their_last_block_index} blocks.')
-    if my_last_block == their_last_block_index:
+    if my_last_block >= their_last_block_index:
         logger.info('I am in sync with the node. Aborting sync.')
         return True
 
     if my_last_block < their_last_block_index - 1000:
         quick_sync(url + '/get-newrl-db')
         return True
-    block_idx = my_last_block
+    block_idx = my_last_block + 1
     block_batch_size = 100  # Fetch blocks in batches
     while True:
-        start_block = block_idx + 1
+        start_block = block_idx
         end_block = 1 + block_idx + block_batch_size
         
         logger.info(f'Asking block node {url} for blocks from {start_block} to {end_block}')
@@ -235,7 +235,7 @@ def sync_chain_from_node(url, block_index=None):
                 con.commit()
                 con.close()
 
-        block_idx += block_batch_size
+        block_idx = block['index'] + 1
 
     return their_last_block_index
 
