@@ -200,13 +200,14 @@ def sync_chain_from_node(url, block_index=None):
     if my_last_block < their_last_block_index - 1000:
         quick_sync(url + '/get-newrl-db')
         return True
-    block_idx = my_last_block + 1
+    block_idx = my_last_block
     block_batch_size = 100  # Fetch blocks in batches
     while block_idx <= their_last_block_index:
-        blocks_to_request = list(range(block_idx, min(their_last_block_index, block_idx + block_batch_size)))
-        blocks_request = {'block_indexes': blocks_to_request}
-        logger.info(f'Asking block node {url} for blocks {blocks_request}')
-        blocks_data = get_block_from_url_retry(url, block_idx, 1 + min(their_last_block_index, block_idx + block_batch_size))
+        start_block = block_idx + 1
+        end_block = 1 + min(their_last_block_index, block_idx + block_batch_size)
+        
+        logger.info(f'Asking block node {url} for blocks from {start_block} to {end_block}')
+        blocks_data = get_block_from_url_retry(url, start_block, end_block)
 
         if blocks_data is None or len(blocks_data['blocks']) == 0:
             logger.warn('Could not get blocks aborting sync')
@@ -578,5 +579,5 @@ def quick_sync(db_url):
         if blocks[0] > existing_block[0]:
             subprocess.call(["mv", downloaded_db_path, NEWRL_DB])
     except Exception as e:
-        logger.info('Could not query internal db. Using downloaded db' + str(e))
+        logger.info('Removing local db and using downloaded db')
         subprocess.call(["mv", downloaded_db_path, NEWRL_DB])

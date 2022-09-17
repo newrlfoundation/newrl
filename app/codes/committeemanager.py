@@ -106,7 +106,7 @@ def get_eligible_miners():
         join stake_ledger sl on sl.wallet_address = m.wallet_address
         and m.block_index > ?
         and m.wallet_address != ?
-        and sl.amount > ?
+        and sl.amount >= ?
         where ts.score > 0
         order by m.wallet_address asc
         ''', (cutfoff_block, SENTINEL_NODE_WALLET, MIN_STAKE_AMOUNT, )).fetchall()

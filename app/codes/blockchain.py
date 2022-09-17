@@ -1,4 +1,5 @@
 """Python programm to create object that enables addition of a block"""
+import logging
 import time
 import datetime
 import hashlib
@@ -22,6 +23,9 @@ from .utils import get_time_ms
 from .auth.auth import get_node_wallet_address
 from .fs.mempool_manager import remove_transaction_from_mempool
 
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class Blockchain:
     """Main blockchain related functions"""
@@ -283,17 +287,21 @@ def get_last_block_index(db_url=NEWRL_DB):
 def get_last_block(cur=None):
     """Get last block hash from db"""
     cursor_opened_inside = False
-    if cur is None:
-        con = sqlite3.connect(NEWRL_DB)
-        cur = con.cursor()
-        cursor_opened_inside = True
-    last_block_cursor = cur.execute(
-        'SELECT block_index, hash, timestamp FROM blocks ORDER BY block_index DESC LIMIT 1'
-    )
-    last_block = last_block_cursor.fetchone()
+    try:
+        if cur is None:
+            con = sqlite3.connect(NEWRL_DB)
+            cur = con.cursor()
+            cursor_opened_inside = True
+        last_block_cursor = cur.execute(
+            'SELECT block_index, hash, timestamp FROM blocks ORDER BY block_index DESC LIMIT 1'
+        )
+        last_block = last_block_cursor.fetchone()
 
-    if cursor_opened_inside:
-        con.close()
+        if cursor_opened_inside:
+            con.close()
+    except:
+        logger.warn('Cannot get last block')
+        return None
 
     if last_block is not None:
         return {
