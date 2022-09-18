@@ -117,13 +117,6 @@ def create_token(wallet, owner , token_name,token_code, amount):
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-pool_token1_code = "nINR"
-pool_token2_code = "nUSDC"
-pool_ratio = "1:4"
-pool_fee = 0.005
-ot_token_code = "LPT_"+str(random.randrange(111111, 999999, 5))
-ot_token_name = ot_token_code
-
 def get_dex_datails():
     pool_token1_code = "nINR"
     pool_token2_code = "nUSDC"
@@ -132,6 +125,26 @@ def get_dex_datails():
     ot_token_code = "LPT_"+str(random.randrange(111111, 999999, 5))
     ot_token_name = ot_token_code
     
+    wallet1 = create_wallet()
+    wallet1_token1_init_amount = 10000
+    wallet1_token2_init_amount = 40000
+
+    wallet2 = create_wallet()
+    wallet2_token1_init_amount = 1000
+    wallet2_token2_init_amount = 7000
+
+    # fund wallet1
+    create_token(WALLET, wallet1['address'], pool_token1_code,
+                pool_token1_code, wallet1_token1_init_amount)
+    create_token(WALLET, wallet1['address'], pool_token2_code,
+                pool_token2_code, wallet1_token2_init_amount)
+
+    #fund wallet2
+    create_token(WALLET, wallet2['address'],
+                pool_token1_code, pool_token1_code, wallet2_token1_init_amount)
+    create_token(WALLET, wallet2['address'],
+                pool_token2_code, pool_token2_code, wallet2_token2_init_amount)
+
     dex_details = {
         "pool_token1_code": pool_token1_code,
         "pool_token2_code": pool_token2_code,
@@ -139,10 +152,33 @@ def get_dex_datails():
         "pool_fee": pool_fee,
         "ot_token_code": ot_token_code,
         "ot_token_name": ot_token_name,
+        "wallet1" : wallet1,
+        "wallet1_token1_init_amount": wallet1_token1_init_amount,
+        "wallet1_token2_init_amount": wallet1_token2_init_amount,
+        "wallet2": wallet2,
+        "wallet2_token1_init_amount": wallet2_token1_init_amount,
+        "wallet2_token2_init_amount": wallet2_token2_init_amount
          }
     return dex_details
 
-def test_create_dex():
+def test_create_dex(request):
+    dex_details = get_dex_datails()
+    request.config.cache.set('dex_details', dex_details)
+    pool_token1_code = dex_details["pool_token1_code"]
+    pool_token2_code = dex_details["pool_token2_code"]
+    pool_ratio = dex_details["pool_ratio"]
+    pool_fee = dex_details["pool_fee"]
+    ot_token_code = dex_details["ot_token_code"]
+    ot_token_name = dex_details["ot_token_name"]
+
+    wallet1 = dex_details["wallet1"]
+    wallet1_token1_init_amount = dex_details["wallet1_token1_init_amount"]
+    wallet1_token2_init_amount = dex_details["wallet1_token1_init_amount"]
+
+    wallet2 = dex_details["wallet2"]
+    wallet2_token1_init_amount = dex_details["wallet2_token1_init_amount"]
+    wallet2_token2_init_amount = dex_details["wallet2_token1_init_amount"]
+
     response_ct_add = requests.get(NODE_URL+"/generate-contract-address")
     assert response_ct_add.status_code == 200
     ct_address = response_ct_add.json()
@@ -210,34 +246,29 @@ def test_create_dex():
             contracts_in_state = True
             break
     assert contracts_in_state 
-    return ct_address
+    request.config.cache.set('dex_address', ct_address) 
 
 
-wallet1 = create_wallet()
-wallet1_token1_init_amount = 10000
-wallet1_token2_init_amount = 40000
 
-wallet2 = create_wallet()
-wallet2_token1_init_amount = 1000
-wallet2_token2_init_amount = 7000
+def test_provide_initial_liquidity(request):
+    
+    dex_details = request.config.cache.get('dex_details', None)
+    dex_address = request.config.cache.get('dex_address',None)
+    pool_token1_code = dex_details["pool_token1_code"]
+    pool_token2_code = dex_details["pool_token2_code"]
+    pool_ratio = dex_details["pool_ratio"]
+    pool_fee = dex_details["pool_fee"]
+    ot_token_code = dex_details["ot_token_code"]
+    ot_token_name = dex_details["ot_token_name"]
 
-# def test_create_token():
-#     create_token(WALLET, wallet1['address'], pool_token1_code,
-#                  pool_token1_code, wallet1_token1_init_amount)
+    wallet1 = dex_details["wallet1"]
+    wallet1_token1_init_amount = dex_details["wallet1_token1_init_amount"]
+    wallet1_token2_init_amount = dex_details["wallet1_token2_init_amount"]
 
-# fund wallet1
-create_token(WALLET, wallet1['address'], pool_token1_code, pool_token1_code, wallet1_token1_init_amount)
-create_token(WALLET, wallet1['address'],pool_token2_code, pool_token2_code,wallet1_token2_init_amount)
+    wallet2 = dex_details["wallet2"]
+    wallet2_token1_init_amount = dex_details["wallet2_token1_init_amount"]
+    wallet2_token2_init_amount = dex_details["wallet2_token2_init_amount"]
 
-#fund wallet2
-create_token(WALLET, wallet2['address'],
-             pool_token1_code, pool_token1_code, wallet2_token1_init_amount)
-create_token(WALLET, wallet2['address'],
-             pool_token2_code, pool_token2_code, wallet2_token2_init_amount)
-
-dex_address = test_create_dex()
-
-def test_provide_initial_liquidity():
     token_1_lp = 1000
     token2_lp = 4000
     req_json = {
@@ -320,9 +351,29 @@ def test_provide_initial_liquidity():
     #TODO check contract balance
 
 #TODO bug, connect validate method
-def test_swap():
+def test_swap(request):
+    
     token2_swaped = 200
     token1_given  = 47
+    
+    dex_details = request.config.cache.get('dex_details', None)
+    dex_address = request.config.cache.get('dex_address', None)
+
+    pool_token1_code = dex_details["pool_token1_code"]
+    pool_token2_code = dex_details["pool_token2_code"]
+    pool_ratio = dex_details["pool_ratio"]
+    pool_fee = dex_details["pool_fee"]
+    ot_token_code = dex_details["ot_token_code"]
+    ot_token_name = dex_details["ot_token_name"]
+
+    wallet1 = dex_details["wallet1"]
+    wallet1_token1_init_amount = dex_details["wallet1_token1_init_amount"]
+    wallet1_token2_init_amount = dex_details["wallet1_token2_init_amount"]
+
+    wallet2 = dex_details["wallet2"]
+    wallet2_token1_init_amount = dex_details["wallet2_token1_init_amount"]
+    wallet2_token2_init_amount = dex_details["wallet2_token2_init_amount"]
+
     req_json = {
         "sc_address": dex_address,
         "function_called": "swap",
@@ -397,7 +448,26 @@ def test_swap():
     # TODO assert pool balances 
 
 
-def test_withdraw():
+def test_withdraw(request):
+
+    dex_details = request.config.cache.get('dex_details', None)
+    dex_address = request.config.cache.get('dex_address', None)
+
+    pool_token1_code = dex_details["pool_token1_code"]
+    pool_token2_code = dex_details["pool_token2_code"]
+    pool_ratio = dex_details["pool_ratio"]
+    pool_fee = dex_details["pool_fee"]
+    ot_token_code = dex_details["ot_token_code"]
+    ot_token_name = dex_details["ot_token_name"]
+
+    wallet1 = dex_details["wallet1"]
+    wallet1_token1_init_amount = dex_details["wallet1_token1_init_amount"]
+    wallet1_token2_init_amount = dex_details["wallet1_token2_init_amount"]
+
+    wallet2 = dex_details["wallet2"]
+    wallet2_token1_init_amount = dex_details["wallet2_token1_init_amount"]
+    wallet2_token2_init_amount = dex_details["wallet2_token2_init_amount"]
+
     amount_to_withdraw = 1000
     req_json = {
         "sc_address": dex_address,
