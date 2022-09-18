@@ -289,7 +289,7 @@ def test_provide_initial_liquidity():
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response_token1 = requests.post(NODE_URL+'/get-balance', json={
+    response_token1 = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": pool_token1_code,
         "wallet_address": wallet1['address']
@@ -299,7 +299,7 @@ def test_provide_initial_liquidity():
     balance_token1 = balance_token1_resp['balance']
     assert balance_token1 == wallet1_token1_init_amount-token_1_lp
 
-    response_token2 = requests.post(NODE_URL+'/get-balance', json={
+    response_token2 = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": pool_token2_code,
         "wallet_address": wallet1['address']
@@ -308,7 +308,7 @@ def test_provide_initial_liquidity():
     balance_token2 = response_token2.json()['balance']
     assert balance_token2 == wallet1_token2_init_amount-token2_lp
 
-    response_token_ot = requests.post(NODE_URL+'/get-balance', json={
+    response_token_ot = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": ot_token_code,
         "wallet_address": wallet1['address']
@@ -375,7 +375,7 @@ def test_swap():
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response_token1 = requests.post(NODE_URL+'/get-balance', json={
+    response_token1 = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": pool_token1_code,
         "wallet_address": wallet2['address']
@@ -385,7 +385,7 @@ def test_swap():
     balance_token1 = balance_token1_resp['balance']
     assert balance_token1 == wallet2_token1_init_amount+token1_given
 
-    response_token2 = requests.post(NODE_URL+'/get-balance', json={
+    response_token2 = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": pool_token2_code,
         "wallet_address": wallet2['address']
@@ -445,7 +445,7 @@ def test_withdraw():
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response_ot = requests.post(NODE_URL+'/get-balance', json={
+    response_ot = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": ot_token_code,
         "wallet_address": wallet1['address']
