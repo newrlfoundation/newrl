@@ -342,7 +342,7 @@ def slashing_tokens(cur,address,is_block):
     if data is not None:
         balance = data[0]
         if is_block:
-            amount = Configuration.config("MIN_STAKE_AMOUNT")
+            amount = int(Configuration.config("MIN_STAKE_AMOUNT"))
         else:
             amount = int((Configuration.config("MIN_STAKE_AMOUNT")/Configuration.config("STAKE_PENALTY_RATIO")))
         actual_balance=balance
