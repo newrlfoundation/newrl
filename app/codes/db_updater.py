@@ -336,6 +336,8 @@ def add_pid_contract_add(cur,ct_add):
     return pid
 
 def slashing_tokens(cur,address,is_block):
+    logger.warn('Slashing disabled due to bug')
+    return True
     data = cur.execute(f'''select amount,staker_wallet_address from stake_ledger where wallet_address=:address''',
                           {"address": address}).fetchone()
     amount = 0
