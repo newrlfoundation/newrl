@@ -18,6 +18,5 @@ def create_token_transaction(token_data):
 
     trans = Transactionmanager()
     transaction_data = {'transaction': transaction, 'signatures': []}
-    trans.transactioncreator(transaction_data)
-    transaction_file = trans.save_transaction_to_mempool()
-    return transaction_file
+    transaction_data = trans.transactioncreator(transaction_data)
+    return transaction_data

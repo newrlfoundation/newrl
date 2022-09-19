@@ -177,15 +177,12 @@ def add_wallet_api(req: AddWalletRequest):
     """Get a transaction file for adding an existing wallet to chain"""
     try:
         req_dict = req.dict()
-        add_wallet_transaction = add_wallet(req.custodian_address, req_dict['kyc_docs'], req.ownertype, 
+        return add_wallet(req.custodian_address, req_dict['kyc_docs'], req.ownertype, 
             req.jurisdiction, req.public_key, req.specific_data)
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
-    
-    with open(add_wallet_transaction) as f:
-        return json.load(f)
-    # return FileResponse(add_wallet_transaction, filename="add_wallet_transaction.json")
+
 
 @router.post("/add-token", tags=[query_tag], include_in_schema=False)
 def add_token(
@@ -205,12 +202,11 @@ def add_token(
         "sc_flag": request.is_smart_contract_token
     }
     try:
-        token_create_transaction_filename = create_token_transaction(token_data)
+        return create_token_transaction(token_data)
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
-    with open(token_create_transaction_filename) as f:
-        return json.load(f)
+
 
 @router.post("/add-transfer", tags=[query_tag], include_in_schema=False)
 def add_transfer(transfer_request: TransferRequest):
