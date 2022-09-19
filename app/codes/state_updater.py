@@ -356,13 +356,14 @@ def pay_fee_for_transaction(cur, transaction):
 
     for payee in payers:
         balance = get_wallet_token_balance(cur, payee, currency)
-        if balance < fee / len(payers):
+        fee_to_charge = math.ceil(fee / len(payers))
+        if balance < fee_to_charge:
             return False
         transfer_tokens_and_update_balances(
             cur,
             payee,
             TREASURY_WALLET_ADDRESS,
             transaction['currency'],
-            fee / len(payers)
+            fee_to_charge
         )
     return True

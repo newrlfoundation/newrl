@@ -145,6 +145,8 @@ def validate_block(block):
         return False
     if calculate_hash(block['data']) != block['hash']:
         return False
+    if not validate_block_transactions(block['data']):
+        return False
     return True
 
 

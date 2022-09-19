@@ -102,7 +102,7 @@ def receive_block(block):
     # Check for sentinel node empty block
     if validate_empty_block(block, check_from_sentinel_node=True):
         logger.info('Accepting timeout block from sentinel node')
-        accept_block(block, block['hash'])
+        accept_block(original_block, block['hash'])
         broadcast_block(original_block)
         return
 
@@ -126,8 +126,7 @@ def receive_block(block):
             #     broadcast_receipt(receipt_for_invalid_block, committee)
             return False
 
-        original_block = copy.deepcopy(block)
-        accept_block(block, block['hash'])
+        accept_block(original_block, block['hash'])
         broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
     elif consensus == BLOCK_CONSENSUS_INVALID:
         if not validate_empty_block(block):
@@ -135,7 +134,6 @@ def receive_block(block):
             return False
         
         logger.info('Committee empty block received for invalid block proposal by valid miner. Accepting and broadcasting.')
-        original_block = copy.deepcopy(block)
         if accept_block(block, block['hash']):
             broadcast_block(original_block)
     else:  # Consensus not available
@@ -147,8 +145,7 @@ def receive_block(block):
                     consensus_adding_my_receipt = get_committee_consensus(block)
                     if consensus_adding_my_receipt == BLOCK_CONSENSUS_VALID:
                         logger.info('Block satisfies valid consensus after adding my receipt. Accepting and broadcasting.')
-                        original_block = copy.deepcopy(block)
-                        if accept_block(block, block['hash']):
+                        if accept_block(original_block, block['hash']):
                             broadcast_block(original_block)
                     elif consensus_adding_my_receipt == BLOCK_CONSENSUS_NA:
                         committee = get_committee_for_current_block()
@@ -223,6 +220,7 @@ def sync_chain_from_node(url, block_index=None):
             block_hash = calculate_hash(block)
             if hash != block_hash:
                 logger.warn('Block hash does not match caculated hash. Aborting sync.')
+                # return True
 
             if not validate_block_data(block):
                 logger.warn('Invalid block. Aborting sync.')
@@ -329,13 +327,14 @@ def ask_peers_for_block(block_index):
 
 
 def accept_block(block, hash):
+    mutable_block = copy.deepcopy(block)
     global TIMERS
 
     # if hash is None:
     #     hash = calculate_hash(block['data'])
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
-    blockchain.add_block(cur, block['data'])
+    blockchain.add_block(cur, mutable_block['data'])
     con.commit()
     con.close()
 
