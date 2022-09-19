@@ -29,17 +29,17 @@ class FetchRepository:
 
     def where_clause(self, column, value, operation):
         if self.queryCheck(column) and self.queryCheck(value):
-            self.__query = self.__query + ' where ' + column + ' ' + self.operation[operation] + ' :' + column
+            self.__query = self.__query + ' where ' + column + ' ' + self.operation[operation] + ' (:' + column+')'
         return self
 
     def and_clause(self, column, value, operation):
         if self.queryCheck(column) and self.queryCheck(value):
-            self.__query = self.__query + ' and ' + column + ' ' + self.operation[operation] + ' :' + column
+            self.__query = self.__query + ' and ' + column + ' ' + self.operation[operation] + ' (:' + column+')'
         return self
 
     def or_clause(self, column, value, operation):
         if self.queryCheck(column) and self.queryCheck(value):
-            self.__query = self.__query + ' or ' + column + ' ' + self.operation[operation] + ' :' + column
+            self.__query = self.__query + ' or ' + column + ' ' + self.operation[operation] + ' (:' + column+')'
         return self
 
     def execute_query_single_result(self, queryParam):
