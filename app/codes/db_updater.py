@@ -12,6 +12,7 @@ import sqlite3
 import hashlib
 
 from app.codes.clock.global_time import get_corrected_time_ms
+from app.nvalues import MIN_STAKE_AMOUNT
 from ..Configuration import Configuration
 
 from ..constants import INITIAL_NETWORK_TRUST_SCORE, NEWRL_DB
@@ -336,13 +337,14 @@ def add_pid_contract_add(cur,ct_add):
     return pid
 
 def slashing_tokens(cur,address,is_block):
-    logger.warn('Slashing disabled due to bug')
-    return True
     data = cur.execute(f'''select amount,staker_wallet_address from stake_ledger where wallet_address=:address''',
                           {"address": address}).fetchone()
     amount = 0
     if data is not None:
         balance = data[0]
+        if balance < MIN_STAKE_AMOUNT:
+            logger.warn('Balance lower than minimum required stake for wallet %s. Not slashing.', address)
+            return False
         if is_block:
             amount = int(Configuration.config("MIN_STAKE_AMOUNT"))
         else:
