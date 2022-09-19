@@ -171,7 +171,7 @@ def fund_wallet_nwrl(wallet,address,amount):
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response_token1 = requests.post(NODE_URL+'/get-balance', json={
+    response_token1 = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": "NWRL",
         "wallet_address": address
@@ -508,7 +508,7 @@ def test_issue_dao_tokens(request):
         time.sleep(BLOCK_WAIT_TIME)
 
     # assert member 1 balance
-    response_token_dao = requests.post(NODE_URL+'/get-balance', json={
+    response_token_dao = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": dao_token_name,
         "wallet_address": wallet_founder1['address']
@@ -518,7 +518,7 @@ def test_issue_dao_tokens(request):
     assert balance_token_ot == 10    
 
     # #assert member 2 balance
-    response_token_dao = requests.post(NODE_URL+'/get-balance', json={
+    response_token_dao = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": dao_token_name,
         "wallet_address": wallet_founder2['address']
@@ -528,7 +528,7 @@ def test_issue_dao_tokens(request):
     assert balance_token_ot == 10
 
     # assert member 3 balance
-    response_token_dao = requests.post(NODE_URL+'/get-balance', json={
+    response_token_dao = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": dao_token_name,
         "wallet_address": wallet_founder3['address']
@@ -1140,7 +1140,7 @@ def test_vote_on_proposal_payout(request):
     current_status = response_val["data"][9]
     assert current_status == 'accepted'
     
-    response_token1 = requests.post(NODE_URL+'/get-balance', json={
+    response_token1 = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": company_token_name,
         "wallet_address": wallet_founder1['address']
