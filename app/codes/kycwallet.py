@@ -54,10 +54,10 @@ def add_wallet(kyccustodian, kycdocs, ownertype, jurisd, public_key, wallet_spec
     }
 
     trans = create_add_wallet_transaction(wallet)
-    ts = str(datetime.datetime.now())
-    file = TMP_PATH + "transaction-1-" + ts[0:10] + "-" + ts[-6:] + ".json"
-    transactionfile = trans.save_transaction_to_mempool(file)
-    return transactionfile
+    # ts = str(datetime.datetime.now())
+    # file = TMP_PATH + "transaction-1-" + ts[0:10] + "-" + ts[-6:] + ".json"
+    # transactionfile = trans.save_transaction_to_mempool(file)
+    return trans
 
 
 def add_linked_wallet(currentaddress, public_key, wallet_specific_data={}):
@@ -124,8 +124,7 @@ def create_add_wallet_transaction(wallet):
     }
     transaction_data = {'transaction': transaction_data, 'signatures': []}
     transaction_manager = Transactionmanager()
-    transaction_manager.transactioncreator(transaction_data)
-    return transaction_manager
+    return transaction_manager.transactioncreator(transaction_data)
 
 
 def get_digest(file_path):

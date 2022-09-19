@@ -225,6 +225,7 @@ class Blockchain:
 
 def add_block(cur, block, hash=None, is_state_reconstruction=False):
     """Add a block to db, add transactions and update states"""
+    archive_block(block)
     if not is_state_reconstruction:
         last_block = get_last_block(cur)
         if last_block is not None and last_block['hash'] != block['previous_hash']:
@@ -268,7 +269,6 @@ def add_block(cur, block, hash=None, is_state_reconstruction=False):
         transaction = transaction['transaction']
         transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction['trans_code']
         remove_transaction_from_mempool(transaction_code)
-    archive_block(block)
     remove_block_from_temp(block_index)
 
 

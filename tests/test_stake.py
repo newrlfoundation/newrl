@@ -1,10 +1,11 @@
 import json
 import time
 import requests
-from app.nvalues import STAKE_CT_ADDRESS
 
 from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
 from tests.test_mem_dao import create_wallet
+
+STAKE_CT_ADDRESS = 'ctcdb91798f3022dee388b7ad55eeea527f98caee4'
 
 def test_stake():
     wallet_to_stake = create_wallet()['address']
@@ -67,7 +68,7 @@ def test_stake():
     assert response['data'][2] == wallet_to_stake
     new_stake = response['data'][3]
 
-    assert new_stake == initial_stake + 1234
+    assert new_stake == initial_stake + amount_to_stake
 
     print('Test passed.')
 
