@@ -34,8 +34,18 @@ class DaoMainTemplate(ContractMaster):
         # create_proposal(cur, callparams)
         # dao_pid = get_pid_from_wallet(cur, self.address)
         dao_pid = self.__get_pid_from_wallet_using_repo(repo, self.address)
-        qparam={"dao_person_id":dao_pid}
-        total_votes_curr=repo.select_count().add_table_name("dao_membership").where_clause("dao_person_id",qparam["dao_person_id"],1).execute_query_single_result(qparam)
+
+        if self.dao_type==2:
+            qparam = {"token_name": cspecs['token_name'],"wallet_address":[self.address,Configuration.config("ZERO_ADDRESS")]}
+
+            total_votes_curr = repo.select_count("balance").add_table_name("balances").where_clause("tokencode",
+                                                                                                 qparam[
+                                                                                                     "token_name"],
+                                                                                                 1).and_clause("wallet_address",qparam['wallet_address'],3).execute_query_single_result(
+                qparam)
+        else:
+            qparam = {"dao_person_id": dao_pid}
+            total_votes_curr=repo.select_count().add_table_name("dao_membership").where_clause("dao_person_id",qparam["dao_person_id"],1).execute_query_single_result(qparam)
         if total_votes_curr is None:
             total_votes_curr=0
             logger.info("Zero Member for DAO "+self.address)
@@ -147,7 +157,8 @@ class DaoMainTemplate(ContractMaster):
                 'voting_scheme_params': voting_scheme_params,
                 'current_yes_votes': yes_votes,
                 'current_no_votes': no_votes,
-                'total_votes': total_votes
+                'total_votes': total_votes,
+                'cspecs' : cspecs
             }
 
             funct = getattr(Utils, voting_scheme_selected)
