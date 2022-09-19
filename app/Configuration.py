@@ -27,12 +27,12 @@ class Configuration:
         "STAKE_PENALTY_RATIO": STAKE_PENALTY_RATIO,
         "MIN_STAKE_AMOUNT": MIN_STAKE_AMOUNT,
         "STAKE_COOLDOWN_MS": STAKE_COOLDOWN_MS,
-        "NEWRL_DAO_ADDRESS": NEWRL_DAO_ADDRESS,
+        "FOUNDATION_DAO_ADDRESS": FOUNDATION_DAO_ADDRESS,
         "ASQI_DAO_ADDRESS": ASQI_DAO_ADDRESS,
-        "TREASURY_CONTRACT_ADDRESS": TREASURY_CONTRACT_ADDRESS,
+        "NETWORK_TREASURY_ADDRESS": NETWORK_TREASURY_ADDRESS,
         "MEMBER_WALLET_LIST" : json.dumps(MEMBER_WALLET_LIST),
-        "FOUNDATION_CONTRACT_ADDRESS" : FOUNDATION_CONTRACT_ADDRESS,
-        "ASQI_CONTRACT_ADDRESS" : ASQI_CONTRACT_ADDRESS
+        "FOUNDATION_TREASURY_ADDRESS" : FOUNDATION_TREASURY_ADDRESS,
+        "ASQI_TREASURY_ADDRESS" : ASQI_TREASURY_ADDRESS
         }
     setters = ["ZERO_ADDRESS",
                "TREASURY_WALLET_ADDRESS",
@@ -47,17 +47,17 @@ class Configuration:
                "SENTINEL_NODE_WALLET_PUBLIC",
                "DAO_MANAGER",
                "ASQI_PID",
-               "TREASURY_CONTRACT_ADDRESS",
+               "NETWORK_TREASURY_ADDRESS",
                "ASQI_DAO_ADDRESS",
-               "NEWRL_DAO_ADDRESS",
+               "FOUNDATION_DAO_ADDRESS",
                "CONFIG_DAO_ADDRESS",
                "STAKE_COOLDOWN_MS",
                "MIN_STAKE_AMOUNT",
                "STAKE_PENALTY_RATIO",
                "STAKE_CT_ADDRESS",
                "MEMBER_WALLET_LIST",
-               "ASQI_CONTRACT_ADDRESS",
-               "FOUNDATION_CONTRACT_ADDRESS"
+               "ASQI_TREASURY_ADDRESS",
+               "FOUNDATION_TREASURY_ADDRESS"
 
                ]
 
@@ -90,11 +90,13 @@ class Configuration:
         Configuration.set("STAKE_PENALTY_RATIO", STAKE_PENALTY_RATIO)
         Configuration.set("MIN_STAKE_AMOUNT", MIN_STAKE_AMOUNT)
         Configuration.set("STAKE_COOLDOWN_MS", STAKE_COOLDOWN_MS)
-        Configuration.set("NEWRL_DAO_ADDRESS", NEWRL_DAO_ADDRESS)
+        Configuration.set("FOUNDATION_DAO_ADDRESS", FOUNDATION_DAO_ADDRESS)
         Configuration.set("ASQI_DAO_ADDRESS", ASQI_DAO_ADDRESS)
-        Configuration.set("TREASURY_CONTRACT_ADDRESS", TREASURY_CONTRACT_ADDRESS)
+        Configuration.set("NETWORK_TREASURY_ADDRESS", NETWORK_TREASURY_ADDRESS)
         Configuration.set("ASQI_PID", ASQI_PID),
         Configuration.set("MEMBER_WALLET_LIST", json.dumps(MEMBER_WALLET_LIST))
+        Configuration.set("FOUNDATION_TREASURY_ADDRESS",FOUNDATION_TREASURY_ADDRESS)
+        Configuration.set("ASQI_TREASURY_ADDRESS",ASQI_TREASURY_ADDRESS)
         con = sqlite3.connect(NEWRL_DB)
         cur = con.cursor()
         Configuration.updateDataFromDB(cur)
