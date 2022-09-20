@@ -3,8 +3,8 @@ import sqlite3
 
 from app.codes.utils import get_person_id_for_wallet_address
 from app.constants import NEWRL_DB
-from app.nvalues import DAO_MANAGER, ASQI_DAO_ADDRESS, \
-    NEWRL_DAO_ADDRESS, ASQI_WALLET_DAO, FOUNDATION_WALLET_DAO, FOUNDATION_DAO_ADDRESS
+from app.nvalues import DAO_MANAGER, ASQI_WALLET, FOUNDATION_WALLET, ASQI_DAO_ADDRESS, \
+    ASQI_WALLET_DAO, FOUNDATION_WALLET_DAO, FOUNDATION_DAO_ADDRESS
 
 
 def migrate():
