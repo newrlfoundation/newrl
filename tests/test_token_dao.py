@@ -171,7 +171,7 @@ def fund_wallet_nwrl(wallet,address,amount):
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response_token1 = requests.post(NODE_URL+'/get-balance', json={
+    response_token1 = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": "NWRL",
         "wallet_address": address
@@ -268,6 +268,7 @@ def test_create_token_dao(request):
                     "invest": [
                         -1
                     ],
+                    "disburse":None,
                     "payout": [
                         -1
                     ],
@@ -508,7 +509,7 @@ def test_issue_dao_tokens(request):
         time.sleep(BLOCK_WAIT_TIME)
 
     # assert member 1 balance
-    response_token_dao = requests.post(NODE_URL+'/get-balance', json={
+    response_token_dao = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": dao_token_name,
         "wallet_address": wallet_founder1['address']
@@ -518,7 +519,7 @@ def test_issue_dao_tokens(request):
     assert balance_token_ot == 10    
 
     # #assert member 2 balance
-    response_token_dao = requests.post(NODE_URL+'/get-balance', json={
+    response_token_dao = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": dao_token_name,
         "wallet_address": wallet_founder2['address']
@@ -528,7 +529,7 @@ def test_issue_dao_tokens(request):
     assert balance_token_ot == 10
 
     # assert member 3 balance
-    response_token_dao = requests.post(NODE_URL+'/get-balance', json={
+    response_token_dao = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": dao_token_name,
         "wallet_address": wallet_founder3['address']
@@ -740,19 +741,15 @@ def test_proposal_invest(request):
         "signers": [
             wallet_company_founder['address']
         ],
-        "value": [
-            {
-                "token_code": company_token_name,
-                "amount": 200
-            }],
         "params": {
-            "value": [
-                {
-                    "token_code": company_token_name,
-                    "amount": 200
-                }],
+
             "function_called": "invest",
             "params": {
+                "value": [
+                    {
+                        "token_code": company_token_name,
+                        "amount": 200
+                    }],
                 "wallet_to_invest": wallet_company_founder['address'],
                 "invest_token_code": "NWRL",
                 "invest_token_amount": 10,
@@ -810,7 +807,8 @@ def test_proposal_invest(request):
     assert proposal_length_new == 1
     proposal_id_resp = response_val["data"][0][1]
     request.config.cache.set('proposal_id_invest', proposal_id_resp)
-    
+
+
 def test_vote_on_proposal_invest(request):
     dao_details = request.config.cache.get('dao_details', None)
     wallet_founder1 = dao_details["wallet_founder1"]
@@ -939,6 +937,78 @@ def test_vote_on_proposal_invest(request):
     assert response_val is not None
     current_status = response_val["data"][9]
     assert current_status == 'accepted'
+
+
+def test_proposal_disburse(request):
+    dao_details = request.config.cache.get('dao_details', None)
+    company_token_name = dao_details["company_token_name"]
+    token_dao_address = request.config.cache.get('token_dao_address', None)
+    wallet_company_founder = dao_details["wallet_company_founder"]
+
+    req = {
+        "sc_address": token_dao_address,
+        "function_called": "disburse",
+        "signers": [
+            wallet_company_founder['address']
+        ],
+
+        "params": {
+            "value": [
+                {
+                    "token_code": company_token_name,
+                    "amount": 200
+                }],
+            "proposal_id":request.config.cache.get('proposal_id_invest', None),
+            "block_index_reference": 234543,
+            "voting_start_ts": 123324324,
+            "voting_end_ts": 123325324
+        }
+    }
+
+    headers = {
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.post(NODE_URL + '/call-sc', headers=headers, json=req
+                             )
+
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    assert unsigned_transaction['transaction']
+    assert len(unsigned_transaction['signatures']) == 0
+
+    response = requests.post(NODE_URL + '/sign-transaction', json={
+        "wallet_data": wallet_company_founder,
+        "transaction_data": unsigned_transaction
+    })
+
+    assert response.status_code == 200
+    signed_transaction = response.json()
+    assert signed_transaction['transaction']
+    assert signed_transaction['signatures']
+    assert len(signed_transaction['signatures']) == 1
+    response = requests.post(
+        NODE_URL + '/validate-transaction', json=signed_transaction)
+    assert response.status_code == 200
+
+    if TEST_ENV == 'local':
+        response = requests.post(
+            NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+    else:
+        print('Waiting to mine block')
+        time.sleep(BLOCK_WAIT_TIME)
+
+    params = {
+        'table_name': "proposal_data",
+        'contract_address': token_dao_address,
+    }
+    response = requests.get(NODE_URL + "/sc-states", params=params)
+    assert response.status_code == 200
+    response_val = response.json()
+    assert response_val["data"]
+    proposal_length_new = len(response_val["data"])
+    assert proposal_length_new == 1
+    assert response_val["data"][0][9]=="disbursed"
 
 def test_proposal_payout(request):
     dao_details = request.config.cache.get('dao_details', None)
@@ -1140,7 +1210,7 @@ def test_vote_on_proposal_payout(request):
     current_status = response_val["data"][9]
     assert current_status == 'accepted'
     
-    response_token1 = requests.post(NODE_URL+'/get-balance', json={
+    response_token1 = requests.get(NODE_URL+'/get-balances', params={
         "balance_type": "TOKEN_IN_WALLET",
         "token_code": company_token_name,
         "wallet_address": wallet_founder1['address']

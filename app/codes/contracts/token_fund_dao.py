@@ -70,7 +70,7 @@ class token_fund_dao(DaoMainTemplate):
                         "table_name": "proposal_data",
                         "sc_address": self.address,
                         "data": {
-                            "status": "disbursed    ",
+                            "status": "disbursed",
                         },
                         "unique_column": "proposal_id",
                         "unique_value": qparam["proposal_id"]
@@ -96,8 +96,8 @@ class token_fund_dao(DaoMainTemplate):
         total_tokens=0
         qparam={"wallet_address":self.address,
                 "tokencode":asset1_code}
-        validationBalance=repo.select_Query("balance").add_table_name("balances").where_clause("wallet_address",qparam['wallet_address'],1).and_clause("tokencode",qparam['tokencode'],1).execute_query_single_result()
-        if validationBalance is None or amount>validationBalance[0]:
+        validationBalance=repo.select_Query("balance").add_table_name("balances").where_clause("wallet_address",qparam['wallet_address'],1).and_clause("tokencode",qparam['tokencode'],1).execute_query_single_result(qparam)
+        if validationBalance is None or int(amount)>int(validationBalance[0]):
             logger.log("Inadequate balance in SC for the tokeCode"+asset1_code)
             return []
         if members is not None:
