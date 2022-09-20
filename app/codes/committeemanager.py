@@ -2,7 +2,7 @@ import sqlite3
 import random
 import logging
 
-from ..nvalues import SENTINEL_NODE_WALLET
+from ..nvalues import MIN_STAKE_AMOUNT, SENTINEL_NODE_WALLET
 from ..constants import BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
 from .clock.global_time import get_corrected_time_ms
 from .utils import get_last_block_hash
@@ -28,17 +28,17 @@ def get_number_from_hash(block_hash):
     return ord(block_hash[0])
 
 
-def weighted_random_choices(population, weights, k):
+def weighted_random_choices(population, weights, k, seed_prefix):
     if len(population) < k:
         raise Exception('Population less than selection count')
     
     selections = []
-    # previous_idx = 0
+    previous_idx = 0
     while len(selections) < k:
-        # random.seed(previous_idx)
+        random.seed(seed_prefix + previous_idx)
         choice = random.choices(population, weights=weights)[0]
         index = population.index(choice)
-        # previous_idx = index
+        previous_idx = index
         selections.append(choice)
         del population[index]
         del weights[index]
@@ -79,7 +79,7 @@ def get_miner_for_current_block(last_block=None):
 
 
 def get_eligible_miners():
-    # last_block = get_last_block_hash()
+    last_block = get_last_block_hash()
     # last_block_epoch = 0
     # try:
     #     # Need try catch to support older block timestamps
@@ -91,19 +91,25 @@ def get_eligible_miners():
     # else:
     #     cutfoff_epoch = 0
     # last_block_epoch = int(last_block['timestamp'])
-    cutfoff_epoch = get_corrected_time_ms() - TIME_MINER_BROADCAST_INTERVAL_SECONDS * 2 * 1000
+    # cutfoff_epoch = get_corrected_time_ms() - TIME_MINER_BROADCAST_INTERVAL_SECONDS * 2 * 1000
+    cutfoff_block = last_block['index'] - 1000
 
     con = sqlite3.connect(NEWRL_DB)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
     miner_cursor = cur.execute(
         '''
-        select wallet_address, network_address, last_broadcast_timestamp from miners
-        join person_wallet on person_id = dest_person_id
-        join trust_scores on wallet_address = wallet_id and last_broadcast_timestamp > ?
-        where score > 0
-        order by wallet_address asc
-        ''', (cutfoff_epoch, )).fetchall()
+        select distinct m.wallet_address, network_address, last_broadcast_timestamp, block_index
+        from miners m
+        join person_wallet pw on m.wallet_address = pw.wallet_id
+        join trust_scores ts on pw.person_id = ts.dest_person_id
+        join stake_ledger sl on sl.wallet_address = m.wallet_address
+        and m.block_index > ?
+        and m.wallet_address != ?
+        and sl.amount >= ?
+        where ts.score > 0
+        order by m.wallet_address asc
+        ''', (cutfoff_block, SENTINEL_NODE_WALLET, MIN_STAKE_AMOUNT, )).fetchall()
     # miner_cursor = cur.execute(
     #     '''SELECT wallet_address, network_address, last_broadcast_timestamp 
     #     FROM miners 
@@ -124,8 +130,6 @@ def get_committee_for_current_block(last_block=None):
     if is_miner_committee_cached(last_block['hash']):
         return miner_committee_cache['current_committee']
 
-    random.seed(get_number_from_hash(last_block['hash']))
-
     miners = get_eligible_miners()
 
     if len(miners) < MINIMUM_ACCEPTANCE_VOTES:
@@ -136,7 +140,11 @@ def get_committee_for_current_block(last_block=None):
     # committee = random.sample(miners, k=committee_size)
     miner_wallets = list(map(lambda m: m['wallet_address'], miners))
     weights = get_scores_for_wallets(miner_wallets)
-    committee = weighted_random_choices(miners, weights, committee_size)
+    committee = weighted_random_choices(
+        miners,
+        weights,
+        committee_size,
+        get_number_from_hash(last_block['hash']))
     committee = sorted(committee, key=lambda d: d['wallet_address']) 
     return committee
 

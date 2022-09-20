@@ -126,14 +126,12 @@ def test_create_sample_template(request):
             break
     assert contracts_in_state
     request.config.cache.set('st_address', ct_address) 
-    return ct_address
 
 
 def test_invlaid_sc_call(request):
     wallet1 = create_wallet()
     st_address = request.config.cache.get('st_address', None)
     request.config.cache.set('wallet1', wallet1)
-
     req_json = {
         "sc_address": st_address,
         "function_called": "sample_validate",

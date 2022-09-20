@@ -9,7 +9,7 @@ from app.codes.db_updater import get_block_from_cursor, get_pid_from_wallet, upd
 from app.codes.state_updater import slashing_tokens
 
 from app.constants import INITIAL_NETWORK_TRUST_SCORE, MAX_NETWORK_TRUST_SCORE
-from app.ntypes import BLOCK_VOTE_MINER, BLOCK_VOTE_VALID
+from app.ntypes import BLOCK_STATUS_INVALID_MINED, BLOCK_VOTE_MINER, BLOCK_VOTE_VALID
 
 
 
@@ -87,16 +87,22 @@ def update_network_trust_score_from_receipt(cur, receipt):
                         score = get_valid_block_creation_score(existing_score)
                     else:
                         score = get_invalid_block_creation_score(existing_score)
+                        logger.info('Actual block hash is not matching proposed block for %d. Slashing proposer %s',
+                            actual_block['block_index'], wallet_address)
                         slashing_tokens(cur, wallet_address, True)
                 else:
                     score = get_invalid_block_creation_score(existing_score)
+                    logger.info('Block proposer is not matching creator_wallet for block %d. Slashing proposer %s',
+                            actual_block['block_index'], wallet_address)
                     slashing_tokens(cur, wallet_address, True)
         else:
             committee = get_committee_for_block(actual_block)
             if actual_block['proof'] == 42:  # Empty block check
-                if actual_block['status'] == 2:
+                if actual_block['status'] == BLOCK_STATUS_INVALID_MINED:
                     if vote == BLOCK_VOTE_VALID:
                         score = get_invalid_receipt_score(existing_score)
+                        logger.info('Committee member voted positive for invalid block %d. Slashing voter %s',
+                            actual_block['block_index'], wallet_address)
                         slashing_tokens(cur, wallet_address, False)
 
                     else:
@@ -111,10 +117,14 @@ def update_network_trust_score_from_receipt(cur, receipt):
                         score = get_valid_receipt_score(existing_score)
                     else:
                         score = get_invalid_receipt_score(existing_score)
+                        logger.info('Committee member voted negative for valid block %d. Slashing voter %s',
+                            actual_block['block_index'], wallet_address)
                         slashing_tokens(cur, wallet_address, False)
             if wallet_address not in committee:
                 score = get_invalid_receipt_score(existing_score)
                 slashing_tokens(cur, wallet_address, False)
+                logger.info('Non-committee member voted for block %d. Slashing voter %s',
+                            actual_block['block_index'], wallet_address)
 
 
         update_trust_score(cur, Configuration.config("NETWORK_TRUST_MANAGER_PID"), person_id, score, receipt_timestamp)

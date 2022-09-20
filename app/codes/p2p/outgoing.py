@@ -94,7 +94,7 @@ def send(payload):
 
 
 def broadcast_receipt(receipt, nodes):
-    logger.info('Broadcasting receipt to nodes')
+    logger.info('Broadcasting receipt to nodes %s', str(receipt))
     if IS_TEST:
         return
 

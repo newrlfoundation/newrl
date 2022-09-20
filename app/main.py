@@ -10,6 +10,9 @@ from fastapi.openapi.utils import get_openapi
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from slowapi.errors import RateLimitExceeded
+from slowapi import Limiter, _rate_limit_exceeded_handler
+
 from .codes.p2p.sync_chain import sync_chain_from_peers
 from .constants import NEWRL_PORT, IS_TEST
 from .codes.p2p.peers import init_bootstrap_nodes, update_my_address, update_software
@@ -17,6 +20,7 @@ from .codes.clock.global_time import sync_timer_clock_with_global
 from .codes.updater import am_i_sentinel_node, global_internal_clock, start_miner_broadcast_clock, start_mining_clock
 
 from .routers import blockchain, system, p2p, transport
+from .limiter import limiter
 
 
 logger = logging.getLogger(__name__)
@@ -25,6 +29,8 @@ app = FastAPI(
     title="The Newrl APIs",
     description="This page covers all the public APIs available at present in the Newrl blockchain platform."
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 origins = ["*"]
 
@@ -37,9 +43,9 @@ app.add_middleware(
 )
 
 app.include_router(blockchain.router)
-app.include_router(p2p.router)
-app.include_router(system.router)
-app.include_router(transport.router)
+app.include_router(p2p.router, include_in_schema=False)
+app.include_router(system.router, include_in_schema=False)
+app.include_router(transport.router, include_in_schema=False)
 def initialze_params():
     parser = argparse.ArgumentParser()
     parser.add_argument("--disablenetwork", help="run the node local only with no network connection",
@@ -64,9 +70,9 @@ args = args = {
 @app.on_event('startup')
 def app_startup():
     try:
+        logger.info("Initializing Config Values")
         Configuration.init_values()
         Configuration.init_values_in_db()
-        logger.info("Initializing Config Values")
         if not IS_TEST:
             sync_timer_clock_with_global()
             init_bootstrap_nodes()

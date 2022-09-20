@@ -17,12 +17,16 @@ from .transactionmanager import Transactionmanager
 from ..constants import IS_TEST, MAX_TRANSACTION_SIZE, MEMPOOL_PATH
 from .p2p.outgoing import propogate_transaction_to_peers
 
+from jsonschema import validate as jsonvalidate
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 def validate(transaction, propagate=False, validate_economics=True):
+    if not validate_transaction_structure(transaction):
+        return {'valid': False, 'msg': 'Invalid transaction structure'}
     existing_transaction = get_mempool_transaction(transaction['transaction']['trans_code'])
     if existing_transaction is not None:
         return {'valid': True, 'msg': 'Already validated and in mempool', 'new_transaction': False}
@@ -141,6 +145,8 @@ def validate_block(block):
         return False
     if calculate_hash(block['data']) != block['hash']:
         return False
+    if not validate_block_transactions(block['data']):
+        return False
     return True
 
 
@@ -152,7 +158,7 @@ def validate_block_data(block):
         return True
 
     if last_block['hash'] != block['previous_hash']:
-        logger.info(f"Block hash does not match at index {last_block['index']} and {last_block['hash']} != {block['previous_hash']}")
+        logger.info(f"Previous block hash does not match at index {last_block['index']}. {last_block['hash']} != {block['previous_hash']}")
         return False
     
     block_index = block['block_index'] if 'block_index' in block else block['index']
@@ -167,4 +173,31 @@ def validate_block_transactions(block):
         validation_result = validate(transaction, propagate=False, validate_economics=True)
         if not validation_result['valid']:
             return False
+    return True
+
+
+def validate_transaction_structure(signed_transaction):
+    schema = {
+        "type": "object",
+        "properties": {
+            "transaction": {
+                "type": "object",
+                "properties": {
+                    "timestamp": {"type": "integer"},
+                    "trans_code": {"type": "string"},
+                    "type": {"type": "integer"},
+                    "currency": {"type": "string"},
+                    "fee": {"type": "integer"},
+                    "descr": {"type": "string"},
+                    "valid": {"type": "integer"},
+                    "specific_data": {"type": "object"}
+                }
+            },
+            "signatures": {"type": "array"}
+        }
+        
+    }
+    
+    jsonvalidate(signed_transaction, schema)
+
     return True

@@ -11,19 +11,19 @@ import logging
 from ...nvalues import STAKE_COOLDOWN_MS, ASQI_WALLET, FOUNDATION_WALLET, ZERO_ADDRESS
 # NETWORK should habve
 # TODO : Add emerbship check remove hardcode have more than n/2 +1 Newrl Foundation
-class TreasuryContract(ContractMaster):
+class NetworkContract(ContractMaster):
     codehash = ""  # this is the hash of the entire document excluding this line, it is same for all instances of this class
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
     def __init__(self, contractaddress=None):
-        self.template = "TreasuryContract"
+        self.template = "NetworkContract"
         self.version = "1.0.0"
         ContractMaster.__init__(self, self.template, self.version, contractaddress)
 
     def burn_token(self,callparamsip,repo:FetchRepository):
         callparams=input_to_dict(callparamsip)
-        cspecs = input_to_dict(self.contractparams['contractspecs'])
+        cspecs = input_to_dict(self.contractparams)
         dao_address = cspecs['dao_address']
         function_caller = callparams['function_caller']
         wallet_present = True
@@ -55,7 +55,7 @@ class TreasuryContract(ContractMaster):
     def upgrade_transfer(self,callparamsip,repo:FetchRepository):
         trxn=[]
         callparams = input_to_dict(callparamsip)
-        cspecs = input_to_dict(self.contractparams['contractspecs'])
+        cspecs = input_to_dict(self.contractparams)
         dao_address = cspecs['dao_address']
         function_caller = callparams['function_caller']
         wallet_present = True
@@ -98,7 +98,7 @@ class TreasuryContract(ContractMaster):
         trxn = []
         total_tokens=0
         callparams=input_to_dict(callparamsip)
-        cspecs = input_to_dict(self.contractparams['contractspecs'])
+        cspecs = input_to_dict(self.contractparams)
         dao_address = cspecs['dao_address']
         function_caller = callparams['function_caller']
         wallet_present = True
@@ -148,16 +148,10 @@ class TreasuryContract(ContractMaster):
     def transfer(self,callparamsip,repo:FetchRepository):
         trxn = []
         callparams = input_to_dict(callparamsip)
-        cspecs = input_to_dict(self.contractparams['contractspecs'])
+        cspecs = input_to_dict(self.contractparams)
+        recipient_list = cspecs('recipients_list',[])
         dao_address = cspecs['dao_address']
         function_caller = callparams['function_caller']
-        wallet_addresses = []
-        for i in function_caller:
-            wallet_addresses.append(i['wallet_address'])
-        wallet_addresses = set(wallet_addresses)
-        number_of_sign = len(wallet_addresses)
-        transfer_limits = cspecs['transfer_limits']
-        transfer_limit = transfer_limits[number_of_sign]
         wallet_present = True
         membership_wallets = []
         wallet_to_send = callparams['receiver']
@@ -169,7 +163,7 @@ class TreasuryContract(ContractMaster):
                 if person_ids is not None and get_person_id_for_wallet_address(i['wallet_address']) not in person_ids:
                     wallet_present = False
 
-        if wallet_present and amount_to_send <= transfer_limit:
+        if wallet_present and wallet_to_send in recipient_list:
             transfer_proposal_data = {
                 "transfer_type": 1,
                 "asset1_code": asset_code,
@@ -186,13 +180,10 @@ class TreasuryContract(ContractMaster):
 
     def get_members_from_dao(self, dao_address, membership_wallets, repo):
         query_param = {"dao_person_id": get_person_id_for_wallet_address(dao_address)}
-        person_ids = repo.select_Query('member_person_id').add_table_name("dao_membership").where_clause("dao_person_id",
+        person_ids = repo.select_Query('person_id').add_table_name("dao_membership").where_clause("dao_person_id",
                                                                                                   query_param[
-                                                                                                       "dao_person_id"],
+                                                                                                      "dao_person_id"],
                                                                                                   1).execute_query_multiple_result(
             query_param)
-        membership_wallets.append(json.loads(Configuration.config("MEMBER_WALLET_LIST")))
-        if person_ids is None:
-            return []
-        else:
-            return person_ids
+        membership_wallets.append(json.loads(Configuration.conf("MEMBER_WALLET_LIST")))
+        return person_ids

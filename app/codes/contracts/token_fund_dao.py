@@ -70,7 +70,7 @@ class token_fund_dao(DaoMainTemplate):
                         "table_name": "proposal_data",
                         "sc_address": self.address,
                         "data": {
-                            "status": "disbursed    ",
+                            "status": "disbursed",
                         },
                         "unique_column": "proposal_id",
                         "unique_value": qparam["proposal_id"]
@@ -94,6 +94,12 @@ class token_fund_dao(DaoMainTemplate):
         locked_tokens=repo.select_Query("wallet_address,amount_locked").add_table_name("DAO_TOKEN_LOCK").where_clause("dao_id",dao_id,4).execute_query_multiple_result({"dao_id":dao_id})
         # locked_tokens=cur.execute(f'''select wallet_address as owner,amount_locked as amount from DAO_TOKEN_LOCK where dao_id like ?''',[dao_id]).fetchall()
         total_tokens=0
+        qparam={"wallet_address":self.address,
+                "tokencode":asset1_code}
+        validationBalance=repo.select_Query("balance").add_table_name("balances").where_clause("wallet_address",qparam['wallet_address'],1).and_clause("tokencode",qparam['tokencode'],1).execute_query_single_result(qparam)
+        if validationBalance is None or int(amount)>int(validationBalance[0]):
+            logger.log("Inadequate balance in SC for the tokeCode"+asset1_code)
+            return []
         if members is not None:
             for i in members:
                 total_tokens=total_tokens+i[1]
@@ -106,7 +112,7 @@ class token_fund_dao(DaoMainTemplate):
                     "asset2_code": "",
                     "wallet1": self.address,
                     "wallet2": i[0],
-                    "asset1_number": math.ceil(i[1]*ratio),
+                    "asset1_number": math.floor(i[1]*ratio),
                     "asset2_number": 0,
                     "additional_data": {}
                 }
@@ -120,7 +126,7 @@ class token_fund_dao(DaoMainTemplate):
                     "asset2_code": "",
                     "wallet1": self.address,
                     "wallet2": i[0],
-                    "asset1_number": math.ceil(i[1] * ratio),
+                    "asset1_number": math.floor(i[1] * ratio),
                     "asset2_number": 0,
                     "additional_data": {}
                 }

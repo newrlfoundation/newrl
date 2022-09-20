@@ -21,8 +21,8 @@ from ..nvalues import NETWORK_TRUST_MANAGER_PID, TREASURY_WALLET_ADDRESS
 
 from app.nvalues import NETWORK_TRUST_MANAGER_PID, MIN_STAKE_AMOUNT, STAKE_PENALTY_RATIO, ZERO_ADDRESS
 
-from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, COMMITTEE_SIZE, INITIAL_NETWORK_TRUST_SCORE, NEWRL_DB
-from ..ntypes import BLOCK_VOTE_MINER, NEWRL_TOKEN_CODE, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
+from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, COMMITTEE_SIZE, INITIAL_NETWORK_TRUST_SCORE, MAX_RECEIPT_HISTORY_BLOCKS, NEWRL_DB
+from ..ntypes import BLOCK_STATUS_MINING_TIMEOUT, BLOCK_VOTE_MINER, NEWRL_TOKEN_CODE, NEWRL_TOKEN_DECIMAL, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
 
 logger = logging.getLogger(__name__)
 
@@ -71,20 +71,22 @@ def update_db_states(cur, block):
                     transaction_data,
                     transaction_code,
                     transaction['timestamp'],
-                    signature
+                    signature,
+                    newblockindex,
                 )
             else:
                 logger.info(f'Fee payment failed for transaction {transaction_code}')
         except Exception as e:
             logger.error(f'Error in transaction: {str(transaction)}')
             logger.error(str(e))
+            logger.error(traceback.format_exc())
     if config_updated:
         Configuration.updateDataFromDB(cur)
     return True
 
 
 def update_state_from_transaction(cur, transaction_type, transaction_data, transaction_code, transaction_timestamp,
-                                  transaction_signer=None):
+                                  transaction_signer=None, block_index=None):
     if transaction_type == TRANSACTION_WALLET_CREATION:  # this is a wallet creation transaction
         add_wallet_pid(cur, transaction_data)
 
@@ -150,6 +152,7 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
             transaction_data['wallet_address'],
             transaction_data['network_address'],
             transaction_data['broadcast_timestamp'],
+            block_index
         )
     if transaction_type == TRANSACTION_SC_UPDATE:
         cr = CentralRepository(cur, cur)
@@ -181,7 +184,7 @@ def add_block_reward(cur, creator, blockindex):
     RATIO = 2 / 3
     STARTING_REWARD = 1000
     block_step = math.ceil(float(blockindex) / 1000000)
-    reward = STARTING_REWARD * pow(RATIO, (block_step - 1))
+    reward = STARTING_REWARD * pow(RATIO, (block_step - 1)) * pow(10, NEWRL_TOKEN_DECIMAL)
     reward_tx_data = {
         "tokenname": NEWRL_TOKEN_NAME,
         "tokencode": NEWRL_TOKEN_CODE,
@@ -204,8 +207,16 @@ def update_trust_scores(cur, block):
     receipts = block['text']['previous_block_receipts']
 
     for receipt in receipts:
-      update_network_trust_score_from_receipt(cur, receipt=receipt)
+        if receipt['data']['block_index'] > block['index'] - MAX_RECEIPT_HISTORY_BLOCKS:
+            update_network_trust_score_from_receipt(cur, receipt=receipt)
 
+def update_miners(cur, block):
+    if (
+        block['expected_miner'] != block['creator_wallet']
+        and block['status'] == BLOCK_STATUS_MINING_TIMEOUT
+    ):
+        logger.info('Removing miner %s due to timeout', block['expected_miner'])
+        cur.execute('DELETE FROM miners WHERE wallet_address = ?', (block['expected_miner'], ))
 
 def simplify_transactions(cur, transactions):
   global value_txns
@@ -221,6 +232,7 @@ def simplify_transactions(cur, transactions):
         logger.error(
             f"Exception during sc txn execution for txn : {transaction}")
         logger.error(traceback.format_exc())
+      print(f"Value transactions are {value_txns}")
       simplified_transactions.extend(value_txns)
       simplified_transactions.extend(non_sc_txns)
       value_txns = []
@@ -320,7 +332,6 @@ def get_value_txns(transaction_signer, transaction_data):
                 "SC-value txn economic validation failed for transaction")
             raise Exception("SC-value txn validation failed for transaction")
         value_txns_local.append(transfer_proposal.get_transaction_complete())
-
     return value_txns_local
 
 def get_fees_for_transaction(transaction):
@@ -345,13 +356,14 @@ def pay_fee_for_transaction(cur, transaction):
 
     for payee in payers:
         balance = get_wallet_token_balance(cur, payee, currency)
-        if balance < fee / len(payers):
+        fee_to_charge = math.ceil(fee / len(payers))
+        if balance < fee_to_charge:
             return False
         transfer_tokens_and_update_balances(
             cur,
             payee,
             TREASURY_WALLET_ADDRESS,
             transaction['currency'],
-            fee / len(payers)
+            fee_to_charge
         )
     return True

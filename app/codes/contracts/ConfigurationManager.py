@@ -29,13 +29,13 @@ class ConfigurationManager(DaoMainTemplate, ABC):
         for i in configArray:
             config_data = repo.select_Query('property_key,property_value,is_editable').\
                 add_table_name('configuration').\
-                where_clause('property_key', i['property_key']).\
+                where_clause('property_key', i['property_key'],1).\
                 execute_query_single_result({"property_key": i['property_key']})
             if config_data is None:
-                logging.error("No property key found for %s", i['property_key'])
+                logging.error(f"No property key found for {i['property_key']}")
                 return trxn
             else:
-                logging.info("Property value change from %s to %s", (config_data[1], i['property_value']))
+                logging.info(f"Property value change from  {config_data[1]}, {i['property_value']}")
                 sc_state_proposal1_data = {
                     "operation": "update",
                     "table_name": "configuration",
@@ -61,13 +61,13 @@ class ConfigurationManager(DaoMainTemplate, ABC):
         for i in configArray:
             config_data = repo.select_Query('property_key,property_value,is_editable').\
                 add_table_name('configuration').\
-                where_clause('property_key', i['property_key']).\
+                where_clause('property_key', i['property_key'],1).\
                 execute_query_single_result({"property_key": i['property_key']})
             if config_data is not None:
-                logging.error("Property key already exists for %s", i['property_key'])
+                logging.error(f"Property key already exists for {i['property_key']}")
                 return trxn
             else:
-                logging.info("Property value saved %s", (i['property_value']))
+                logging.info(f"Property value saved {i['property_value']}")
                 sc_state_proposal1_data = {
                     "operation": "save",
                     "table_name": "configuration",

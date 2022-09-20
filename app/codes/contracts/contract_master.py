@@ -20,7 +20,7 @@ from ...constants import NEWRL_DB
 from ..db_updater import *
 
 
-class ContractMaster(abc.ABC):
+class ContractMaster():
     codehash=""    #this is the hash of the entire document excluding this line, it is same for all instances of this class
     def __init__(self, template, version, contractaddress=None):
         self.address=contractaddress    #this is for instances of this class created for tx creation and other non-chain work
@@ -199,9 +199,7 @@ class ContractMaster(abc.ABC):
         contractparams['legalparams']={}  
         return contractparams       
 
-    @abstractmethod
-    def validate(self):
-        pass
+
 
 
 

@@ -3,29 +3,39 @@ import os
 
 from .ntypes import NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE
 
-SOFTWARE_VERSION = "1.1.2"
+SOFTWARE_VERSION = "1.2.3"
 
 NEWRL_ENV = os.environ.get('NEWRL_ENV')
 IS_TEST = os.environ.get('NEWRL_TEST') == 'Y'
 
 if NEWRL_ENV == 'testnet':
     BOOTSTRAP_NODES = ['testnet.newrl.net']
-    NEWRL_PORT = 8090
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['testnetarchive1.newrl.net', 'testnetarchive2.newrl.net']
+    NEWRL_PORT = 8421
     DATA_PATH = 'data_testnet/'
     print('Using testnet constants')
 elif NEWRL_ENV == 'mainnet':
     BOOTSTRAP_NODES = ['mainnet.newrl.net']
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['mainnetarchive1.newrl.net', 'mainnetarchive2.newrl.net']
     NEWRL_PORT = 8456
     DATA_PATH = 'data_mainnet/'
     print('Using mainnet constants')
 elif NEWRL_ENV == 'test':
-    BOOTSTRAP_NODES = ['testnet.newrl.net']
+    BOOTSTRAP_NODES = ['localhost']
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['localhost']
     NEWRL_PORT = 4018
     DATA_PATH = 'data_test/'
     print('Using test constants')
-else:
-    BOOTSTRAP_NODES = ['testnet.newrl.net']
-    NEWRL_PORT = 8182
+elif NEWRL_ENV == 'devnet':
+    BOOTSTRAP_NODES = ['devnet.newrl.net']
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['devnetarchive1.newrl.net']
+    NEWRL_PORT = 8420
+    DATA_PATH = 'data_devnet/'
+    print('Using devnet constants')
+else:  # default ot devnet
+    BOOTSTRAP_NODES = ['devnet.newrl.net']
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['devnetarchive1.newrl.net']
+    NEWRL_PORT = 8420
     DATA_PATH = 'data_devnet/'
     print('Using devnet constants')
 
@@ -33,6 +43,7 @@ DATA_PATH = 'data_test/' if IS_TEST else DATA_PATH
 LOG_FILE_PATH = DATA_PATH + 'logs/'
 MEMPOOL_PATH = DATA_PATH + 'mempool/'
 TMP_PATH = DATA_PATH + 'tmp/'
+BLOCK_ARCHIVE_PATH = DATA_PATH + 'archive/'
 INCOMING_PATH = DATA_PATH + 'tmp/incoming/'
 NEWRL_DB = DATA_PATH + 'newrl.db'
 NEWRL_P2P_DB = DATA_PATH + 'newrl_p2p.db'
@@ -59,7 +70,9 @@ NETWORK_BLOCK_TIMEOUT = 25
 MAX_BROADCAST_NODES = 13
 MEMPOOL_TRANSACTION_LIFETIME_SECONDS = 3600  # Mempool transactions will be removed after 1 hour
 MAX_TRANSACTION_BATCH_SIZE = 50
-MAX_TRANSACTION_SIZE = 1024
+MAX_TRANSACTION_SIZE = 4096
+MIN_SYNC_INTERVAL_MS = 60000
+MAX_RECEIPT_HISTORY_BLOCKS = 1000
 
 # Variables
 MY_ADDRESS_FILE = DATA_PATH + 'my_address.json'
@@ -75,3 +88,4 @@ ALLOWED_FEE_PAYMENT_TOKENS = [NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE]
 
 MAX_NETWORK_TRUST_SCORE = 1000000
 INITIAL_NETWORK_TRUST_SCORE = 100000
+CUSTODIAN_OWNER_TYPE = 101

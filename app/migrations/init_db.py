@@ -117,12 +117,9 @@ def init_db():
                     (block_index integer,
                     block_hash text,
                     vote integer,
-                    wallet_address text,
-                    included_block_index text,
-                    signature text,
-                    timestamp integer)
+                    wallet_address text)
                     ''')
-    cur.execute('DROP INDEX IF EXISTS idx_receipts_block_index_hash')
+
     cur.execute('''
                     CREATE UNIQUE INDEX IF NOT EXISTS idx_receipts_block_index_hash
                      ON receipts (block_index, block_hash, wallet_address)
@@ -132,15 +129,7 @@ def init_db():
                     CREATE TABLE IF NOT EXISTS transactions
                     (
                     transaction_code text PRIMARY KEY,
-                    block_index integer,
-                    timestamp integer,
-                    type integer,
-                    currency text,
-                    fee integer,
-                    description text,
-                    valid integer,
-                    specific_data text,
-                    signatures text)
+                    block_index integer)
                     ''')
 
     cur.execute('''
@@ -179,6 +168,7 @@ def init_db():
                     wallet_address text,
                     network_address text NOT NULL,
                     last_broadcast_timestamp integer,
+                    block_index integer,
                     UNIQUE (wallet_address)
                     )
                     ''')
@@ -231,7 +221,7 @@ def init_db():
                     dao_personid text NOT NULL, 
                     dao_name text NOT NULL,
                     founder_personid text NOT NULL,
-                    dao_sc_address text NOT NULL)
+                    dao_sc_address text  PRIMARY KEY NOT NULL)
                     ''')
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS dao_membership
@@ -259,12 +249,12 @@ def init_db():
                     )
                     ''')
     cur.execute('''
-                    CREATE TABLE IF NOT EXISTS DAO_TOKEN_LOCK
+                    CREATE TABLE IF NOT EXISTS dao_token_lock
                     (
                     address text NOT NULL,
                     dao_id  text Not NULL,
                     person_id text Not NULL,
-                    pr  oposal_list TEXT ,
+                    proposal_list TEXT ,
                     status INT,
                     amount_locked INT,
                     wallet_address text
@@ -282,10 +272,14 @@ def init_db():
                     )
                     ''')
     cur.execute('''
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_stake_ledger_wallet 
+                    ON stake_ledger (wallet_address)
+                ''')
+    cur.execute('''
                         CREATE TABLE IF NOT EXISTS configuration 
                         (
                         address text NOT NULL,
-                        property_key text NOT NULL, 
+                        property_key text PRIMARY KEY NOT NULL, 
                         property_value text Not NULL, 
                         is_editable TEXT , 
                         last_updated TIMESTAMP 
@@ -305,21 +299,33 @@ def init_db():
     con.close()
 
 
+def revert_chain_quick(revert_to_snapshot=True):
+    SYNC_STATUS['IS_SYNCING'] = True
+    if revert_to_snapshot:
+        revert_to_last_snapshot()
+    else:
+        clear_db()
+    SYNC_STATUS['IS_SYNCING'] = False
+
+
 def revert_chain(block_index):
     """Revert chain to given index"""
-    logger.info(f'Reverting chain to index {block_index}')
+    logger.info(f'Reverting chain to local snapshot.')
     global SYNC_STATUS
     if SYNC_STATUS['IS_SYNCING']:
         logger.info('Syncing with network. Reverting anyway.')
         # logger.info('Syncing with network. Aborting revert.')
         # return
-    revert_to_last_snapshot()
-    return
+    # revert_to_last_snapshot()
+    # return
     SYNC_STATUS['IS_SYNCING'] = True
     try:
         if block_index == 0:
             clear_db()
         else:
+            revert_to_last_snapshot()
+            SYNC_STATUS['IS_SYNCING'] = False
+            return
             con = sqlite3.connect(NEWRL_DB)
             cur = con.cursor()
             cur.execute(f'DELETE FROM blocks WHERE block_index > {block_index}')
@@ -357,7 +363,7 @@ def revert_chain(block_index):
         chain = Blockchain()
         for _block_index in range(1, block_index):
             block = chain.get_block(_block_index)
-            add_block(cur, block, block['hash'], is_state_reconstruction=True)
+            add_block(cur, block, is_state_reconstruction=True)
 
         con.commit()
         con.close()

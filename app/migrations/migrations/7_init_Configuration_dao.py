@@ -3,8 +3,7 @@ import sqlite3
 
 from app.codes.utils import get_person_id_for_wallet_address
 from app.constants import NEWRL_DB
-from app.nvalues import DAO_MANAGER, ASQI_WALLET, TREASURY_CONTRACT_ADDRESS, FOUNDATION_WALLET, ASQI_DAO_ADDRESS, \
-    NEWRL_DAO_ADDRESS, CONFIG_DAO_ADDRESS
+from app.nvalues import *
 
 
 def migrate():
@@ -24,8 +23,10 @@ def init_Configuration_Dao():
     con.close()
 
 
+
 def create_Configuration_Dao(cur, address,name,wallet):
-    address_signatories = [ASQI_WALLET, FOUNDATION_WALLET]
+    address_signatories = MEMBER_WALLET_LIST
+    print(address_signatories[0])
     signatories = {"vote_on_proposal": None,
                 "delete_member": [
                     -1
@@ -42,12 +43,12 @@ def create_Configuration_Dao(cur, address,name,wallet):
                 ],
                 "initialize_membership":None
                    }
-    contract_specs={"dao_wallet_address": wallet, "max_members": 999999999, "max_voting_time": 300000, "signatories": {"vote_on_proposal": None, "delete_member": [-1], "create_proposal": None, "add_member": [-1], "invest": [-1], "payout": [-1], "initialize_membership": None}, "voting_schemes": [{"function": "add_member", "voting_scheme": "voting_scheme_one", "params": {"min_yes_votes": 50}}, {"function": "delete_member", "voting_scheme": "voting_scheme_one", "params": {"min_yes_votes": 50}}]}
+    contract_specs = {"dao_wallet_address": wallet, "max_members": 999999999, "max_voting_time": 300000, "signatories": {"vote_on_proposal": None, "delete_member": [-1], "create_proposal": None, "add_member": [-1], "add_config": [-1], "change_config": [-1], "invest": [-1], "payout": [-1], "initialize_membership": None}, "voting_schemes": [{"function": "add_config", "voting_scheme": "voting_scheme_one", "params": {"min_yes_votes": 75}}, {"function": "change_config", "voting_scheme": "voting_scheme_one", "params": {"min_yes_votes": 75}}, {"function": "add_member", "voting_scheme": "voting_scheme_one", "params": {"min_yes_votes": 50}}, {"function": "delete_member", "voting_scheme": "voting_scheme_one", "params": {"min_yes_votes": 50}}]}
     query_params = (
         address,
         json.dumps(address_signatories),
         1648706655,
-        'MembershipDao',
+        'ConfigurationManager',
         '1.0.0',
         'hybrid',
         '1',
@@ -60,7 +61,7 @@ def create_Configuration_Dao(cur, address,name,wallet):
         '{}'
     )
     dao_exists = cur.execute(f'''SELECT COUNT(*) FROM CONTRACTS WHERE ADDRESS=? AND NAME LIKE ? ''',
-                                          (address, 'MembershipDao'))
+                             (address, 'ConfigurationManager'))
     dao_exists = dao_exists.fetchone()
     cur.execute(f'''INSERT OR IGNORE INTO CONTRACTS
         (address, creator, ts_init, 

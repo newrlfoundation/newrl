@@ -7,7 +7,7 @@ from app.codes.fs.temp_manager import get_all_receipts_from_storage, remove_rece
 from app.codes.kycwallet import get_address_from_public_key
 from app.codes.signmanager import verify_sign
 from .statereader import get_public_key_from_wallet_address
-from ..constants import NEWRL_DB
+from ..constants import MAX_RECEIPT_HISTORY_BLOCKS, NEWRL_DB
 
 
 logging.basicConfig(level=logging.INFO)
@@ -53,23 +53,21 @@ def update_receipts_in_state(cur, block):
             receipt['data']['block_hash'],
             receipt['data']['vote'],
             receipt['data']['wallet_address'],
-            # wallet_address,
-            block['index'],
-            receipt['signature'],
-            receipt['data']['timestamp'],
         )
 
         cur.execute('''
             INSERT OR IGNORE INTO receipts 
-            (block_index, block_hash, vote, wallet_address, 
-            included_block_index, signature, timestamp)
-            VALUES(?, ?, ?, ?, ?, ?, ?)
+            (block_index, block_hash, vote, wallet_address)
+            VALUES(?, ?, ?, ?)
         ''', db_receipt_data)
+
 
         remove_receipt_from_temp(
             receipt['data']['block_index'],
             receipt['data']['block_hash'],
             receipt['data']['wallet_address'])
+    
+    cur.execute('DELETE FROM receipts where block_index < ?', (block['index'] - MAX_RECEIPT_HISTORY_BLOCKS, ))
 
 
 def check_receipt_exists_in_db(block_index, block_hash, wallet_address, cur=None):

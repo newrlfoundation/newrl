@@ -12,6 +12,7 @@ import sqlite3
 import hashlib
 
 from app.codes.clock.global_time import get_corrected_time_ms
+from app.nvalues import MIN_STAKE_AMOUNT
 from ..Configuration import Configuration
 
 from ..constants import INITIAL_NETWORK_TRUST_SCORE, NEWRL_DB
@@ -203,18 +204,10 @@ def add_tx_to_block(cur, block_index, transactions):
         db_transaction_data = (
             block_index,
             transaction_code,
-            transaction['timestamp'],
-            transaction['type'],
-            transaction['currency'],
-            transaction['fee'],
-            description,
-            transaction['valid'],
-            specific_data,
-            signatures
         )
         cur.execute(f'''INSERT OR IGNORE INTO transactions
-            (block_index, transaction_code, timestamp, type, currency, fee, description, valid, specific_data, signatures)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', db_transaction_data)
+            (block_index, transaction_code)
+            VALUES (?, ?)''', db_transaction_data)
 
 
 def update_token_amount(cur, tid, amt):
@@ -311,16 +304,16 @@ def input_to_dict(ipval):
     return callparams
 
 
-def add_miner(cur, wallet_address, network_address, broadcast_timestamp):
+def add_miner(cur, wallet_address, network_address, broadcast_timestamp, block_index):
     miner_cursor = cur.execute('SELECT last_broadcast_timestamp FROM miners where wallet_address = ?', (wallet_address, )).fetchone()
     if miner_cursor is not None:
         last_broadcast_timestamp = int(miner_cursor[0])
         if last_broadcast_timestamp > broadcast_timestamp:
             return
     cur.execute('''INSERT OR REPLACE INTO miners
-				(id, wallet_address, network_address, last_broadcast_timestamp)
-				 VALUES (?, ?, ?, ?)''', 
-                 (wallet_address, wallet_address, network_address, broadcast_timestamp))
+				(id, wallet_address, network_address, last_broadcast_timestamp, block_index)
+				 VALUES (?, ?, ?, ?, ?)''', 
+                 (wallet_address, wallet_address, network_address, broadcast_timestamp, block_index))
     
     person_id = get_pid_from_wallet(cur, wallet_address)
     if person_id is not None:
@@ -349,8 +342,11 @@ def slashing_tokens(cur,address,is_block):
     amount = 0
     if data is not None:
         balance = data[0]
+        if balance < MIN_STAKE_AMOUNT:
+            logger.warn('Balance lower than minimum required stake for wallet %s. Not slashing.', address)
+            return False
         if is_block:
-            amount = Configuration.config("MIN_STAKE_AMOUNT")
+            amount = int(Configuration.config("MIN_STAKE_AMOUNT"))
         else:
             amount = int((Configuration.config("MIN_STAKE_AMOUNT")/Configuration.config("STAKE_PENALTY_RATIO")))
         actual_balance=balance

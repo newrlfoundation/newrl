@@ -9,6 +9,8 @@ import copy
 import multiprocessing
 
 from app.codes import blockchain
+from app.codes.dbmanager import get_snapshot_last_block_index
+from app.codes.fs.archivemanager import get_block_from_archive
 from app.codes.utils import get_last_block_hash
 from app.ntypes import BLOCK_CONSENSUS_INVALID, BLOCK_CONSENSUS_NA, BLOCK_CONSENSUS_VALID, BLOCK_STATUS_INVALID_MINED, BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID
 from ..clock.global_time import get_corrected_time_ms
@@ -17,7 +19,7 @@ from app.codes.minermanager import am_i_in_block_committee, am_i_in_current_comm
 from app.codes.p2p.outgoing import broadcast_receipt, broadcast_block
 from app.codes.receiptmanager import check_receipt_exists_in_db, validate_receipt
 # from app.codes.utils import store_block_proposal
-from app.constants import COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
+from app.constants import COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NETWORK_TRUSTED_ARCHIVE_NODES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
 from app.codes.p2p.peers import get_peers
 
 from app.codes.validator import validate_block, validate_block_data, validate_block_transactions, validate_receipt_signature
@@ -25,7 +27,7 @@ from app.codes.timers import TIMERS
 from app.codes.fs.temp_manager import append_receipt_to_block_in_storage, check_receipt_exists_in_temp, get_blocks_for_index_from_storage, store_block_to_temp, store_receipt_to_temp
 from app.codes.consensus.consensus import get_committee_consensus, validate_empty_block, validate_block_miner_committee, generate_block_receipt, \
     add_my_receipt_to_block, validate_receipt_for_committee
-from app.migrations.init_db import revert_chain
+from app.migrations.init_db import revert_chain, revert_chain_quick
 from app.nvalues import SENTINEL_NODE_WALLET
 from app.codes.timers import SYNC_STATUS
 
@@ -36,9 +38,9 @@ logger = logging.getLogger(__name__)
 def get_blocks(block_indexes):
     blocks = []
     for block_index in block_indexes:
-        block = get_block(block_index)
+        block = get_block_from_archive(block_index)
         if block:
-            blocks.append(get_block(block_index))
+            blocks.append(block)
         else:
             break
     return blocks
@@ -84,7 +86,7 @@ def receive_block(block):
     block_index = block['index']
     if block_index > get_last_block_index() + 1:
         logger.info('Node not in sync. Cannot add block')
-        sync_chain_from_peers()
+        # sync_chain_from_peers()
         return
 
     if blockchain.block_exists(block_index):
@@ -100,7 +102,7 @@ def receive_block(block):
     # Check for sentinel node empty block
     if validate_empty_block(block, check_from_sentinel_node=True):
         logger.info('Accepting timeout block from sentinel node')
-        accept_block(block, block['hash'])
+        accept_block(original_block, block['hash'])
         broadcast_block(original_block)
         return
 
@@ -124,8 +126,7 @@ def receive_block(block):
             #     broadcast_receipt(receipt_for_invalid_block, committee)
             return False
 
-        original_block = copy.deepcopy(block)
-        accept_block(block, block['hash'])
+        accept_block(original_block, block['hash'])
         broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
     elif consensus == BLOCK_CONSENSUS_INVALID:
         if not validate_empty_block(block):
@@ -133,7 +134,6 @@ def receive_block(block):
             return False
         
         logger.info('Committee empty block received for invalid block proposal by valid miner. Accepting and broadcasting.')
-        original_block = copy.deepcopy(block)
         if accept_block(block, block['hash']):
             broadcast_block(original_block)
     else:  # Consensus not available
@@ -141,18 +141,20 @@ def receive_block(block):
         if am_i_in_current_committee():
             if validate_block(block):
                 my_receipt = add_my_receipt_to_block(block, vote=BLOCK_VOTE_VALID)
-                consensus_adding_my_receipt = get_committee_consensus(block)
-                if consensus_adding_my_receipt == BLOCK_CONSENSUS_VALID:
-                    logger.info('Block satisfies valid consensus after adding my receipt. Accepting and broadcasting.')
-                    original_block = copy.deepcopy(block)
-                    if accept_block(block, block['hash']):
-                        broadcast_block(original_block)
-                elif consensus_adding_my_receipt == BLOCK_CONSENSUS_NA:
-                    committee = get_committee_for_current_block()
-                    broadcast_receipt(my_receipt, nodes=committee)
-                else:  # Not possible
-                    logger.warn('Unexpected behaviour after adding my valid vote. Consensus became invalid. Not broadcasting')
-                    return False
+                if my_receipt:
+                    consensus_adding_my_receipt = get_committee_consensus(block)
+                    if consensus_adding_my_receipt == BLOCK_CONSENSUS_VALID:
+                        logger.info('Block satisfies valid consensus after adding my receipt. Accepting and broadcasting.')
+                        if accept_block(original_block, block['hash']):
+                            broadcast_block(original_block)
+                    elif consensus_adding_my_receipt == BLOCK_CONSENSUS_NA:
+                        committee = get_committee_for_current_block()
+                        broadcast_receipt(my_receipt, nodes=committee)
+                    else:  # Not possible
+                        logger.warn('Unexpected behaviour after adding my valid vote. Consensus became invalid. Not broadcasting')
+                        return False
+                else:
+                    logger.info('My receipt is already in the received block and no consensus yet.')
             else:
                 # Generate empty block. 
                 chain = blockchain.Blockchain()
@@ -191,7 +193,7 @@ def sync_chain_from_node(url, block_index=None):
         their_last_block_index = block_index
     my_last_block = get_last_block_index()
     logger.info(f'I have {my_last_block} blocks. Node {url} has {their_last_block_index} blocks.')
-    if my_last_block == their_last_block_index:
+    if my_last_block >= their_last_block_index:
         logger.info('I am in sync with the node. Aborting sync.')
         return True
 
@@ -199,48 +201,39 @@ def sync_chain_from_node(url, block_index=None):
         quick_sync(url + '/get-newrl-db')
         return True
     block_idx = my_last_block + 1
-    block_batch_size = 10  # Fetch blocks in batches
-    while block_idx <= their_last_block_index:
-        failed_for_invalid_block = False
-        blocks_to_request = list(range(block_idx, 1 + min(their_last_block_index, block_idx + block_batch_size)))
-        blocks_request = {'block_indexes': blocks_to_request}
-        logger.info(f'Asking block node {url} for blocks {blocks_request}')
-        blocks_data = get_block_from_url_retry(url, blocks_request)
+    block_batch_size = 100  # Fetch blocks in batches
+    while True:
+        start_block = block_idx
+        end_block = 1 + block_idx + block_batch_size
+        
+        logger.info(f'Asking block node {url} for blocks from {start_block} to {end_block}')
+        blocks_data = get_block_from_url_retry(url, start_block, end_block)
 
-        for block in blocks_data:
-            # block['index'] = block['block_index']
-            # block['timestamp'] = int(block['timestamp'])
-            hash = block['hash']  # TODO - Use calculate hash
-            # hash = calculate_hash(block)
-            # block.pop('hash', None)
-            # block.pop('transactions_hash', None)
-            # block.pop('block_index', None)
-            for idx, tx in enumerate(block['text']['transactions']):
-                specific_data = tx['transaction']['specific_data']
-                while isinstance(specific_data, str):
-                    specific_data = json.loads(specific_data)
-                block['text']['transactions'][idx]['transaction']['specific_data'] = specific_data
-                
-                signatures = tx['transaction']['signatures']
-                while isinstance(signatures, str):
-                    signatures = json.loads(signatures)
-                block['text']['transactions'][idx]['transaction']['signatures'] = signatures
-                block['text']['transactions'][idx]['signatures'] = signatures
+        if blocks_data is None or len(blocks_data['blocks']) == 0:
+            logger.warn('Finished getting blocks from the node')
+            return True  # To prevent revert
+
+        for i in range(0, len(blocks_data['blocks'])):
+            block = blocks_data['blocks'][i]
+            hash = blocks_data['hashes'][i]
+
+            block_hash = calculate_hash(block)
+            if hash != block_hash:
+                logger.warn('Block hash does not match caculated hash. Aborting sync.')
+                # return True
 
             if not validate_block_data(block):
-                logger.info('Invalid block. Aborting sync.')
-                failed_for_invalid_block = True
+                logger.warn('Invalid block. Aborting sync.')
                 return False
-            con = sqlite3.connect(NEWRL_DB)
-            cur = con.cursor()
-            blockchain.add_block(cur, block, hash)
-            con.commit()
-            con.close()
+            else:
+                logger.info('Adding block %d', block['index'])
+                con = sqlite3.connect(NEWRL_DB)
+                cur = con.cursor()
+                blockchain.add_block(cur, block, hash)
+                con.commit()
+                con.close()
 
-        if failed_for_invalid_block:
-            break
-
-        block_idx += block_batch_size + 1
+        block_idx = block['index'] + 1
 
     return their_last_block_index
 
@@ -266,7 +259,13 @@ def sync_chain_from_peers(force_sync=False):
             if not sync_success:
                 forking_block = find_forking_block(url)
                 logger.info(f'Chains forking from block {forking_block}. Need to revert.')
-                # revert_chain(forking_block)
+                snapshot_last_block = get_snapshot_last_block_index()
+                logger.info('Last snapshot block is %s and forking from %s.', snapshot_last_block, forking_block)
+                if snapshot_last_block is not None and snapshot_last_block < forking_block:
+                    revert_chain_quick(revert_to_snapshot=True)
+                else:
+                    revert_chain_quick(revert_to_snapshot=False)
+
         else:
             logger.info('No node available to sync')
     except Exception as e:
@@ -328,13 +327,14 @@ def ask_peers_for_block(block_index):
 
 
 def accept_block(block, hash):
+    mutable_block = copy.deepcopy(block)
     global TIMERS
 
     # if hash is None:
     #     hash = calculate_hash(block['data'])
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
-    blockchain.add_block(cur, block['data'], hash)
+    blockchain.add_block(cur, mutable_block['data'])
     con.commit()
     con.close()
 
@@ -401,23 +401,24 @@ def receive_receipt(receipt):
     return True
 
 
-def get_block_from_url_retry(url, blocks_request):
+def get_block_from_url_retry(url, start_index, end_index):
     response = None
     retry_count = 3
-    while response is None or response.status_code != 200:
+    while response is None:
         try:
-            response = requests.post(
-                    url + '/get-blocks',
-                    json=blocks_request,
-                    timeout=15
+            response = requests.get(
+                    url + f'/get-archived-blocks?start_index={start_index}&end_index={end_index}',
+                    timeout=3
                 )
+            if response.status_code != 200:
+                return None
         except Exception as err:
             logger.info(f'Retrying block get {err}')
             if retry_count < 0:
                 SYNC_STATUS['IS_SYNCING'] = False
                 break
             retry_count -= 1
-            time.sleep(5)
+            time.sleep(1)
     blocks_data = response.json()
     return blocks_data
 
@@ -451,7 +452,7 @@ def get_last_block_hash_from_url_retry(url):
             )
         return response.json()['hash']
     except Exception as err:
-        logger.info(f'Error getting block hash {err}')
+        logger.info(f'Could not get block hash from {url}')
 
     return None
 
@@ -465,64 +466,71 @@ def get_majority_random_node():
     """Return a random node from the majority fork"""
     logger.info('Finding a majority node')
     peers = get_peers()
-    hashes = []
-    candidate_hash = ''
-    candidate_hash_count = 0
-    candidate_node_url = ''
+    hash_url_map = {}
+    valid_peers = 0
+    queried_peers = 0
+    
     random.seed(get_corrected_time_ms())
-    peers = random.sample(peers, k=min(len(peers), COMMITTEE_SIZE))
-    for peer in peers:
-        url = 'http://' + peer['address'] + ':' + str(NEWRL_PORT)
-        # logger.info(f"Querying {url} for block hash")
 
+    while len(hash_url_map) < COMMITTEE_SIZE and len(peers) > 0:
+        peer_idx = random.choice(range(len(peers)))
+        url = 'http://' + peers[peer_idx]['address'] + ':' + str(NEWRL_PORT)
+        del peers[peer_idx]
         hash = get_last_block_hash_from_url_retry(url)
         if hash:
-            hashes.append(hash)
-            if hash == candidate_hash:
-                candidate_hash_count += 1
+            valid_peers += 1
+            if hash in hash_url_map:
+                hash_url_map[hash].append(url)
+                if len(hash_url_map[hash]) > COMMITTEE_SIZE * 0.6:
+                    random_majority_node_url = random.choice(hash_url_map[hash])
+                    logger.info(f'Majority hash is {hash} and a random url is {random_majority_node_url}')
+                    return random_majority_node_url
             else:
-                candidate_hash_count -= 1
-            if candidate_hash_count < 0:
-                candidate_hash = hash
-                candidate_hash_count = 0
-                candidate_node_url = url
+                hash_url_map[hash] = [url]
+        queried_peers += 1
+        if valid_peers < COMMITTEE_SIZE and queried_peers > COMMITTEE_SIZE * 2:
+            break    
+    if valid_peers < COMMITTEE_SIZE or True:  # TODO - Remove this once network stabilise
+        trusted_node = random.choice(NETWORK_TRUSTED_ARCHIVE_NODES)
+        url = 'http://' + trusted_node + ':' + str(NEWRL_PORT)
+        logger.info('Could not find a majority chain. Using archive node %s', url)
+        return url
 
-    logger.info(f'Majority hash is {candidate_hash} and a random url is {candidate_node_url}')
-    return candidate_node_url
-    # revert_chain(find_forking_block(candidate_node_url))
-    # sync_chain_from_node(candidate_node_url)
+    logger.warn('Could not find a majority chain and enough peers responded with hash.')
+    return None
 
-def get_majority_random_node_parallel():  # TODO - Need to fix for memory leakage
-    """Return a random node from the majority fork"""
-    logger.info('Finding a majority node')
-    peers = get_peers()
-    hashes = []
-    candidate_hash = ''
-    candidate_hash_count = 0
-    candidate_node_url = ''
-    random.seed(get_corrected_time_ms())
-    peers = random.sample(peers, k=min(len(peers), COMMITTEE_SIZE))
 
-    pool = multiprocessing.Pool(5)
-    hash_urls = pool.map(get_hash, peers)
-    for hash_url in hash_urls:
-        block_hash = hash_url[0]
-        url = hash_url[1]
-        if block_hash:
-            hashes.append(block_hash)
-            if block_hash == candidate_hash:
-                candidate_hash_count += 1
-            else:
-                candidate_hash_count -= 1
-            if candidate_hash_count < 0:
-                candidate_hash = block_hash
-                candidate_hash_count = 0
-                candidate_node_url = url
+# def get_majority_random_node_parallel():  # TODO - Need to fix for memory leakage
+#     """Return a random node from the majority fork"""
+#     logger.info('Finding a majority node')
+#     peers = get_peers()
+#     hashes = []
+#     candidate_hash = ''
+#     candidate_hash_count = 0
+#     candidate_node_url = ''
+#     random.seed(get_corrected_time_ms())
+#     peers = random.sample(peers, k=min(len(peers), COMMITTEE_SIZE))
 
-    logger.info(f'Majority hash is {candidate_hash} and a random url is {candidate_node_url}')
-    return candidate_node_url
-    # revert_chain(find_forking_block(candidate_node_url))
-    # sync_chain_from_node(candidate_node_url)
+#     pool = multiprocessing.Pool(5)
+#     hash_urls = pool.map(get_hash, peers)
+#     for hash_url in hash_urls:
+#         block_hash = hash_url[0]
+#         url = hash_url[1]
+#         if block_hash:
+#             hashes.append(block_hash)
+#             if block_hash == candidate_hash:
+#                 candidate_hash_count += 1
+#             else:
+#                 candidate_hash_count -= 1
+#             if candidate_hash_count < 0:
+#                 candidate_hash = block_hash
+#                 candidate_hash_count = 0
+#                 candidate_node_url = url
+
+#     logger.info(f'Majority hash is {candidate_hash} and a random url is {candidate_node_url}')
+#     return candidate_node_url
+#     # revert_chain(find_forking_block(candidate_node_url))
+#     # sync_chain_from_node(candidate_node_url)
 
 
 def find_forking_block(node_url):
@@ -534,7 +542,7 @@ def find_forking_block(node_url):
     while start_idx >= 0:
         end_idx = start_idx + batch_size
         hash_tree = get_block_tree_from_url_retry(node_url, start_idx, end_idx)
-        my_blocks = get_blocks(list(range(start_idx, end_idx)))
+        my_blocks = get_block_hashes(start_idx, end_idx)
 
         idx = end_idx - 1 - start_idx
 
@@ -573,5 +581,5 @@ def quick_sync(db_url):
         if blocks[0] > existing_block[0]:
             subprocess.call(["mv", downloaded_db_path, NEWRL_DB])
     except Exception as e:
-        logger.info('Could not query internal db. Using downloaded db' + str(e))
+        logger.info('Removing local db and using downloaded db')
         subprocess.call(["mv", downloaded_db_path, NEWRL_DB])
