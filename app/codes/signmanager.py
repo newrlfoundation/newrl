@@ -52,7 +52,7 @@ def sign_object(private_key, data):
     msgsign = msgsignbytes.hex()
     return msgsign
 
-def verify_sign(data, public_key,signature):
+def verify_sign(data, signature, public_key):
     public_key_bytes = bytes.fromhex(public_key)
     sign_trans_bytes = bytes.fromhex(signature)
     vk = ecdsa.VerifyingKey.from_string(
