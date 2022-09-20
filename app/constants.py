@@ -21,15 +21,15 @@ elif NEWRL_ENV == 'mainnet':
     DATA_PATH = 'data_mainnet/'
     print('Using mainnet constants')
 elif NEWRL_ENV == 'test':
-    BOOTSTRAP_NODES = ['testnet.newrl.net']
-    NETWORK_TRUSTED_ARCHIVE_NODES = ['devnetarchive1.newrl.net']
+    BOOTSTRAP_NODES = ['localhost']
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['localhost']
     NEWRL_PORT = 4018
     DATA_PATH = 'data_test/'
     print('Using test constants')
-else:
-    BOOTSTRAP_NODES = ['testnet.newrl.net']
+elif NEWRL_ENV == 'devnet':
+    BOOTSTRAP_NODES = ['devnet.newrl.net']
     NETWORK_TRUSTED_ARCHIVE_NODES = ['devnetarchive1.newrl.net']
-    NEWRL_PORT = 8182
+    NEWRL_PORT = 8420
     DATA_PATH = 'data_devnet/'
     print('Using devnet constants')
 
