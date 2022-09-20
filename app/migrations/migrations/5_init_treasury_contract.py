@@ -78,19 +78,19 @@ def create_treasury_contract(cur, address,dao_address=FOUNDATION_DAO_ADDRESS):
                    }
     multiplier_newrl=math.pow(10,NEWRL_TOKEN_DECIMAL)
     transfer_limits = [
-        0,
-        0,
-        1000000*multiplier_newrl,
-        10000000*multiplier_newrl,
-        50000000*multiplier_newrl,
-        100000000*multiplier_newrl,
-        100000000*multiplier_newrl,
-        100000000*multiplier_newrl
+        int(0),
+        int(0),
+        int(1000000*multiplier_newrl),
+        int(10000000*multiplier_newrl),
+        int(50000000*multiplier_newrl),
+        int(100000000*multiplier_newrl),
+        int(100000000*multiplier_newrl),
+        int(100000000*multiplier_newrl)
     ]
 
     contract_specs = {
         "dao_address":dao_address,
-        "transfer_limits":json.dumps(transfer_limits)
+        "transfer_limits":transfer_limits
     }
     query_params = (
         address,

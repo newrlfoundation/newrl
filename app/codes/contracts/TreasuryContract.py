@@ -156,7 +156,7 @@ class TreasuryContract(ContractMaster):
             wallet_addresses.append(i['wallet_address'])
         wallet_addresses = set(wallet_addresses)
         number_of_sign = len(wallet_addresses)
-        transfer_limits = json.loads(cspecs['transfer_limits'])
+        transfer_limits = cspecs['transfer_limits']
         transfer_limit = transfer_limits[number_of_sign]
         wallet_present = True
         membership_wallets = []
