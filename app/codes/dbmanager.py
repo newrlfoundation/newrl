@@ -46,7 +46,7 @@ def create_block_snapshot(block_index):
         try:
             snapshot_last_block = get_last_block_index(NEWRL_DB + '.snapshot')
         except Exception as e:
-            logger.error('Error getting snapshot block size %s', str(e))
+            # logger.error('Error getting snapshot block size %s', str(e))
             snapshot_last_block = 0
         db_last_block = get_last_block_index(NEWRL_DB)
 
