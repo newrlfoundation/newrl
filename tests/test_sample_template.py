@@ -1,4 +1,3 @@
-
 import time
 import requests
 
@@ -70,7 +69,6 @@ def create_wallet():
     return wallet
 
 def test_create_sample_template(request):
-
     response_ct_add = requests.get(NODE_URL+"/generate-contract-address")
     assert response_ct_add.status_code == 200
     ct_address = response_ct_add.json()
@@ -127,12 +125,13 @@ def test_create_sample_template(request):
             contracts_in_state=True
             break
     assert contracts_in_state
-    request.config.cache.set('st_address', ct_address)
+    request.config.cache.set('st_address', ct_address) 
 
 
 def test_invlaid_sc_call(request):
-    st_address = request.config.cache.get('st_address', None)
     wallet1 = create_wallet()
+    st_address = request.config.cache.get('st_address', None)
+    request.config.cache.set('wallet1', wallet1)
     req_json = {
         "sc_address": st_address,
         "function_called": "sample_validate",

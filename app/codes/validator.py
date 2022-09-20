@@ -87,8 +87,8 @@ def validate(transaction, propagate=False, validate_economics=True):
 
 
 def validate_signature(data, public_key, signature):
-    public_key_bytes = base64.b64decode(public_key)
-    sign_trans_bytes = base64.decodebytes(signature.encode('utf-8'))
+    public_key_bytes = bytes.fromhex(public_key)
+    sign_trans_bytes = bytes.fromhex(signature)
     vk = ecdsa.VerifyingKey.from_string(
         public_key_bytes, curve=ecdsa.SECP256k1)
     message = json.dumps(data).encode()

@@ -1,3 +1,4 @@
+import logging
 import sys
 import json
 
@@ -5,6 +6,7 @@ from ...Configuration import Configuration
 from ...constants import AUTH_FILE_PATH
 from ..crypto import sign_object
 
+logger = logging.getLogger(__name__)
 
 
 def get_node_wallet_public():
@@ -49,7 +51,14 @@ def get_auth():
             }
             auth_data['signature'] = sign_object(private_key, auth_data)
             return auth_data
-    except:
+    except ValueError as e:        
+        logger.error(e)
+        auth_data = {}
+        print(
+            f'Could not use the wallet data. Please ensure correct format is present')
+        exit()
+    except Exception as e:
+        logger.error(e)
         auth_data = {}
         print(f'Could not get auth data. Make auth file {AUTH_FILE_PATH} is present. Exiting.')
         print('Generate one by running installation')

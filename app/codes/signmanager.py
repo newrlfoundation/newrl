@@ -19,8 +19,8 @@ def check_signing_address(transaction, address):
 def sign_transaction(wallet_data, transaction_data):
     """Sign a transaction using a given wallet"""
     address = wallet_data['address']
-    private_key_bytes = base64.b64decode(wallet_data['private'])
-    public_key_bytes = base64.b64decode(wallet_data['public'])
+    private_key_bytes = bytes.fromhex(wallet_data['private'])
+    public_key_bytes = bytes.fromhex(wallet_data['public'])
     if not private_key_bytes:
         print("No private key found for the address")
         return False
@@ -33,7 +33,7 @@ def sign_transaction(wallet_data, transaction_data):
     signtransbytes = transaction_manager.sign_transaction(private_key_bytes, address)
     print("signed msg signature is:", signtransbytes,
           " and address is ", address)
-    signtrans = base64.b64encode(signtransbytes).decode('utf-8')
+    signtrans = signtransbytes.hex()
     if signtrans:
         print("Successfully signed the transaction and updated its signatures data.")
         sign_valid = transaction_manager.verify_sign(signtrans, public_key_bytes)
@@ -45,17 +45,20 @@ def sign_transaction(wallet_data, transaction_data):
 
 
 def sign_object(private_key, data):
-    pvtkeybytes = base64.b64decode(private_key)
+    pvtkeybytes = bytes.fromhex(private_key)
     msg = json.dumps(data).encode()
     sk = ecdsa.SigningKey.from_string(pvtkeybytes, curve=ecdsa.SECP256k1)
     msgsignbytes = sk.sign(msg)
-    msgsign = base64.b64encode(msgsignbytes).decode('utf-8')
+    msgsign = msgsignbytes.hex()
     return msgsign
 
-
-def verify_sign(data, signature, public_key):
-    public_key_bytes = base64.b64decode(public_key)
-    sign_trans_bytes = base64.decodebytes(signature.encode('utf-8'))
-    verifying_key = ecdsa.VerifyingKey.from_string(public_key_bytes, curve=ecdsa.SECP256k1)
+def verify_sign(data, public_key,signature):
+    public_key_bytes = bytes.fromhex(public_key)
+    sign_trans_bytes = bytes.fromhex(signature)
+    vk = ecdsa.VerifyingKey.from_string(
+        public_key_bytes, curve=ecdsa.SECP256k1)
     message = json.dumps(data).encode()
-    return verifying_key.verify(sign_trans_bytes, message)
+    try:
+        return vk.verify(sign_trans_bytes, message)
+    except:
+        return False
