@@ -23,7 +23,7 @@ class TreasuryContract(ContractMaster):
 
     def burn_token(self,callparamsip,repo:FetchRepository):
         callparams=input_to_dict(callparamsip)
-        cspecs = input_to_dict(self.contractparams)
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
         dao_address = cspecs['dao_address']
         function_caller = callparams['function_caller']
         wallet_present = True
@@ -55,7 +55,7 @@ class TreasuryContract(ContractMaster):
     def upgrade_transfer(self,callparamsip,repo:FetchRepository):
         trxn=[]
         callparams = input_to_dict(callparamsip)
-        cspecs = input_to_dict(self.contractparams)
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
         dao_address = cspecs['dao_address']
         function_caller = callparams['function_caller']
         wallet_present = True
@@ -98,7 +98,7 @@ class TreasuryContract(ContractMaster):
         trxn = []
         total_tokens=0
         callparams=input_to_dict(callparamsip)
-        cspecs = input_to_dict(self.contractparams)
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
         dao_address = cspecs['dao_address']
         function_caller = callparams['function_caller']
         wallet_present = True

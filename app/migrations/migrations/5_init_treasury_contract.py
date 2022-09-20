@@ -19,7 +19,8 @@ def create_network_contract(cur, address,dao_address=FOUNDATION_DAO_ADDRESS):
                    "deploy": None,
                    "burn_token": address_signatories,
                    "upgrade_transfer": address_signatories,
-                   "payout": address_signatories
+                   "payout": address_signatories,
+                   "transfer": address_signatories
                    }
     contract_specs = {"dao_address": dao_address,
                       "recipient_list": []
@@ -72,7 +73,8 @@ def create_treasury_contract(cur, address,dao_address=FOUNDATION_DAO_ADDRESS):
                    "deploy": None,
                    "burn_token": address_signatories,
                    "upgrade_transfer": address_signatories,
-                   "payout": address_signatories
+                   "payout": address_signatories,
+                   "transfer":address_signatories
                    }
     multiplier_newrl=math.pow(10,NEWRL_TOKEN_DECIMAL)
     transfer_limits = [
