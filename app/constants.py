@@ -32,6 +32,12 @@ elif NEWRL_ENV == 'devnet':
     NEWRL_PORT = 8420
     DATA_PATH = 'data_devnet/'
     print('Using devnet constants')
+else:  # default ot devnet
+    BOOTSTRAP_NODES = ['devnet.newrl.net']
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['devnetarchive1.newrl.net']
+    NEWRL_PORT = 8420
+    DATA_PATH = 'data_devnet/'
+    print('Using devnet constants')
 
 DATA_PATH = 'data_test/' if IS_TEST else DATA_PATH
 LOG_FILE_PATH = DATA_PATH + 'logs/'
