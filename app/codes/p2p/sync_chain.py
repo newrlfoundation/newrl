@@ -209,11 +209,11 @@ def sync_chain_from_node(url, block_index=None):
         logger.info(f'Asking block node {url} for blocks from {start_block} to {end_block}')
         blocks_data = get_block_from_url_retry(url, start_block, end_block)
 
-        if blocks_data is None or len(blocks_data['blocks']) == 0:
+        if blocks_data is None or len(blocks_data['hashes']) == 0:
             logger.warn('Finished getting blocks from the node')
             return True  # To prevent revert
 
-        for i in range(0, len(blocks_data['blocks'])):
+        for i in range(0, len(blocks_data['hashes'])):
             block = blocks_data['blocks'][i]
             hash = blocks_data['hashes'][i]
 

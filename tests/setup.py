@@ -2,9 +2,7 @@ import random
 import string
 import os
 
-WALLET  {"public": "9ed7d27889d0d17c9f729afc806684cadf32d131ca1078bcd42d7ca954c9317cef739f647c5119ca4f74fc24fb027bfac9b38b0ee5bb5025ecbb82a8e7cb95d1",
-                   "private": "e31b507aecd43490e61a3228dc36227a33ee5aac6c608a390e53202ca8084720",
-                   "address": "0xe738ffa75c377d07819d21170c7594aa89ce1618"}
+WALLET = {"public": "09c191748cc60b43839b273083cc565811c26f5ce54b17ed4b4a17c61e7ad6b880fc7ac3081b9c0cf28756ea21ce501789b59e8f9103f3668ccf2c86108628ee", "private": "d63e7ca37bcd6b43a6bdf281b2f9b4de7e64f027c0f741ffe12a105bf3955ec7", "address": "0x667663f36ac08e78bbf259f1361f02dc7dad593b"}
 BLOCK_WAIT_TIME = 15
 
 
@@ -16,4 +14,4 @@ TEST_ENV = os.environ.get('TEST_ENV')
 if TEST_ENV == 'local':
     NODE_URL = 'http://localhost:4018'
 else:
-    NODE_URL = 'http://testnet.newrl.net:8182'
+    NODE_URL = 'http://devnet.newrl.net:8420'
