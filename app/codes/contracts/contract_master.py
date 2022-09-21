@@ -6,14 +6,19 @@
 #import ecdsa
 #from Crypto.Hash import keccak
 #import os
+from abc import abstractmethod
+import abc
 import json
 import datetime
 import time
 import sqlite3
+
+from app.codes.helpers.TransactionCreator import TransactionCreator
 #import hashlib
 
 from ...constants import NEWRL_DB
 from ..db_updater import *
+
 
 class ContractMaster():
     codehash=""    #this is the hash of the entire document excluding this line, it is same for all instances of this class
@@ -21,53 +26,54 @@ class ContractMaster():
         self.address=contractaddress    #this is for instances of this class created for tx creation and other non-chain work
         self.type=1
         self.template=template
+        self.new_contract = False
         if contractaddress:     #as in this is an existing contract
             con = sqlite3.connect(NEWRL_DB)
             cur = con.cursor()
             params = self.loadcontract(cur, contractaddress)  #this will populate the params for a given instance of the contract
-            con.close()
-        if not params or not contractaddress:   #either no contractaddress provided or new adddress not in db
-            contractparams={}
-            contractparams['creator']=""
-            contractparams['ts_init']=0
-            contractparams['name']=template
-            contractparams['version']=version
-            contractparams['actmode']="hybrid"
-            contractparams['status']=0
-            contractparams['next_act_ts']=0
-            contractparams['signatories']=[]
-            contractparams['parent']=""
-            contractparams['oracleids']=[]
-            contractparams['contractspecs']={}
-            contractparams['legalparams']={}
-            self.contractparams=contractparams
+            if not params:
+                self.new_contract = True
+                self.contractparams = self.get_default_contract_params(
+                    template, version)
+            con.close()    
+        else:   #either no contractaddress provided or new adddress not in db
+            self.address = create_contract_address()
+            self.contractparams=self.get_default_contract_params(template, version)
+            self.new_contract = True
+            # no pre-set address, need to create a new one
 
-    def setup(self, cur, callparams):
+    def setup(self, callparams, fetchRepository):
         #this is called by a tx type 3 signed by the creator, it calls the function setp with parameters as params
         #setup implies a transaction for contract address creation
-        contractparams= input_to_dict(callparams)
-        if contractparams['status']==-1:
-            print("Contract is already terminated, cannot setup. Exiting.")
-            return False
-        if contractparams['status']==2:
-            print("Contract already deployed, cannot setup. Exiting.")
-            return False
-        if contractparams['status']==3:
-            print("Contract already expired, cannot setup. Exiting.")
-            return False
-        if contractparams['status']==1:
-            print("Contract already setup, cannot setup again. Exiting.")
-            return False
-        #add other codes here if in future 4 onwards are used for specifying other contract states.
-        if not self.address:    #no pre-set address, need to create a new one
-            self.address = create_contract_address()
 
+        if not self.new_contract:
+            raise Exception("This exists a contract already in the database with same address")
+
+        contractparams= input_to_dict(callparams)
+
+        if not (contractparams['status']==0 or contractparams['status'] is None):
+            raise Exception("Contract status provided is not valid. Should be 0 or None for contracts that aren't setup")
+        
+        # if contractparams['status']==-1:
+        #     print("Contract is already terminated, cannot setup. Exiting.")
+        #     return False
+        # if contractparams['status']==2:
+        #     print("Contract already deployed, cannot setup. Exiting.")
+        #     return False
+        # if contractparams['status']==3:
+        #     print("Contract already expired, cannot setup. Exiting.")
+        #     return False
+        # if contractparams['status']==1:
+        #     print("Contract already setup, cannot setup again. Exiting.")
+        #     return False
+        #add other codes here if in future 4 onwards are used for specifying other contract states.
+        
         if contractparams['name']!=self.template:
             print("Mismatch in contractname. Not creating a new contract.")
             return False
-    #    if contractparams['version']!=self.version:
-    #        print("Mismatch in contract version. Not creating a new contract.")
-    #        return False
+        #    if contractparams['version']!=self.version:
+        #        print("Mismatch in contract version. Not creating a new contract.")
+        #        return False
         contractparams['status']=1
         #status convention: 0 or None is not setup yet, 1 is setup but not deployed, 2 is setup and deployed, 3 is expired and -1 is terminated
         
@@ -99,11 +105,36 @@ class ContractMaster():
                 cspecs,
                 legpars
                 )
-        cur.execute(f'''INSERT INTO contracts
-                (address, creator, ts_init, name, version, actmode, status, next_act_ts, signatories, parent, oracleids, selfdestruct, contractspecs, legalparams)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', qparams)
-        return self.address
 
+        contract_data = {
+            "address": (self.address).strip('\"'),
+            "creator": contractparams['creator'],
+            "ts_init": contractparams['ts_init'],
+            "name": contractparams['name'],
+            "version": contractparams['version'],
+            "actmode": contractparams['actmode'],
+            "status": cstatus,
+            "next_act_ts":  contractparams['next_act_ts'],
+            "signatories": signstr,
+            "parent": contractparams['parent'],
+            "oracleids": oraclestr,
+            "selfdestruct": sdestr,
+            "contractspecs": cspecs,
+            "legalparams": legpars
+        }
+        '''txn type 8 (sc-private state update)'''
+        sc_state_proposal1_data = {
+            "operation": "save",
+            "table_name": "contracts",
+            "sc_address": self.address,
+            "data": contract_data
+        }
+
+        transaction_creator = TransactionCreator()
+        add_contract_proposal = transaction_creator.transaction_type_8(
+            sc_state_proposal1_data)
+
+        return [add_contract_proposal]
     def loadcontract(self, cur, contractaddress):
         #this loads the contract from the state db
         #it should take as input contractaddress and output the contractparams as they are in the db as of the time of calling it
@@ -112,14 +143,15 @@ class ContractMaster():
                     'address': contractaddress})
         contract_row = contract_cursor.fetchone()
         if not contract_row:
+            self.new_contract = True
             return False
-        #print(contract)
-    #    self.contractparams=dict(contract_row)
+
         self.contractparams = {k[0]: v for k, v in list(zip(contract_cursor.description, contract_row))}
         self.contractparams['contractspecs']=json.loads(self.contractparams['contractspecs'])
         self.contractparams['legalparams']=json.loads(self.contractparams['legalparams'])
         self.contractparams['signatories']=json.loads(self.contractparams['signatories'])
         self.contractparams['oracleids'] = json.loads(self.contractparams['oracleids'])
+        self.new_contract = False
         print("Loaded the contract with following data: \n",self.contractparams)
         return self.contractparams
         
@@ -150,3 +182,24 @@ class ContractMaster():
                 if appr_sender['allowed'] == 'all' or function in appr_sender['allowed']:
                     sendervalidity = True
         return sendervalidity
+
+    def get_default_contract_params(self,template,version):
+        contractparams = {}
+        contractparams['creator']=""
+        contractparams['ts_init']=0
+        contractparams['name']=template
+        contractparams['version']=version
+        contractparams['actmode']="hybrid"
+        contractparams['status']=0
+        contractparams['next_act_ts']=0
+        contractparams['signatories']=[]
+        contractparams['parent']=""
+        contractparams['oracleids']=[]
+        contractparams['contractspecs']={}
+        contractparams['legalparams']={}  
+        return contractparams       
+
+
+
+
+

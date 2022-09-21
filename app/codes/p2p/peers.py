@@ -16,7 +16,6 @@ from .utils import get_my_address
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-auth_data = get_auth()
 
 
 def clear_peer_db():
@@ -123,18 +122,23 @@ def init_bootstrap_nodes():
         if socket.gethostbyname(address) == my_address:
             continue
         try:
-            response = register_me_with_them(address)
+            # response = register_me_with_them(address)
+            thread = Thread(target=register_me_with_them, args=(address,))
+            thread.start()
         except Exception as e:
-            print(f'Peer unreachable, deleting: {peer}')
-            remove_peer(peer['address'])
+            print(f'Peer unreachable: {peer}')
+            # remove_peer(peer['address'])
     return True
 
 
 def register_me_with_them(address):
     auth_data = get_auth()
     logger.info(f'Registering me with node {address}')
-    response = requests.post('http://' + address + f':{NEWRL_PORT}/add-peer', json=auth_data, timeout=REQUEST_TIMEOUT)
-    return response.json()
+    try:
+        response = requests.post('http://' + address + f':{NEWRL_PORT}/add-peer', json=auth_data, timeout=REQUEST_TIMEOUT)
+        return response.json()
+    except Exception as e:
+        pass
 
 def update_peers():
     my_peers = get_peers()
@@ -168,7 +172,6 @@ def update_software(propogate):
         update_peers()
 
     logger.info('Getting latest code from repo')
-    subprocess.call(["git", "pull"])
     subprocess.call(["sh", "scripts/install.sh"])
     init_newrl()
 

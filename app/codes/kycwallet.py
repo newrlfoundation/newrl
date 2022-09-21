@@ -13,8 +13,9 @@ from ..constants import TMP_PATH, NEWRL_DB
 from .transactionmanager import Transactionmanager
 
 
+
 def get_address_from_public_key(public_key):
-    public_key_bytes = base64.b64decode(public_key)
+    public_key_bytes = bytes.fromhex(public_key)
 
     wallet_hash = keccak.new(digest_bits=256)
     wallet_hash.update(public_key_bytes)
@@ -29,15 +30,13 @@ def generate_wallet_address():
     key_data = {'public': None, 'private': None, 'address': None}
     key = ecdsa.SigningKey.from_string(
         private_key_bytes, curve=ecdsa.SECP256k1).verifying_key
-
     key_bytes = key.to_string()
 
-    # the below section is to enable serialization while passing the keys through json
-    private_key_final = base64.b64encode(private_key_bytes).decode('utf-8')
-    public_key_final = base64.b64encode(key_bytes).decode('utf-8')
-    key_data['address'] = get_address_from_public_key(public_key_final)
-    key_data['private'] = private_key_final
-    key_data['public'] = public_key_final
+    private_key_hex = private_key_bytes.hex()
+    public_key_hex = key_bytes.hex()
+    key_data['address'] = get_address_from_public_key(public_key_hex)
+    key_data['private'] = private_key_hex
+    key_data['public'] = public_key_hex
     return key_data
 
 
@@ -54,10 +53,10 @@ def add_wallet(kyccustodian, kycdocs, ownertype, jurisd, public_key, wallet_spec
     }
 
     trans = create_add_wallet_transaction(wallet)
-    ts = str(datetime.datetime.now())
-    file = TMP_PATH + "transaction-1-" + ts[0:10] + "-" + ts[-6:] + ".json"
-    transactionfile = trans.save_transaction_to_mempool(file)
-    return transactionfile
+    # ts = str(datetime.datetime.now())
+    # file = TMP_PATH + "transaction-1-" + ts[0:10] + "-" + ts[-6:] + ".json"
+    # transactionfile = trans.save_transaction_to_mempool(file)
+    return trans
 
 
 def add_linked_wallet(currentaddress, public_key, wallet_specific_data={}):
@@ -124,8 +123,7 @@ def create_add_wallet_transaction(wallet):
     }
     transaction_data = {'transaction': transaction_data, 'signatures': []}
     transaction_manager = Transactionmanager()
-    transaction_manager.transactioncreator(transaction_data)
-    return transaction_manager
+    return transaction_manager.transactioncreator(transaction_data)
 
 
 def get_digest(file_path):
@@ -141,12 +139,13 @@ def get_digest(file_path):
     return h.hexdigest()
 
 
-def get_walletdata_from_address(addressinput):
+def get_person_id_for_wallet_from_db(addressinput):
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
     wallet_cursor = cur.execute(
-        'SELECT * FROM person_wallet WHERE wallet_id=?', (addressinput, )).fetchone()
+        'SELECT person_id FROM person_wallet WHERE wallet_id=?', (addressinput, )).fetchone()
     if wallet_cursor is None:
-        return False
-    walletdata = dict(wallet_cursor)
-    return walletdata
+        return None
+    pid = wallet_cursor[0]
+    con.close()
+    return wallet_cursor[0]

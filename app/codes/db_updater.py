@@ -1,4 +1,5 @@
 import codecs
+import math
 from subprocess import call
 import uuid
 import ecdsa
@@ -10,10 +11,28 @@ import time
 import sqlite3
 import hashlib
 
-from ..constants import NEWRL_DB
+from app.codes.clock.global_time import get_corrected_time_ms
+from app.nvalues import MIN_STAKE_AMOUNT
+from ..Configuration import Configuration
+
+from ..constants import INITIAL_NETWORK_TRUST_SCORE, NEWRL_DB
 from .utils import get_person_id_for_wallet_address, get_time_ms
+from ..ntypes import NEWRL_TOKEN_CODE
+import logging
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+def __is_smart_contract(cur,address):
+    if not address.startswith('ct'):
+        return False
 
+    sc_cursor = cur.execute(
+        'SELECT COUNT (*) FROM contracts WHERE address=?', (address, ))
+    sc_id = sc_cursor.fetchone()
+    if sc_id is None:
+        return False
+    else:
+        return True
 def is_wallet_valid(cur, address):
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
@@ -24,21 +43,17 @@ def is_wallet_valid(cur, address):
 
 
 def transfer_tokens_and_update_balances(cur, sender, reciever, tokencode, amount):
+    if sender == reciever:
+        print('Sender and receiver cannot be the same')
+        return False
+
     sender_balance = get_wallet_token_balance(cur, sender, tokencode)
-    print("Sender is ", sender, " and their balance is ", sender_balance)
     reciever_balance = get_wallet_token_balance(cur, reciever, tokencode)
-    print("Receiver is ", reciever, " and their balance is ", reciever_balance)
     sender_balance = sender_balance - amount
     reciever_balance = reciever_balance + amount
-    print("Amount is ", amount)
-    print("Updating sender's balance with ", sender_balance)
-    print("Updating reciever's balance with ", reciever_balance)
     update_wallet_token_balance(cur, sender, tokencode, sender_balance)
     update_wallet_token_balance(cur, reciever, tokencode, reciever_balance)
-    sender_balance = get_wallet_token_balance(cur, sender, tokencode)
-    print("Sender is ", sender, " and their balance is ", sender_balance)
-    reciever_balance = get_wallet_token_balance(cur, reciever, tokencode)
-    print("Receiver is ", reciever, " and their balance is ", reciever_balance)
+    
 
 
 def update_wallet_token_balance(cur, wallet_address, token_code, balance):
@@ -83,7 +98,8 @@ def add_wallet_pid(cur, wallet):
                     wallet['jurisd'],
                     data_json
                     )
-    cur.execute(f'''INSERT OR IGNORE INTO wallets
+    if not __is_smart_contract(cur,wallet['wallet_address']):
+        cur.execute(f'''INSERT OR IGNORE INTO wallets
             (wallet_address, wallet_public, custodian_wallet, kyc_docs, owner_type, jurisdiction, specific_data)
             VALUES (?, ?, ?, ?, ?, ?, ?)''', query_params)
 
@@ -177,7 +193,6 @@ def get_wallet_token_balance(cur, wallet_address, token_code):
 
 
 def add_tx_to_block(cur, block_index, transactions):
-    print(block_index, transactions)
     for transaction_signature in transactions:
         transaction = transaction_signature['transaction']
         signatures = json.dumps(transaction_signature['signatures'])
@@ -189,18 +204,10 @@ def add_tx_to_block(cur, block_index, transactions):
         db_transaction_data = (
             block_index,
             transaction_code,
-            transaction['timestamp'],
-            transaction['type'],
-            transaction['currency'],
-            transaction['fee'],
-            description,
-            transaction['valid'],
-            specific_data,
-            signatures
         )
         cur.execute(f'''INSERT OR IGNORE INTO transactions
-            (block_index, transaction_code, timestamp, type, currency, fee, description, valid, specific_data, signatures)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', db_transaction_data)
+            (block_index, transaction_code)
+            VALUES (?, ?)''', db_transaction_data)
 
 
 def update_token_amount(cur, tid, amt):
@@ -251,6 +258,29 @@ def get_pid_from_wallet(cur, walletaddinput):
     return pid[0]
 
 
+def get_block_from_cursor(cur, block_index):
+    block = cur.execute(
+        '''SELECT 
+        block_index, hash, timestamp, status, proof,
+        previous_hash, creator_wallet, 
+        expected_miner, committee
+        FROM blocks where block_index=?'''
+    , (block_index,)).fetchone()
+    if block is None:
+        return None
+    return {
+        'block_index': block[0],
+        'hash': block[1],
+        'timestamp': block[2],
+        'status': block[3],
+        'proof': block[4],
+        'previous_hash': block[5],
+        'creator_wallet': block[6],
+        'expected_miner': block[7],
+        'committee': block[8],
+    }
+
+
 def create_contract_address():
     private_key_bytes = os.urandom(32)
     key = ecdsa.SigningKey.from_string(
@@ -274,16 +304,25 @@ def input_to_dict(ipval):
     return callparams
 
 
-def add_miner(cur, wallet_address, network_address, broadcast_timestamp):
+def add_miner(cur, wallet_address, network_address, broadcast_timestamp, block_index):
     miner_cursor = cur.execute('SELECT last_broadcast_timestamp FROM miners where wallet_address = ?', (wallet_address, )).fetchone()
     if miner_cursor is not None:
         last_broadcast_timestamp = int(miner_cursor[0])
         if last_broadcast_timestamp > broadcast_timestamp:
             return
     cur.execute('''INSERT OR REPLACE INTO miners
-				(id, wallet_address, network_address, last_broadcast_timestamp)
-				 VALUES (?, ?, ?, ?)''', 
-                 (wallet_address, wallet_address, network_address, broadcast_timestamp))
+				(id, wallet_address, network_address, last_broadcast_timestamp, block_index)
+				 VALUES (?, ?, ?, ?, ?)''', 
+                 (wallet_address, wallet_address, network_address, broadcast_timestamp, block_index))
+    
+    person_id = get_pid_from_wallet(cur, wallet_address)
+    if person_id is not None:
+        cur.execute(f'''
+        INSERT OR IGNORE INTO trust_scores
+        (src_person_id, dest_person_id, score, last_time)
+        VALUES (?, ?, ?, ?)''', 
+        (Configuration.config("NETWORK_TRUST_MANAGER_PID"), person_id,
+        INITIAL_NETWORK_TRUST_SCORE, get_corrected_time_ms()))
 
 def add_pid_contract_add(cur,ct_add):
     pid = get_person_id_for_wallet_address(ct_add)
@@ -296,3 +335,35 @@ def add_pid_contract_add(cur,ct_add):
                     (person_id, wallet_id)
                     VALUES (?, ?)''', query_params)
     return pid
+
+def slashing_tokens(cur,address,is_block):
+    data = cur.execute(f'''select amount,staker_wallet_address from stake_ledger where wallet_address=:address''',
+                          {"address": address}).fetchone()
+    amount = 0
+    if data is not None:
+        balance = data[0]
+        if balance < MIN_STAKE_AMOUNT:
+            logger.warn('Balance lower than minimum required stake for wallet %s. Not slashing.', address)
+            return False
+        if is_block:
+            amount = int(Configuration.config("MIN_STAKE_AMOUNT"))
+        else:
+            amount = int((Configuration.config("MIN_STAKE_AMOUNT")/Configuration.config("STAKE_PENALTY_RATIO")))
+        actual_balance=balance
+        balance = balance-amount
+        deducted_amount=0
+        # Transferring amount (i.e. penal amount to the zero address)
+        data_json=json.loads(data[1])
+        for index, value in enumerate(data_json):
+            for i in value.keys():
+                burn_amount=data_json[index][i]-(data_json[index][i]/actual_balance)*balance
+                data_json[index][i]=(data_json[index][i]/actual_balance)*balance
+                transfer_tokens_and_update_balances(cur,Configuration.config("STAKE_CT_ADDRESS"),Configuration.config("ZERO_ADDRESS"),NEWRL_TOKEN_CODE,math.ceil(burn_amount))
+                deducted_amount=deducted_amount+math.ceil(burn_amount)
+        # updating stake_ledger table with the new updated address amount
+        cur.execute(f'''UPDATE stake_ledger set amount=:amount, staker_wallet_address=:staker_wallet_address where wallet_address=:address''', {"amount": actual_balance-deducted_amount,
+                                                                                           "address": address,"staker_wallet_address":json.dumps(data_json)})
+        return True
+    else:
+        logger.info("No entry found for this address while slashing %s", address)
+        return False

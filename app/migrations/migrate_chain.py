@@ -20,11 +20,11 @@ def migrate_chain(chain_file_path):
 
         transactions = block['text']['transactions']
         encoded_block = json.dumps(transactions, sort_keys=True).encode()
-        transactions_hash = hashlib.sha256(encoded_block).hexdigest()
+        # transactions_hash = hashlib.sha256(encoded_block).hexdigest()
 
         db_block_data = (block['index'], block['timestamp'], block['proof'],
-                        block['previous_hash'], hash, transactions_hash)
-        cur.execute(f'''INSERT OR IGNORE INTO blocks (block_index, timestamp, proof, previous_hash, hash, transactions_hash) VALUES (?, ?, ?, ?, ?, ?)''', db_block_data)
+                        block['previous_hash'], hash)
+        cur.execute(f'''INSERT OR IGNORE INTO blocks (block_index, timestamp, proof, previous_hash, hash) VALUES (?, ?, ?, ?, ?)''', db_block_data)
 
         block_index = block['index']
 

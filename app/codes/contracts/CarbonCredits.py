@@ -35,7 +35,7 @@ class CarbonCredits(ContractMaster):
         callparams = input_to_dict(callparamsip)
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         custodian_address = cspecs['custodian_address']
-        custodian_wallet = base64.b64decode(get_public_key_from_address(custodian_address))
+        custodian_wallet = bytes.fromhex(get_public_key_from_address(custodian_address))
 
         transaction_manager = Transactionmanager()
         transaction_manager.set_transaction_data(callparams)

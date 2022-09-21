@@ -1,9 +1,10 @@
 """Chain and state queries"""
 import sqlite3
 
+
 from ..constants import NEWRL_DB
 from .blockchain import Blockchain
-
+from app.Configuration import Configuration
 
 class Chainscanner():
     def __init__(self):
@@ -48,38 +49,40 @@ class Chainscanner():
             return row[0]
 
 
-def get_wallet_token_balance(wallet_address, token_code):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
-    balance_cursor = cur.execute('SELECT balance FROM balances WHERE wallet_address = :address AND tokencode = :tokencode', {
-        'address': wallet_address, 'tokencode': token_code})
-    balance_row = balance_cursor.fetchone()
-    balance = balance_row[0] if balance_row is not None else 0
-    cur.close()
-    return balance
-
 
 def download_state():
     con = sqlite3.connect(NEWRL_DB)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
-    wallets_cursor = cur.execute('SELECT * FROM wallets').fetchall()
+    wallets_cursor = cur.execute('SELECT * FROM wallets ORDER BY wallet_address').fetchall()
     wallets = [dict(ix) for ix in wallets_cursor]
 
-    tokens_cursor = cur.execute('SELECT * FROM tokens').fetchall()
+    tokens_cursor = cur.execute('SELECT * FROM tokens ORDER BY tokencode').fetchall()
     tokens = [dict(ix) for ix in tokens_cursor]
 
-    balances_cursor = cur.execute('SELECT * FROM balances').fetchall()
+    balances_cursor = cur.execute('SELECT * FROM balances ORDER BY wallet_address').fetchall()
     balances = [dict(ix) for ix in balances_cursor]
     
-    contracts_cursor = cur.execute('SELECT * FROM contracts').fetchall()
+    contracts_cursor = cur.execute('SELECT * FROM contracts ORDER BY address').fetchall()
     contracts = [dict(ix) for ix in contracts_cursor]
+    
+    miners_cursor = cur.execute('SELECT * FROM miners ORDER BY id').fetchall()
+    miners = [dict(ix) for ix in miners_cursor]
+    
+    trust_scores_cursor = cur.execute('SELECT * FROM trust_scores ORDER BY src_person_id, dest_person_id').fetchall()
+    trust_scores = [dict(ix) for ix in trust_scores_cursor]
+    
+    stake_ledger_cursor = cur.execute('SELECT * FROM stake_ledger ORDER BY address').fetchall()
+    stake_ledger = [dict(ix) for ix in stake_ledger_cursor]
 
     state = {
         'wallets': wallets,
         'tokens': tokens,
         'balances': balances,
-        'contracts': contracts
+        'contracts': contracts,
+        'miners': miners,
+        'trust_scores': trust_scores,
+        'stake_ledger': stake_ledger,
     }
     return state
 
@@ -98,16 +101,25 @@ def get_transaction(transaction_code):
         return None
     return dict(transaction_cursor)
 
+def get_config():
+    config = Configuration().conf
+    return config
 
 def get_wallet(wallet_address):
     con = sqlite3.connect(NEWRL_DB)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
-    cur = cur.execute(
+    wallet_cursor = cur.execute(
         'SELECT * FROM wallets where wallet_address=?', (wallet_address,)).fetchone()
-    if cur is None:
+    if wallet_cursor is None:
         return None
-    return dict(cur)
+    wallet = dict(wallet_cursor)
+    pid_cursor = cur.execute(
+        'SELECT person_id FROM person_wallet WHERE wallet_id=?', (wallet['wallet_address'], ))
+    pid = pid_cursor.fetchone()
+    person_id = pid['person_id'] if pid is not None else ''
+    wallet['person_id'] = person_id
+    return wallet
 
 
 def get_token(token_code):

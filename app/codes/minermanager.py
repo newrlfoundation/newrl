@@ -1,20 +1,24 @@
 """Miner update functions"""
 import sqlite3
-import random
+import logging
 
+from .blockchain import get_last_block_index
 from .p2p.peers import add_peer
-from .clock.global_time import get_corrected_time_ms, get_time_difference
-from ..nvalues import SENTINEL_NODE_WALLET
-from .utils import get_last_block_hash
-# from .p2p.outgoing import propogate_transaction_to_peers
+from ..Configuration import Configuration
 from .p2p.utils import get_my_address
-from ..constants import COMMITTEE_SIZE, IS_TEST, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
+from ..constants import NEWRL_DB, SOFTWARE_VERSION
+from .clock.global_time import get_time_difference
 from .auth.auth import get_wallet
 from .signmanager import sign_transaction
 from ..ntypes import TRANSACTION_MINER_ADDITION
 from .utils import get_time_ms
 from .transactionmanager import Transactionmanager
 from .validator import validate
+from .committeemanager import get_eligible_miners, get_miner_for_current_block, get_committee_for_current_block
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def miner_addition_transaction(wallet=None, my_address=None):
@@ -34,7 +38,9 @@ def miner_addition_transaction(wallet=None, my_address=None):
         'specific_data': {
             'wallet_address': wallet['address'],
             'network_address': my_address,
-            'broadcast_timestamp': timestamp
+            'broadcast_timestamp': timestamp,
+            'software_version': SOFTWARE_VERSION,
+            'last_block_index': get_last_block_index()
         }
     }
 
@@ -72,76 +78,17 @@ def broadcast_miner_update():
     validate(transaction, propagate=True)
 
 
-def get_eligible_miners():
-    # last_block = get_last_block_hash()
-    # last_block_epoch = 0
-    # try:
-    #     # Need try catch to support older block timestamps
-    #     last_block_epoch = int(last_block['timestamp'])
-    # except:
-    #     pass
-    # if last_block:
-    #     cutfoff_epoch = last_block_epoch - TIME_MINER_BROADCAST_INTERVAL
-    # else:
-    #     cutfoff_epoch = 0
-    # last_block_epoch = int(last_block['timestamp'])
-    cutfoff_epoch = get_corrected_time_ms() - TIME_MINER_BROADCAST_INTERVAL_SECONDS * 2 * 1000
-
-    con = sqlite3.connect(NEWRL_DB)
-    con.row_factory = sqlite3.Row
-    cur = con.cursor()
-    miner_cursor = cur.execute(
-        '''SELECT wallet_address, network_address, last_broadcast_timestamp 
-        FROM miners 
-        WHERE last_broadcast_timestamp > ?
-        ORDER BY wallet_address ASC''', (cutfoff_epoch, )).fetchall()
-    miners = [dict(m) for m in miner_cursor]
-    con.close()
-    return miners
-
-
-def get_miner_for_current_block(last_block=None):
-    if last_block is None:
-        last_block = get_last_block_hash()
-
-    if not last_block:
-        return {'wallet_address': SENTINEL_NODE_WALLET}
-
-    random.seed(last_block['index'])
-
-    committee_list = get_committee_for_current_block()
-
-    if len(committee_list) == 0:
-        return {'wallet_address': SENTINEL_NODE_WALLET}
-
-    return random.choice(committee_list)
-
-    # return committee_list[0]
-
-
-def get_committee_for_current_block(last_block=None):
-    if last_block is None:
-        last_block = get_last_block_hash()
-
-    if not last_block:
-        return [{'wallet_address': SENTINEL_NODE_WALLET}]
-
-    random.seed(last_block['index'])
-
-    miners = get_eligible_miners()
-
-    if len(miners) == 0:
-        return [{'wallet_address': SENTINEL_NODE_WALLET}]
-
-    committee_size = min(COMMITTEE_SIZE, len(miners))
-    committee = random.sample(miners, k=committee_size)
-    return committee
+def get_committee_wallet_addresses():
+    committee = get_committee_for_current_block()
+    wallets = map(lambda c: c['wallet_address'], committee)
+    return wallets
 
 
 def should_i_mine(last_block=None):
     my_wallet = get_wallet()
     miner = get_miner_for_current_block(last_block=last_block)
     if miner['wallet_address'] == my_wallet['address']:
+        logger.info("I am the miner for this block")
         return True
     return False
 
@@ -154,6 +101,11 @@ def am_i_in_current_committee(last_block=None):
     if len(found) == 0:
         return False
     return True
+
+
+def am_i_in_block_committee(block):
+    my_wallet_address = get_wallet()['address']
+    return my_wallet_address in block['committee']
 
 
 def get_miner_info():
@@ -169,3 +121,5 @@ def add_miners_as_peers():
 
     for miner in miners:
         add_peer(miner['network_address'])
+
+

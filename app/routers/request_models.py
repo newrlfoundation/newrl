@@ -34,10 +34,10 @@ class TransferRequest(BaseModel):
     description: str = ''
     additional_data: dict = {}
 
-class TscoreRequest(BaseModel):
+class TrustScoreUpdateRequest(BaseModel):
     source_address: str = '0x762485963e99f6a6548729f11d610dd37ffd3b73'
     destination_address: str = '0x9b85fcc6071cb974458ce9d2260fd1f102760f8b'
-    tscore: float = 1.0
+    tscore: int = 100000
 
 class CreateTokenRequest(BaseModel):
     token_name: str = "NEWTOKEN"
@@ -111,3 +111,8 @@ class ReceiptAdditionRequest(BaseModel):
 
 class TransactionAdditionRequest(BaseModel):
     signed_transaction: dict
+
+
+class TransactionBatchPayload(BaseModel):
+    transactions: List[dict]
+    peers_already_broadcasted: List[str] = []

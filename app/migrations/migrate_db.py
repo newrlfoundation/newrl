@@ -1,6 +1,7 @@
 import os
 import importlib
 
+from app.Configuration import Configuration
 from ..constants import DB_MIGRATIONS_PATH, NEWRL_DB
 
 db_path = NEWRL_DB
@@ -19,4 +20,6 @@ def run_migrations():
 
 if __name__ == '__main__':
     db_path = '../' + db_path
+    Configuration.init_values()
+    Configuration.init_values_in_db()
     run_migrations()

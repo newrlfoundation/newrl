@@ -2,6 +2,7 @@ mempool/
 statearchive/
 tmp/
 data/
+data_*/
 state.json
 chain.json
 tokennew.json
@@ -17,7 +18,7 @@ data_test/
 venv/
 __pycache__/
 
-.vscode
+# .vscode
 .idea
 .DS_Store
 

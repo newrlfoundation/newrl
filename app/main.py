@@ -1,4 +1,6 @@
 import logging
+
+from app.Configuration import Configuration
 from .codes.log_config import logger_init
 logger_init()
 import argparse
@@ -8,13 +10,17 @@ from fastapi.openapi.utils import get_openapi
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from slowapi.errors import RateLimitExceeded
+from slowapi import Limiter, _rate_limit_exceeded_handler
+
 from .codes.p2p.sync_chain import sync_chain_from_peers
-from .constants import NEWRL_PORT
+from .constants import NEWRL_PORT, IS_TEST
 from .codes.p2p.peers import init_bootstrap_nodes, update_my_address, update_software
 from .codes.clock.global_time import sync_timer_clock_with_global
-from .codes.updater import global_internal_clock, start_miner_broadcast_clock, start_mining_clock
+from .codes.updater import am_i_sentinel_node, global_internal_clock, start_miner_broadcast_clock, start_mining_clock
 
 from .routers import blockchain, system, p2p, transport
+from .limiter import limiter
 
 
 logger = logging.getLogger(__name__)
@@ -23,6 +29,8 @@ app = FastAPI(
     title="The Newrl APIs",
     description="This page covers all the public APIs available at present in the Newrl blockchain platform."
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 origins = ["*"]
 
@@ -35,33 +43,54 @@ app.add_middleware(
 )
 
 app.include_router(blockchain.router)
-app.include_router(p2p.router)
-app.include_router(system.router)
-app.include_router(transport.router)
-
-args = {
+app.include_router(p2p.router, include_in_schema=False)
+app.include_router(system.router, include_in_schema=False)
+app.include_router(transport.router, include_in_schema=False)
+def initialze_params():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--disablenetwork", help="run the node local only with no network connection",
+                        action="store_true")
+    parser.add_argument("--disableupdate", help="run the node without updating software", action="store_true")
+    parser.add_argument("--disablebootstrap", help="run the node without bootstrapping", action="store_true")
+    _args = parser.parse_args()
+    args = {
+        'disablenetwork': _args.disablenetwork,
+        'disableupdate': _args.disableupdate,
+        'disablebootstrap': _args.disablebootstrap,
+    }
+    return args
+# args = initialze_params()  # TODO - This is causing tests to fail
+args = args = {
     'disablenetwork': False,
     'disableupdate': False,
     'disablebootstrap': False,
 }
 
+
 @app.on_event('startup')
 def app_startup():
     try:
-        if not args['disablenetwork']:
+        logger.info("Initializing Config Values")
+        Configuration.init_values()
+        Configuration.init_values_in_db()
+        if not IS_TEST:
             sync_timer_clock_with_global()
-            if not args['disableupdate']:
-                update_software(propogate=False)
-            if not args['disablebootstrap']:
-                init_bootstrap_nodes()
+            init_bootstrap_nodes()
             sync_chain_from_peers()
             update_my_address()
     except Exception as e:
         print('Bootstrap failed')
         logging.critical(e, exc_info=True)
-    
-    start_miner_broadcast_clock()
-    global_internal_clock()
+
+    if not IS_TEST:
+        if not am_i_sentinel_node():
+            logger.info('Participating in mining')
+            start_miner_broadcast_clock()
+        else:
+            logger.info('Not participating in mining')
+
+
+        global_internal_clock()
     
 
 @app.on_event("shutdown")
@@ -70,13 +99,9 @@ def shutdown_event():
     os._exit(0)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--disablenetwork", help="run the node local only with no network connection", action="store_true")
-    parser.add_argument("--disableupdate", help="run the node without updating software", action="store_true")
-    parser.add_argument("--disablebootstrap", help="run the node without bootstrapping", action="store_true")
-    _args = parser.parse_args()
-    args["disablenetwork"] = _args.disablenetwork
     uvicorn.run("app.main:app", host="0.0.0.0", port=NEWRL_PORT, reload=True)
+
+
 
 
 def custom_openapi():

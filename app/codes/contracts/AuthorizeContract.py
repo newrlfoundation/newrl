@@ -5,6 +5,8 @@ from ecdsa import BadSignatureError
 
 from .contract_master import ContractMaster
 from ..db_updater import *
+from ..helpers.FetchRespository import FetchRepository
+from ..helpers.TransactionCreator import TransactionCreator
 from ..transactionmanager import get_public_key_from_address, Transactionmanager
 
 
@@ -18,10 +20,10 @@ class AuthorizeContract(ContractMaster):
 
     def validateCustodian(self, transaction, custodian_address, custodian_wallet, transaction_manager):
         valid = False
-        matchedCustodian = [x for x in transaction['signatures'] if x['wallet_address'] == custodian_address][0]
+        matchedCustodian = [x for x in transaction['signatures'] if x['wallet_address'] == custodian_address]
         if (matchedCustodian is not None):
             try:
-                sign_valid = transaction_manager.verify_sign(matchedCustodian['msgsign'],
+                sign_valid = transaction_manager.verify_sign(matchedCustodian[0]['msgsign'],
                                                              custodian_wallet)
                 valid = sign_valid
             except BadSignatureError:
@@ -31,29 +33,35 @@ class AuthorizeContract(ContractMaster):
         else:
             return False
 
-    def validate(self, cur, callparamsip):
+    def validate(self, callparamsip, repo: FetchRepository):
         callparams = input_to_dict(callparamsip)
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         custodian_address = cspecs['custodian_address']
-        custodian_wallet = base64.b64decode(get_public_key_from_address(custodian_address))
+        custodian_wallet = bytes.fromhex(get_public_key_from_address(custodian_address))
 
         transaction_manager = Transactionmanager()
         transaction_manager.set_transaction_data(callparams)
 
         return self.validateCustodian(callparams, custodian_address, custodian_wallet, transaction_manager)
 
-    def modifyTokenAttributes(self, cur, callparamsip):
-        if self.validate(cur, callparamsip):
+    def modifyTokenAttributes(self, callparamsip, repo: FetchRepository):
+        if self.validate(callparamsip, repo):
+
+            transaction_creator = TransactionCreator()
+            trxn = []
             callparams = input_to_dict(callparamsip)
             query_params = (
-                callparams['transaction']['token_code'],
+                callparams['transaction']['specific_data']['tokencode'],
                 callparams['transaction']['timestamp'],
-                callparams['transaction']['token_attributes'],
+                callparams['transaction']['specific_data']['tokenattributes'],
 
             )
-            cursor = cur.execute('SELECT token_attributes FROM tokens WHERE tokencode = :tokencode',
-                                 {'tokencode': query_params[0]})
-            tokenAttributes = cursor.fetchone()
+            # cursor = cur.execute('SELECT token_attributes FROM tokens WHERE tokencode = :tokencode',
+            #                      {'tokencode': query_params[0]})
+            # tokenAttributes = cursor.fetchone()
+            tokenAttributes = repo.select_Query("token_attributes"). \
+                add_table_name("tokens").where_clause("tokencode", query_params[0], 1). \
+                execute_query_single_result({'tokencode': query_params[0]})
             jsonObj = json.loads(tokenAttributes[0])
             list = []
             if "append" in jsonObj:
@@ -61,20 +69,71 @@ class AuthorizeContract(ContractMaster):
             list.append({query_params[1]: query_params[2]})
             jsonObj["append"] = list
             attributes = json.dumps(jsonObj)
-            cur.execute(f'''UPDATE tokens SET token_attributes= :attr WHERE tokenCode= :code''',
-                        {'attr': attributes,
-                         'code': query_params[0]})
-            return "Modification transaction successful %s" % query_params[0]
+            # cur.execute(f'''UPDATE tokens SET token_attributes= :attr WHERE tokenCode= :code''',
+            #             {'attr': attributes,
+            #              'code': query_params[0]})
+            sc_state_proposal1_data = {
+                "operation": "update",
+                "table_name": "tokens",
+                "sc_address": self.address,
+                "data": {
+                    "token_attributes": attributes
+                },
+                "unique_column": "tokenCode",
+                "unique_value": query_params[0]
+            }
+            trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
+            logger.info("Modification transaction successful %s" % query_params[0])
+            return trxn
         else:
             return "Invalid Transaction: Error in custodian signature"
 
     def destroyTokens(self, cur, callparamsip):
         pass
 
-    def createTokens(self, cur, callparamsip):
-        pass
+    def createTokens(self, callparamsip, repo: FetchRepository):
+        trxn = []
+        callparams = input_to_dict(callparamsip)
+        token_code = callparams['token_code']
+        amount = callparams['token_amount']
+        token_name = callparams.get('token_name', token_code)
+        recipient_address = callparams['recipient_address']
+        token_attributes = callparams.get('token_attributes', {})
+        value_created = callparams.get('value_created', '')
+        legal_doc = callparams.get('legal_doc', '')
+        tokendata = {
+            "tokenname": token_name,
+            "tokencode": token_code,
+            "tokentype": '31',
+            "tokenattributes": token_attributes,
+            "first_owner": recipient_address,
+            "custodian": self.address,
+            "legaldochash": legal_doc,
+            "amount_created": amount,
+            "value_created": value_created,
+            "disallowed": {},
+            "sc_flag": True
+        }
+        transacation_creator = TransactionCreator()
+        trxn.append(transacation_creator.transaction_type_two(tokendata))
+        return trxn
 
-    def terminate(self, cur, callparamsip):
-        cur.execute(f'''UPDATE contracts SET status=-1 WHERE address= :address''',
-                    {'address': self.address})
-        return "Contract delete successful %s" % self.address
+    def terminate(self, callparamsip, repo: FetchRepository):
+
+        transaction_creator = TransactionCreator()
+        trxn = []
+        sc_state_proposal1_data = {
+            "operation": "update",
+            "table_name": "contracts",
+            "sc_address": self.address,
+            "data": {
+                "status": -1
+            },
+            "unique_column": "address",
+            "unique_value": self.address
+        }
+        trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
+        # cur.execute(f'''UPDATE contracts SET status=-1 WHERE address= :address''',
+        #             {'address': self.address})
+        logger.info("Contract delete successful %s" % self.address)
+        return trxn

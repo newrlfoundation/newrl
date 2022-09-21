@@ -1,7 +1,8 @@
 # class to create smart contract for creating stablecoins on Newrl
 from .contract_master import ContractMaster
 from ..db_updater import *
-from ..kycwallet import generate_wallet_address
+from ..helpers.FetchRespository import FetchRepository
+from ..helpers.TransactionCreator import TransactionCreator
 
 
 class dao_manager(ContractMaster):
@@ -15,20 +16,50 @@ class dao_manager(ContractMaster):
     def updateondeploy(self, cur):
         pass
 
-    def create(self, cur, callparams):
+    def create(self, callparams,repo:FetchRepository):
         dao_params = input_to_dict(callparams)
-
+        transaction_creator = TransactionCreator()
         # create wallet and pid for contract or dao_sc_main
         dao_sc_address = dao_params['dao_address']
-        dao_person_id = add_pid_contract_add(cur, dao_sc_address)
+        # get dao wallet as contractspecs
+        # dao_wallet_address=dao_params['dao_wallet_address']
+        # dao_pid=repo.select_Query('person_id').add_table_name("person_wallet").where_clause('wallet_id',dao_wallet_address,1).execute_query_single_result({"wallet_id":dao_wallet_address})
+        dao_person_id = get_person_id_for_wallet_address(dao_sc_address)
 
+        add_wallet_request = {
+            "custodian_wallet": self.address,
+            "ownertype": 2,
+            "jurisdiction": 91,
+            "kyc_docs":json.dumps(dao_params['legalparams']),
+            "specific_data": {"desc":dao_params['dao_name']},
+            'address': dao_sc_address,
+            'public': ""
+        }
 
+        trxn_add=transaction_creator.transaction_type_one(add_wallet_request)
+        # person table and person_wallet table
         # update dao db
         dao_name = dao_params['dao_name']
-        founders_personid = json.dumps(dao_params['founders'])
-        self.__create_dao_details(cur, dao_person_id, dao_name, founders_personid, dao_sc_address)
+        # dao_token_name=dao_params['token_name']
+        founders_personid = dao_params['founders']
+        if(len(founders_personid)<3):
+            logger.info("Founders size less than 3")
+            return []
+        sc_state_proposal1_data = {
+            "operation": "save",
+            "table_name": "dao_main",
+            "sc_address": self.address,
+            "data": {
+                "dao_personid": dao_person_id,
+                "dao_name": dao_name,
+                "founder_personid": json.dumps(founders_personid),
+                "dao_sc_address": dao_sc_address,
+                "address":self.address
+            }
+        }
+        txn_1=transaction_creator.transaction_type_8(sc_state_proposal1_data)
+        # self.__create_dao_details(cur, dao_person_id, dao_name, founders_personid, dao_sc_address)
         # if DAO is of type Token based create SC token keeper for it
-
 
         # create contract instance for this new dao with params of dao sc main (contract table)
         contractparams = {}
@@ -48,28 +79,30 @@ class dao_manager(ContractMaster):
         oraclestr = {}
         signstr = json.dumps(input_to_dict(cspecs)['signatories'])
 
-        qparams = (
-        dao_sc_address, founders_personid, contractparams['ts_init'], dao_params['dao_main_sc'], dao_params['dao_main_sc_version'],
-        # actmode?
-        # contractparams['actmode']
-            0
-        , cstatus,  # next_act_ts?
-        # contractparams['next_act_ts'],
-        0,
-        signstr,  # parent?
-        # contractparams['parent']
-            0
-        , json.dumps(oraclestr), sdestr, cspecs, legpars)
-        cur.execute(f'''INSERT INTO contracts
-                        (address, creator, ts_init, name, version, actmode, status, next_act_ts, signatories, parent, oracleids, selfdestruct, contractspecs, legalparams)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', qparams)
-        cur.execute(f'''UPDATE contracts SET status=? WHERE address=?''', (
-            # contractparams['status']
-            2
-            , dao_sc_address))
+        sc_state_proposal_data = {
+            "operation": "save",
+            "table_name": "contracts",
+            "sc_address": self.address,
+            "data": {
+                "address": dao_sc_address,
+                "creator": json.dumps(founders_personid),
+                "ts_init": contractparams['ts_init'] ,
+                "name": dao_params['dao_main_sc'],
+                "version": dao_params['dao_main_sc_version'],
+                "actmode": 0,
+                "status": cstatus,
+                "next_act_ts": 0,
+                "signatories": signstr,
+                "parent": 0,
+                "oracleids": json.dumps(oraclestr),
+                "selfdestruct": sdestr,
+                "contractspecs": cspecs,
+                "legalparams": legpars,
+            }
+        }
+        txn=transaction_creator.transaction_type_8(sc_state_proposal_data)
+        return [trxn_add,txn_1,txn]
 
-
-        pass
 
     def alter(self, cur, callParamsip):
         pass
@@ -77,7 +110,7 @@ class dao_manager(ContractMaster):
     def terminate(self, cur, callParamsip):
         pass
 
-    def __create_dao_details(self, cur, dao_personid, dao_name, founder_personid, dao_sc_address):
-        cur.execute(f'''INSERT OR REPLACE INTO dao_main
-                    (dao_personid, dao_name, founder_personid, dao_sc_address)
-                    VALUES (?, ?, ?,?)''', (dao_personid, dao_name, founder_personid, dao_sc_address))
+    # def __create_dao_details(self, cur, dao_personid, dao_name, founder_personid, dao_sc_address):
+    #     cur.execute(f'''INSERT OR REPLACE INTO dao_main
+    #                 (dao_personid, dao_name, founder_personid, dao_sc_address)
+    #                 VALUES (?, ?, ?,?)''', (dao_personid, dao_name, founder_personid, dao_sc_address))

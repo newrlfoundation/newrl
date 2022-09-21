@@ -10,7 +10,7 @@ from app.codes.log_config import get_past_log_content, logGenerator
 from sse_starlette.sse import EventSourceResponse
 from fastapi.responses import PlainTextResponse
 
-from app.codes.chainscanner import download_chain, download_state
+from app.codes.chainscanner import download_chain, download_state, get_config
 from app.codes.clock.global_time import get_time_stats
 from app.codes.fs.mempool_manager import clear_mempool
 from app.codes.p2p.peers import add_peer, clear_peers, get_peers, remove_dead_peers, update_software
@@ -19,7 +19,7 @@ from app.codes.p2p.sync_mempool import list_mempool_transactions, sync_mempool_t
 from app.codes.updater import TIMERS, get_timers
 from app.codes.utils import get_last_block_hash
 from app.constants import SOFTWARE_VERSION
-from app.migrations.init_db import clear_db, init_db, revert_chain
+from app.migrations.init_db import revert_chain
 from app.codes.p2p.peers import call_api_on_peers
 from app.codes.auth.auth import get_node_wallet_public
 from app.codes.minermanager import add_miners_as_peers, broadcast_miner_update, get_miner_info
@@ -30,7 +30,7 @@ p2p_tag = 'System'
 
 
 @router.get("/get-node-info", tags=[p2p_tag])
-def get_node_info():
+async def get_node_info():
     last_block = get_last_block_hash()
     if last_block is None:
         last_block_index = 0
@@ -44,7 +44,7 @@ def get_node_info():
         'timers': get_timers(),
         'miners': get_miner_info(),
         'peers': get_peers(),
-        'recent_blocks': get_blocks(list(range(last_block_index - 5, last_block_index))),
+        # 'recent_blocks': get_blocks(list(range(last_block_index - 5, last_block_index))),
         'mempool_transactions': list_mempool_transactions()[-10:],
     }
     return node_info
@@ -70,7 +70,7 @@ def sync_chain_from_node_api(url: str = 'https://newrl-devnet1.herokuapp.com'):
     try:
         return sync_chain_from_node(url)
     except Exception as e:
-        raise HTTPException(status_code=500, detail='No more blocks')
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/sync-chain-from-peers", tags=[p2p_tag])
@@ -83,11 +83,15 @@ def initiate_peer_api(address: str):
     "Test only, used to first connect a client"
     return add_peer(address)
 
+@router.get("/config", tags=[p2p_tag])
+def get_config_api():
+    return get_config()
+    
 
 @router.post("/update-software", tags=[p2p_tag])
 def update_software_api(propogate: bool = False):
     # update_software(propogate)
-    timer = threading.Timer(randint(30, 60), update_software, [propogate])
+    timer = threading.Timer(randint(30, 120), update_software, [propogate])
     timer.start()
     return {'status': 'SUCCESS'}
 

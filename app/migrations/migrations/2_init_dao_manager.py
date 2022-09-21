@@ -1,9 +1,8 @@
 import sqlite3
 
+from app.Configuration import Configuration
 from app.constants import NEWRL_DB
 
-DAO_MANAGER = 'ct9dc895fe5905dc73a2273e70be077bf3e94ea3b7'
-ASQI_WALLET = '0x20513a419d5b11cd510ae518dc04ac1690afbed6'
 
 
 def migrate():
@@ -16,7 +15,7 @@ def init_dao_manager():
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
 
-    create_dao_manager(cur, DAO_MANAGER)
+    create_dao_manager(cur, Configuration.config("DAO_MANAGER"))
 
     con.commit()
     con.close()
@@ -25,7 +24,7 @@ def init_dao_manager():
 def create_dao_manager(cur, address):
     query_params = (
         address,
-        ASQI_WALLET,
+        Configuration.config("ASQI_WALLET"),
         1648706655,
         'dao_manager',
         '1.0.0',

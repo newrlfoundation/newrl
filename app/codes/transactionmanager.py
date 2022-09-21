@@ -1,4 +1,8 @@
 """Transaction management functions"""
+import importlib
+from logging import Logger
+import logging
+from re import A
 import time
 import ecdsa
 import os
@@ -8,13 +12,18 @@ import datetime
 import base64
 import sqlite3
 
+from app.codes.db_updater import get_contract_from_address, get_wallet_token_balance
+from app.codes.helpers.CustomExceptions import ContractValidationError
+from app.codes.helpers.FetchRespository import FetchRepository
+from app.nvalues import MEMBER_WALLET_LIST
+
 
 from ..ntypes import TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
 
-from .chainscanner import get_wallet_token_balance
-from ..constants import ALLOWED_CUSTODIANS_FILE, MEMPOOL_PATH, NEWRL_DB
+from ..constants import CUSTODIAN_OWNER_TYPE, MEMPOOL_PATH, NEWRL_DB
 from .utils import get_time_ms
 
+logger = logging.getLogger(__name__)
 
 class Transactionmanager:
     def __init__(self):
@@ -73,7 +82,7 @@ class Transactionmanager:
     def loadtransactionpassive(self, file):
         transactiondata = {}
         with open(file, "r") as readfile:
-            print("Now reading from ", file)
+            # print("Now reading from ", file)
             trandata = json.load(readfile)
         self.transaction = trandata['transaction']
         self.signatures = trandata['signatures']
@@ -104,13 +113,14 @@ class Transactionmanager:
         msg = json.dumps(self.transaction).encode()
         signing_key = ecdsa.SigningKey.from_string(private_key_bytes, curve=ecdsa.SECP256k1)
         msgsignbytes = signing_key.sign(msg)
-        msgsign = base64.b64encode(msgsignbytes).decode('utf-8')
+        msgsign = msgsignbytes.hex()
         self.signatures.append({'wallet_address': address, 'msgsign': msgsign})
-        return signing_key.sign(msg)
+        return msgsignbytes
 
     def verify_sign(self, sign_trans, public_key_bytes):
         """The pubkey above is in bytes form"""
-        sign_trans_bytes = base64.decodebytes(sign_trans.encode('utf-8'))
+        # sign_trans_bytes = base64.decodebytes(sign_trans.encode('utf-8'))
+        sign_trans_bytes = bytes.fromhex(sign_trans)
         verifying_key = ecdsa.VerifyingKey.from_string(public_key_bytes, curve=ecdsa.SECP256k1)
         message = json.dumps(self.transaction).encode()
         return verifying_key.verify(sign_trans_bytes, message)
@@ -144,7 +154,7 @@ class Transactionmanager:
                 return False
     #		print("encoded pubkey from json file: ",pubkey)
             # here we decode the base64 form to get pubkeybytes
-            pubkeybytes = base64.b64decode(pubkey)
+            pubkeybytes = bytes.fromhex(pubkey)
         #	print("decoded bytes of pubkey",pubkeybytes)
     #		print("now verifying ",msgsign)
             if not self.verify_sign(msgsign, pubkeybytes):
@@ -156,11 +166,11 @@ class Transactionmanager:
                 # for a valid address the signature is found
                 addvaliditydict[signaddress] = True
                 prodflag = prodflag*1
-        if prodflag:
-            print("All provided signatures of the message valid; still need to check if all required ones are provided")
+        # if prodflag:
+            # print("All provided signatures of the message valid; still need to check if all required ones are provided")
         #	return True
-        else:
-            print("Some of the provided signatures not valid")
+        # else:
+            # print("Some of the provided signatures not valid")
         #	return False
         # now checking if signatures for all valid addresses are covered
         validsignspresent = 0
@@ -172,7 +182,7 @@ class Transactionmanager:
                     "Either couldn't find signature or found invalid signature for ", valadd)
             #	valaddsignpresent=valaddsignpresent*0;	#any one signaure not being present will throw an error
         if prodflag and validsignspresent >= len(validadds):
-            print("All provided signatures valid and all required signatures provided")
+            # print("All provided signatures valid and all required signatures provided")
             return True
         else:
             print("Either some signatures invalid or some required ones missing")
@@ -215,12 +225,11 @@ class Transactionmanager:
         if self.transaction['type'] == TRANSACTION_WALLET_CREATION:
             custodian = self.transaction['specific_data']['custodian_wallet']
             walletaddress = self.transaction['specific_data']['wallet_address']
-            if not is_wallet_valid(custodian):
-                print("No custodian address found")
-            #	self.transaction['valid']=0
+            if not is_custodian_wallet(custodian):
+                logger.warn('Invalid custodian wallet')
                 self.validity = 0
             else:
-                print("Valid custodian address")
+                # print("Valid custodian address")
 #                if self.transaction['specific_data']['specific_data']['linked_wallet']:  #linked wallet
                 if 'linked_wallet' in self.transaction['specific_data']['specific_data']:
                     linkedwalletstatus = self.transaction['specific_data']['specific_data']['linked_wallet']
@@ -233,28 +242,12 @@ class Transactionmanager:
                     else:
                         self.validity = 0  # other custodian cannot sign someone's linked wallet address
                 else:   # this is a new wallet and person
-                    if is_wallet_valid(walletaddress):
+                    if is_wallet_valid(walletaddress) and not is_smart_contract(walletaddress):
                         print("Wallet with address",
                               walletaddress, " already exists.")
                         self.validity = 0
                     else:
                         self.validity = 1
-                    # additional check for allowed custodian addresses; valid only for new wallet, not linked ones
-                        if os.path.exists(ALLOWED_CUSTODIANS_FILE):
-                            print(
-                                "Found allowed_custodians file; checking against it.")
-                            custallowflag = False
-                            with open(ALLOWED_CUSTODIANS_FILE, "r") as custfile:
-                                allowedcust = json.load(custfile)
-                            for cust in allowedcust:
-                                if custodian == cust['address']:
-                                    print("Address ", custodian,
-                                          " is allowed as a custodian.")
-                                    custallowflag = True
-                            if not custallowflag:
-                                print("Could not find address ", custodian,
-                                      " amongst allowed custodians.")
-                                self.validity = 0
 
     #	self.validity=0
         if self.transaction['type'] == TRANSACTION_TOKEN_CREATION:  # token addition transaction
@@ -264,7 +257,7 @@ class Transactionmanager:
             custvalidity = False
             if firstowner:
                 if is_wallet_valid(firstowner):
-                    print("Valid first owner")
+                    # print("Valid first owner")
                     fovalidity = True
                 else:
                     fovalidity = False
@@ -276,7 +269,7 @@ class Transactionmanager:
                 else:
                     fovalidity = True
             if is_wallet_valid(custodian):
-                print("Valid custodian")
+                # print("Valid custodian")
                 custvalidity = True
             if not fovalidity:
                 print("No first owner address found")
@@ -286,7 +279,7 @@ class Transactionmanager:
                 print("No custodian address found")
                 self.validity = 0
             if fovalidity and custvalidity:
-                print("Valid first owner and custodian")
+                # print("Valid first owner and custodian")
             #	self.transaction['valid']=1
             #   now checking for instances where more tokens are added for an existing tokencode
                 self.validity = 1
@@ -303,12 +296,12 @@ class Transactionmanager:
                                     "The custodian for that token is someone else.")
                                 self.validity = 0
                         else:
-                            print(
-                                "Tokencode provided does not exist. Will append as new one.")
+                            # print(
+                            #     "Tokencode provided does not exist. Will append as new one.")
                             self.validity = 1  # tokencode is provided by user
                     else:
-                        print(
-                            "Tokencode provided does not exist. Will append as new one.")
+                        # print(
+                        #     "Tokencode provided does not exist. Will append as new one.")
                         self.validity = 1  # tokencode is provided by user
 
         if self.transaction['type'] == TRANSACTION_SMART_CONTRACT:
@@ -319,8 +312,17 @@ class Transactionmanager:
             if 'participants' in self.transaction['specific_data']['params']:
                 for wallet in self.transaction['specific_data']['params']['participants']:
                     if not is_wallet_valid(wallet):
+                        self.validity = 0          
+            if 'value' in self.transaction['specific_data']['params']:
+                for value in self.transaction['specific_data']['params']['value']:
+                    print(value)
+                    if not is_token_valid(value['token_code']):
                         self.validity = 0
-
+                        break
+                    sender_balance = get_wallet_token_balance_tm(self.transaction['specific_data']['signers'][0], value['token_code'])
+                    if value['amount'] > sender_balance:
+                        self.validity = 0
+                        break  
     #	self.validity=0
         if self.transaction['type'] == TRANSACTION_TWO_WAY_TRANSFER or self.transaction['type'] == TRANSACTION_ONE_WAY_TRANSFER:
             ttype = self.transaction['type']
@@ -335,6 +337,14 @@ class Transactionmanager:
             sender1valid = False
             sender2valid = False
 
+            if (
+                self.transaction['specific_data']['asset1_number'] < 0
+                or self.transaction['specific_data']['asset2_number'] < 0
+                ):
+                logger.warn('Token quantity cannot be negative')
+                self.validity = 0
+                return False
+
             # for ttype=5, there is no tokencode for asset2 since it is off-chain, there is no amount either
             if ttype == 4:  # some attributes of transaction apply only for bilateral transfer and not unilateral
                 #	startingbalance2=0;
@@ -344,6 +354,7 @@ class Transactionmanager:
                     self.transaction['specific_data']['asset2_number'], token2mp)
 
             # address validity applies to both senders in ttype 4 and 5; since sender2 is still receiving tokens
+            
             sender1valid = is_wallet_valid(sender1)
             sender2valid = is_wallet_valid(sender2)
             if not sender1valid:
@@ -385,9 +396,9 @@ class Transactionmanager:
             # resetting to check the balances being sufficient, in futures, make different functions
             self.validity = 0
 
-            startingbalance1 = get_wallet_token_balance(sender1, tokencode1)
+            startingbalance1 = get_wallet_token_balance_tm(sender1, tokencode1)
             if ttype == 4:
-                startingbalance2 = get_wallet_token_balance(
+                startingbalance2 = get_wallet_token_balance_tm(
                     sender2, tokencode2)
             if token1amt > startingbalance1:  # sender1 is trying to send more than she owns
                 print("sender1 is trying to send,", token1amt, "she owns,",
@@ -434,7 +445,7 @@ class Transactionmanager:
                         "One of the wallet addresses does not have a valid associated personids.")
                     self.validity = 0
                 else:
-                    if self.transaction['specific_data']['new_score'] < 0.0 or self.transaction['specific_data']['new_score'] > 3.0:
+                    if self.transaction['specific_data']['new_score'] < -1000000 or self.transaction['specific_data']['new_score'] > 1000000:
                         print("New_score is out of valid range.")
                         self.validity = 0
                     else:
@@ -453,9 +464,45 @@ class Transactionmanager:
         else:
             return False  # this includes the case where valid=-1 i.e. yet to be validated
 
+    def contract_validate(self):
+        transaction = self.transaction
+        specific_data = transaction['specific_data']
+        funct_called = specific_data["function"]
+        if funct_called == "setup":
+            return True
+        funct_name = "validate"
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        contract = get_contract_from_address(cur, specific_data['address'])
+  
+        try:
+            module = importlib.import_module(
+                ".codes.contracts." + contract['name'], package="app")
+            sc_class = getattr(module, contract['name'])
+            sc_instance = sc_class(specific_data['address'])
+            funct = getattr(sc_instance, funct_name)
+            fetchRepository = FetchRepository(cur)
+            funct(specific_data, fetchRepository)
+        except TypeError as e:
+            logger.warn(f"Validate method not implemented for {sc_class}")
+            return True
+        except AttributeError as e:
+            logger.warn(f"Validate method not implemented for {sc_class}")
+            return True
+        except ContractValidationError as e:
+            logger.error(f"Contract validation failed {e}")
+            return False
+        except Exception as e:
+            logger.error(f"{type(e)}")
+            logger.error(f"Error validating the contract call {e}")
+            return False
+
+        return True
 #	def legalvalidator(self):
         # check the token restrictions on ownertype and check the type of the recipient
 
+
+    
 
 def get_public_key_from_address(address):
     con = sqlite3.connect(NEWRL_DB)
@@ -482,12 +529,30 @@ def is_token_valid(token_code):
 def is_wallet_valid(address):
     con = sqlite3.connect(NEWRL_DB)
     cur = con.cursor()
+    if is_smart_contract(address):
+        return True
+        
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
     wallet = wallet_cursor.fetchone()
     if wallet is None:
         return False
+
     return True
+
+
+def is_custodian_wallet(address):
+    """
+        If address in [initial foundation addresses], return True
+        Check if address is in custodian DAO return True
+        Return false otherwise
+    """
+    if address in MEMBER_WALLET_LIST:
+        return True
+
+    # TODO - Also check for Custodian DAO membership
+
+    return False
 
 
 def get_wallets_from_pid(personidinput):
@@ -578,3 +643,33 @@ def get_valid_addresses(transaction):
     if transaction_type == TRANSACTION_MINER_ADDITION:
         valid_addresses.append(transaction['specific_data']['wallet_address'])
     return valid_addresses
+
+
+def get_wallet_token_balance_tm(wallet_address, token_code):
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
+    balance = get_wallet_token_balance(cur, wallet_address, token_code)
+    # balance_cursor = cur.execute('SELECT balance FROM balances WHERE wallet_address = :address AND tokencode = :tokencode', {
+    #     'address': wallet_address, 'tokencode': token_code})
+    # balance_row = balance_cursor.fetchone()
+    # balance = balance_row[0] if balance_row is not None else 0
+    cur.close()
+    return balance
+
+
+def is_smart_contract(address):
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
+    if not address.startswith('ct'):
+        return False
+
+    sc_cursor = cur.execute(
+        'SELECT COUNT (*) FROM contracts WHERE address=?', (address, ))
+    sc_id = sc_cursor.fetchone()
+    if sc_id is None:
+        return False
+    else:
+        return True 
+
+def __str__(self):
+    return str(self.get_transaction_complete())
