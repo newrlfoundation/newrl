@@ -15,7 +15,7 @@ from app.codes.chainscanner import download_chain, download_state, get_transacti
 from app.codes.clock.global_time import get_time_stats
 from app.codes.dbmanager import get_or_create_db_snapshot
 from app.codes.p2p.peers import add_peer, clear_peers, get_peers, update_software
-from app.codes.p2p.sync_chain import find_forking_block_with_majority, get_block_hashes, get_blocks, get_last_block_index, quick_sync, receive_block, receive_receipt, sync_chain_from_peers
+from app.codes.p2p.sync_chain import find_forking_block_with_majority, get_block_hashes, get_blocks, get_last_block_index, get_majority_random_node, quick_sync, receive_block, receive_receipt, sync_chain_from_peers
 from app.codes.p2p.sync_mempool import get_mempool_transactions, list_mempool_transactions, sync_mempool_transactions
 from app.codes.p2p.peers import call_api_on_peers
 from app.constants import NEWRL_DB
@@ -96,11 +96,7 @@ def get_last_block_index_api():
 @router.get("/get-random-majority-chain-peers", tags=[p2p_tag])
 def get_majority_peers_api():
     # TODO - Return a list of majority nodes
-    return [{
-        'url': '',
-        'block_index': '',
-        'block_hash': ''
-    }]
+    return get_majority_random_node(return_many=True)
 
 @router.get("/find-forking-block-with-majority", tags=[p2p_tag])
 def find_forking_block_with_majority_api():

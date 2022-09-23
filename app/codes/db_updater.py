@@ -345,10 +345,11 @@ def slashing_tokens(cur,address,is_block):
         if balance < MIN_STAKE_AMOUNT:
             logger.warn('Balance lower than minimum required stake for wallet %s. Not slashing.', address)
             return False
+        min_stake = int(Configuration.config("MIN_STAKE_AMOUNT"))
         if is_block:
-            amount = int(Configuration.config("MIN_STAKE_AMOUNT"))
+            amount = min_stake
         else:
-            amount = int((Configuration.config("MIN_STAKE_AMOUNT")/Configuration.config("STAKE_PENALTY_RATIO")))
+            amount = int(min_stake/int(Configuration.config("STAKE_PENALTY_RATIO")))
         actual_balance=balance
         balance = balance-amount
         deducted_amount=0
