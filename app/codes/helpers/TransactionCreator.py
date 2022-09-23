@@ -17,7 +17,20 @@ class TransactionCreator:
             'wallet_public': data['public']
         }
 
-        return create_add_wallet_transaction(add_wallet_request)
+        transaction_data = {
+            'timestamp': "",
+            'type': 1,
+            'currency': 'NWRL',
+            'fee': 0.0,
+            'descr': 'New wallet',
+            'valid': -1,
+            'specific_data': add_wallet_request
+        }
+        transaction_data = {'transaction': transaction_data, 'signatures': []}
+        transaction_manager = Transactionmanager()
+        transaction_manager.transactioncreator(transaction_data)
+        return transaction_manager
+
 
     def transaction_type_one_modal(self, data: CreateWalletRequest, wallet):
         add_wallet_request = {
