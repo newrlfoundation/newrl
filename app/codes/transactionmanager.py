@@ -438,6 +438,9 @@ class Transactionmanager:
             if not wallet1valid or not wallet2valid:
                 print("One of the wallets is invalid")
                 self.validity = 0
+            elif wallet1 == wallet2:
+                logger.info('src and dest wallets cannot be same')
+                self.validity = 0
             else:
                 #    if get_pid_from_wallet(wallet1) != personid1 or get_pid_from_wallet(wallet2) != personid2:
                 if not get_pid_from_wallet(wallet1) or not get_pid_from_wallet(wallet2):
@@ -586,6 +589,22 @@ def get_custodian_from_token(token_code):
     if custodian is None:
         return False
     return custodian[0]
+
+
+def get_miner_count_person_id(person_id):
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
+    token_cursor = cur.execute(
+        '''
+        select count(*) from miners
+        where wallet_address in
+        (select wallet_id from person_wallet
+            where person_id = ?)
+        ''', (person_id, ))
+    result = token_cursor.fetchone()
+    if result is None:
+        return 0
+    return result[0]
 
 
 def get_sc_validadds(transaction):
