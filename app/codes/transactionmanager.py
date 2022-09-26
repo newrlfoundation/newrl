@@ -438,14 +438,16 @@ class Transactionmanager:
             if not wallet1valid or not wallet2valid:
                 print("One of the wallets is invalid")
                 self.validity = 0
-            elif wallet1 == wallet2:
-                logger.info('src and dest wallets cannot be same')
-                self.validity = 0
             else:
                 #    if get_pid_from_wallet(wallet1) != personid1 or get_pid_from_wallet(wallet2) != personid2:
-                if not get_pid_from_wallet(wallet1) or not get_pid_from_wallet(wallet2):
+                pid_1 = get_pid_from_wallet(wallet1)
+                pid_2 = get_pid_from_wallet(wallet2)
+                if not pid_1 or not pid_2:
                     print(
                         "One of the wallet addresses does not have a valid associated personids.")
+                    self.validity = 0
+                elif pid_1 == pid_2:
+                    logger.warn('src and dst person ids cannot be same')
                     self.validity = 0
                 else:
                     if self.transaction['specific_data']['new_score'] < -1000000 or self.transaction['specific_data']['new_score'] > 1000000:

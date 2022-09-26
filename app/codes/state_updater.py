@@ -184,7 +184,7 @@ def add_block_reward(cur, creator, blockindex):
     RATIO = 0.99
     STARTING_REWARD = 100
     block_step = math.ceil(float(blockindex) / 1000000)
-    reward = STARTING_REWARD * pow(RATIO, (block_step - 1)) * pow(10, NEWRL_TOKEN_DECIMAL)
+    reward = math.floor(STARTING_REWARD * pow(RATIO, (block_step - 1)) * pow(10, NEWRL_TOKEN_DECIMAL))
     reward_tx_data = {
         "tokenname": NEWRL_TOKEN_NAME,
         "tokencode": NEWRL_TOKEN_CODE,

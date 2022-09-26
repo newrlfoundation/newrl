@@ -32,7 +32,7 @@ def get_number_from_hash(block_hash):
 def weighted_random_choices(population, weights, k, seed_prefix=0):
     if len(population) < k:
         raise Exception('Population less than selection count')
-    
+    random.seed(seed_prefix)
     v = [random.random() ** (1 / w) for w in weights]
     order = sorted(range(len(population)), key=lambda i: v[i])
     return [population[i] for i in order[-k:]]
