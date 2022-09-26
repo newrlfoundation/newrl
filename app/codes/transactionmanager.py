@@ -440,9 +440,14 @@ class Transactionmanager:
                 self.validity = 0
             else:
                 #    if get_pid_from_wallet(wallet1) != personid1 or get_pid_from_wallet(wallet2) != personid2:
-                if not get_pid_from_wallet(wallet1) or not get_pid_from_wallet(wallet2):
+                pid_1 = get_pid_from_wallet(wallet1)
+                pid_2 = get_pid_from_wallet(wallet2)
+                if not pid_1 or not pid_2:
                     print(
                         "One of the wallet addresses does not have a valid associated personids.")
+                    self.validity = 0
+                elif pid_1 == pid_2:
+                    logger.warn('src and dst person ids cannot be same')
                     self.validity = 0
                 else:
                     if self.transaction['specific_data']['new_score'] < -1000000 or self.transaction['specific_data']['new_score'] > 1000000:
@@ -586,6 +591,22 @@ def get_custodian_from_token(token_code):
     if custodian is None:
         return False
     return custodian[0]
+
+
+def get_miner_count_person_id(person_id):
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
+    token_cursor = cur.execute(
+        '''
+        select count(*) from miners
+        where wallet_address in
+        (select wallet_id from person_wallet
+            where person_id = ?)
+        ''', (person_id, ))
+    result = token_cursor.fetchone()
+    if result is None:
+        return 0
+    return result[0]
 
 
 def get_sc_validadds(transaction):
