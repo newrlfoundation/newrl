@@ -15,7 +15,7 @@ import sqlite3
 from app.codes.db_updater import get_contract_from_address, get_wallet_token_balance
 from app.codes.helpers.CustomExceptions import ContractValidationError
 from app.codes.helpers.FetchRespository import FetchRepository
-from app.nvalues import MEMBER_WALLET_LIST
+from app.Configuration import Configuration
 
 
 from ..ntypes import TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
@@ -552,7 +552,8 @@ def is_custodian_wallet(address):
         Check if address is in custodian DAO return True
         Return false otherwise
     """
-    if address in MEMBER_WALLET_LIST:
+    custodian_wallet_list = json.loads(Configuration.config('CUSTODIAN_WALLET_LIST'))
+    if address in custodian_wallet_list:
         return True
 
     # TODO - Also check for Custodian DAO membership

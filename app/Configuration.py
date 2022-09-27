@@ -11,7 +11,6 @@ class Configuration:
         "ZERO_ADDRESS": ZERO_ADDRESS,
         "TREASURY_WALLET_ADDRESS": TREASURY_WALLET_ADDRESS,
         "NETWORK_TRUST_MANAGER_WALLET": NETWORK_TRUST_MANAGER_WALLET,
-        "NETWORK_TRUST_MANAGER_PUBLIC": NETWORK_TRUST_MANAGER_PUBLIC,
         "NETWORK_TRUST_MANAGER_PID": NETWORK_TRUST_MANAGER_PID,
         "ASQI_WALLET": ASQI_WALLET,
         "ASQI_WALLET_DAO": ASQI_WALLET_DAO,
@@ -31,13 +30,13 @@ class Configuration:
         "ASQI_DAO_ADDRESS": ASQI_DAO_ADDRESS,
         "NETWORK_TREASURY_ADDRESS": NETWORK_TREASURY_ADDRESS,
         "MEMBER_WALLET_LIST" : json.dumps(MEMBER_WALLET_LIST),
+        "CUSTODIAN_WALLET_LIST" : json.dumps(CUSTODIAN_WALLET_LIST),
         "FOUNDATION_TREASURY_ADDRESS" : FOUNDATION_TREASURY_ADDRESS,
         "ASQI_TREASURY_ADDRESS" : ASQI_TREASURY_ADDRESS
         }
     setters = ["ZERO_ADDRESS",
                "TREASURY_WALLET_ADDRESS",
                "NETWORK_TRUST_MANAGER_WALLET",
-               "NETWORK_TRUST_MANAGER_PUBLIC",
                "NETWORK_TRUST_MANAGER_PID",
                "ASQI_WALLET",
                "ASQI_WALLET_PUBLIC",
@@ -56,6 +55,7 @@ class Configuration:
                "STAKE_PENALTY_RATIO",
                "STAKE_CT_ADDRESS",
                "MEMBER_WALLET_LIST",
+               "CUSTODIAN_WALLET_LIST",
                "ASQI_TREASURY_ADDRESS",
                "FOUNDATION_TREASURY_ADDRESS"
 
@@ -74,7 +74,6 @@ class Configuration:
         Configuration.set("ZERO_ADDRESS", ZERO_ADDRESS)
         Configuration.set("TREASURY_WALLET_ADDRESS", TREASURY_WALLET_ADDRESS)
         Configuration.set("NETWORK_TRUST_MANAGER_WALLET", NETWORK_TRUST_MANAGER_WALLET)
-        Configuration.set("NETWORK_TRUST_MANAGER_PUBLIC", NETWORK_TRUST_MANAGER_PUBLIC)
         Configuration.set("NETWORK_TRUST_MANAGER_PID", NETWORK_TRUST_MANAGER_PID)
         Configuration.set("ASQI_WALLET", ASQI_WALLET)
         Configuration.set("ASQI_WALLET_DAO", ASQI_WALLET_DAO)
@@ -95,6 +94,7 @@ class Configuration:
         Configuration.set("NETWORK_TREASURY_ADDRESS", NETWORK_TREASURY_ADDRESS)
         Configuration.set("ASQI_PID", ASQI_PID),
         Configuration.set("MEMBER_WALLET_LIST", json.dumps(MEMBER_WALLET_LIST))
+        Configuration.set("CUSTODIAN_WALLET_LIST", json.dumps(CUSTODIAN_WALLET_LIST))
         Configuration.set("FOUNDATION_TREASURY_ADDRESS",FOUNDATION_TREASURY_ADDRESS)
         Configuration.set("ASQI_TREASURY_ADDRESS",ASQI_TREASURY_ADDRESS)
         con = sqlite3.connect(NEWRL_DB)
