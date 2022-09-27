@@ -23,7 +23,7 @@ def create_network_contract(cur, address,dao_address=FOUNDATION_DAO_ADDRESS):
                    "transfer": address_signatories
                    }
     contract_specs = {"dao_address": dao_address,
-                      "recipient_list": []
+                      "recipient_list": ["ctf4e76455165f3373393312c8b754994c6e7f4f63"]
                       }
     query_params = (
         address,

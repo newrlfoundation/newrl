@@ -362,7 +362,7 @@ def pay_fee_for_transaction(cur, transaction):
         transfer_tokens_and_update_balances(
             cur,
             payee,
-            TREASURY_WALLET_ADDRESS,
+            Configuration.config("NETWORK_TREASURY_ADDRESS"),
             transaction['currency'],
             fee_to_charge
         )

@@ -42,7 +42,7 @@ class NetworkContract(ContractMaster):
                 "asset1_code": 'NWRL',
                 "asset2_code": "",
                 "wallet1": self.address,
-                "wallet2": ZERO_ADDRESS,
+                "wallet2": Configuration.config("ZERO_ADDRESS"),
                 "asset1_number": int(amount),
                 "asset2_number": 0,
                 "additional_data": {}
