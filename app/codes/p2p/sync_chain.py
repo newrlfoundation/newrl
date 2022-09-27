@@ -462,7 +462,7 @@ def get_hash(peer):
         hash = get_last_block_hash_from_url_retry(url)
         return hash, url
 
-def get_majority_random_node():
+def get_majority_random_node(return_many=False):
     """Return a random node from the majority fork"""
     logger.info('Finding a majority node')
     peers = get_peers()
@@ -482,6 +482,8 @@ def get_majority_random_node():
             if hash in hash_url_map:
                 hash_url_map[hash].append(url)
                 if len(hash_url_map[hash]) > COMMITTEE_SIZE * 0.6:
+                    if return_many:
+                        return hash_url_map[hash]
                     random_majority_node_url = random.choice(hash_url_map[hash])
                     logger.info(f'Majority hash is {hash} and a random url is {random_majority_node_url}')
                     return random_majority_node_url

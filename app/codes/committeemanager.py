@@ -1,6 +1,7 @@
 import sqlite3
 import random
 import logging
+import json
 
 from ..nvalues import MIN_STAKE_AMOUNT, SENTINEL_NODE_WALLET
 from ..constants import BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
@@ -28,22 +29,30 @@ def get_number_from_hash(block_hash):
     return ord(block_hash[0])
 
 
-def weighted_random_choices(population, weights, k, seed_prefix):
+def weighted_random_choices(population, weights, k, seed_prefix=0):
     if len(population) < k:
         raise Exception('Population less than selection count')
+    random.seed(seed_prefix)
+    v = [random.random() ** (1 / w) for w in weights]
+    order = sorted(range(len(population)), key=lambda i: v[i])
+    return [population[i] for i in order[-k:]]
+
+# def weighted_random_choices(population, weights, k, seed_prefix):
+#     if len(population) < k:
+#         raise Exception('Population less than selection count')
     
-    selections = []
-    previous_idx = 0
-    while len(selections) < k:
-        random.seed(seed_prefix + previous_idx)
-        choice = random.choices(population, weights=weights)[0]
-        index = population.index(choice)
-        previous_idx = index
-        selections.append(choice)
-        del population[index]
-        del weights[index]
+#     selections = []
+#     previous_idx = 0
+#     while len(selections) < k:
+#         random.seed(seed_prefix + previous_idx)
+#         choice = random.choices(population, weights=weights)[0]
+#         index = population.index(choice)
+#         previous_idx = index
+#         selections.append(choice)
+#         del population[index]
+#         del weights[index]
     
-    return selections
+#     return selections
 
 
 def get_miner_for_current_block(last_block=None):
