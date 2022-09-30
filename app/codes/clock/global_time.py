@@ -35,7 +35,14 @@ def get_time_stats():
     }
 
 def get_corrected_time_ms():
-    return 1000 * (get_local_epoch() - get_time_difference())
+    local_time = get_local_epoch()
+    try:
+        global_time = get_time_difference()
+    except Exception as e:
+        print('Error getting global time: ', str(e))
+        global_time = local_time
+
+    return 1000 * (local_time - global_time)
 
 def get_time_difference():
     """Return the time difference between local and global in seconds"""
