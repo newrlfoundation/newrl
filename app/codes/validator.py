@@ -7,6 +7,7 @@ import logging
 
 import ecdsa
 import os
+from app.codes.clock.global_time import get_corrected_time_ms
 from app.codes.crypto import calculate_hash
 
 from app.codes.fs.mempool_manager import get_mempool_transaction
@@ -14,7 +15,7 @@ from app.codes.p2p.transport import send
 from app.ntypes import BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID
 from .utils import get_last_block_hash
 from .transactionmanager import Transactionmanager
-from ..constants import IS_TEST, MAX_TRANSACTION_SIZE, MEMPOOL_PATH
+from ..constants import IS_TEST, MAX_TRANSACTION_SIZE, MEMPOOL_PATH, MEMPOOL_TRANSACTION_LIFETIME_SECONDS
 from .p2p.outgoing import propogate_transaction_to_peers
 
 from jsonschema import validate as jsonvalidate
@@ -27,6 +28,11 @@ logger = logging.getLogger(__name__)
 def validate(transaction, propagate=False, validate_economics=True):
     if not validate_transaction_structure(transaction):
         return {'valid': False, 'msg': 'Invalid transaction structure'}
+    if transaction['transaction']['timestamp'] < get_corrected_time_ms() - MEMPOOL_TRANSACTION_LIFETIME_SECONDS * 1000:
+        return {
+            'valid': False,
+            'msg': 'Transaction is old'
+        }
     existing_transaction = get_mempool_transaction(transaction['transaction']['trans_code'])
     if existing_transaction is not None:
         return {'valid': True, 'msg': 'Already validated and in mempool', 'new_transaction': False}
