@@ -133,7 +133,7 @@ def get_dao_details():
     wallet_dao = create_wallet()
     dao_token_name = "dao_token".join(random.choices(
         string.ascii_uppercase + string.digits, k=10))
-    dao_manager_address = "ct9dc895fe5905dc73a2273e70be077bf3e94ea3b7"
+    dao_manager_address = "ct9000000000000000000000000000000000000da0"
     dao_name = "dao_mem_"+str(random.randrange(111111, 999999, 5))
     dao_details = {
         'wallet_founder1': wallet_founder1,

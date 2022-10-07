@@ -199,7 +199,7 @@ def get_dao_details():
     fund_wallet_nwrl(WALLET, wallet_founder2['address'], 10)
     fund_wallet_nwrl(WALLET, wallet_founder3['address'], 10)
     dao_token_name = "dao_token"+str(random.randrange(111111, 999999, 5))
-    dao_manager_address = "ct9dc895fe5905dc73a2273e70be077bf3e94ea3b7"
+    dao_manager_address = "ct9000000000000000000000000000000000000da0"
     dao_name = "dao_token_"+str(random.randrange(111111, 999999, 5))
     dao_details = {
         'wallet_founder1': wallet_founder1,
