@@ -33,7 +33,7 @@ class AuthorizeContract(ContractMaster):
         else:
             return False
 
-    def validate(self, callparamsip, repo: FetchRepository):
+    def _validate(self, callparamsip, repo: FetchRepository):
         callparams = input_to_dict(callparamsip)
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         custodian_address = cspecs['custodian_address']
@@ -45,7 +45,7 @@ class AuthorizeContract(ContractMaster):
         return self.validateCustodian(callparams, custodian_address, custodian_wallet, transaction_manager)
 
     def modifyTokenAttributes(self, callparamsip, repo: FetchRepository):
-        if self.validate(callparamsip, repo):
+        if self._validate(callparamsip, repo):
 
             transaction_creator = TransactionCreator()
             trxn = []
