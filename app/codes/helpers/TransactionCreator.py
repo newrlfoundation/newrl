@@ -97,7 +97,9 @@ class TransactionCreator:
                 "block_index": 0,
                 "specific_data": txspecdata
             },
-            "signatures": []
+            "signatures": [{
+                "wallet_address": data['signers'][0]
+            }]
         }
         newtx = Transactionmanager()
         newtx.transactioncreator(fulltrandata)
