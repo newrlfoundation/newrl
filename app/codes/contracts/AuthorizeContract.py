@@ -20,7 +20,7 @@ class AuthorizeContract(ContractMaster):
 
     def validateCustodian(self, transaction, custodian_address, custodian_wallet, transaction_manager):
         valid = False
-        matchedCustodian = [x for x in transaction['signatures'] if x['wallet_address'] == custodian_address]
+        matchedCustodian = [x for x in transaction["transaction"]['signatures'] if x['wallet_address'] == custodian_address]
         if (matchedCustodian is not None):
             try:
                 sign_valid = transaction_manager.verify_sign(matchedCustodian[0]['msgsign'],
@@ -51,9 +51,9 @@ class AuthorizeContract(ContractMaster):
             trxn = []
             callparams = input_to_dict(callparamsip)
             query_params = (
-                callparams['transaction']['transaction']['specific_data']['token_code'],
+                callparams['transaction']['transaction']['token_code'],
                 callparams['transaction']['transaction']['timestamp'],
-                callparams['transaction']['transaction']['specific_data']['token_attributes'],
+                callparams['transaction']['transaction']['token_attributes'],
 
             )
             # cursor = cur.execute('SELECT token_attributes FROM tokens WHERE tokencode = :tokencode',
