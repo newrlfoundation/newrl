@@ -62,7 +62,7 @@ class og_stake(ContractMaster):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         # TODO check for self balance
         callparams = input_to_dict(callparamsip)
-        token_code = cspecs['issuance_token_code']
+        issuance_token_code = cspecs['issuance_token_code']
         token_multiplier = cspecs['token_multiplier']
         wallet_address = callparams['wallet_address']
         person_id = callparams['person_id']
@@ -74,7 +74,7 @@ class og_stake(ContractMaster):
         transaction_creator = TransactionCreator()
         params = {
             "token_amount": newrl_unstake_amount,
-            "wallet_address": self.address,
+            "wallet_address": wallet_address,
             "person_id": person_id
         }
         txspecdata = {
@@ -92,13 +92,13 @@ class og_stake(ContractMaster):
         transaction_creator = TransactionCreator()
         transfer_proposal_data = {
             "transfer_type": 1,
-            "asset1_code": "NWRL",
+            "asset1_code": issuance_token_code,
             "asset2_code": "",
             "wallet1": self.address,
             "wallet2": wallet_address,
             "asset1_number": og_unstake_amount,
             "asset2_number": 0,
-            "additional_data": {}
+            "additional_data": {}       
         }
         transfer_proposal = transaction_creator.transaction_type_5(
             transfer_proposal_data)
