@@ -51,7 +51,7 @@ def update_db_states(cur, block):
     config_updated = False
 
     for transaction in collated_txns:
-
+        cur.execute('SAVEPOINT trans_sp')
         signature = transaction['signatures']
         transaction = transaction['transaction']
         transaction_data = transaction['specific_data']
@@ -73,6 +73,7 @@ def update_db_states(cur, block):
                     transaction['timestamp'],
                     signature,
                     newblockindex,
+                    transaction
                 )
             else:
                 logger.info(f'Fee payment failed for transaction {transaction_code}')
@@ -86,7 +87,12 @@ def update_db_states(cur, block):
 
 
 def update_state_from_transaction(cur, transaction_type, transaction_data, transaction_code, transaction_timestamp,
-                                  transaction_signer=None, block_index=None):
+                                  transaction_signer=None, block_index=None, full_transaction=None):
+    tm = Transactionmanager()
+    tm.transactioncreator({'transaction': full_transaction, 'signatures': []})
+    if not tm.econvalidator(cur=cur):
+        cur.execute('ROLLBACK to SAVEPOINT trans_sp')
+        return
     if transaction_type == TRANSACTION_WALLET_CREATION:  # this is a wallet creation transaction
         add_wallet_pid(cur, transaction_data)
 

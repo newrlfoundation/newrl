@@ -217,7 +217,7 @@ class Transactionmanager:
         #	need to incorporate the fee as well in future
         return mppayment
 
-    def econvalidator(self):
+    def econvalidator(self, cur=None):
         # start with all holdings of the wallets involved and add validated transactions from mempool
         # from mempool only include transactions that reduce balance and not those that increase
         # check if the sender has enough balance to spend
@@ -319,7 +319,7 @@ class Transactionmanager:
                     if not is_token_valid(value['token_code']):
                         self.validity = 0
                         break
-                    sender_balance = get_wallet_token_balance_tm(self.transaction['specific_data']['signers'][0], value['token_code'])
+                    sender_balance = get_wallet_token_balance_tm(self.transaction['specific_data']['signers'][0], value['token_code'], cur)
                     if value['amount'] > sender_balance:
                         self.validity = 0
                         break  
@@ -331,9 +331,10 @@ class Transactionmanager:
             sender1 = self.transaction['specific_data']['wallet1']
             sender2 = self.transaction['specific_data']['wallet2']
             tokencode1 = self.transaction['specific_data']['asset1_code']
-            token1mp = self.mempoolpayment(sender1, tokencode1)
-            token1amt = max(
-                self.transaction['specific_data']['asset1_number'], token1mp)
+            # token1mp = self.mempoolpayment(sender1, tokencode1)
+            # token1amt = max(
+            #     self.transaction['specific_data']['asset1_number'], token1mp)
+            token1amt = self.transaction['specific_data']['asset1_number']
             sender1valid = False
             sender2valid = False
 
@@ -349,9 +350,10 @@ class Transactionmanager:
             if ttype == 4:  # some attributes of transaction apply only for bilateral transfer and not unilateral
                 #	startingbalance2=0;
                 tokencode2 = self.transaction['specific_data']['asset2_code']
-                token2mp = self.mempoolpayment(sender2, tokencode2)
-                token2amt = max(
-                    self.transaction['specific_data']['asset2_number'], token2mp)
+                # token2mp = self.mempoolpayment(sender2, tokencode2)
+                # token2amt = max(
+                #     self.transaction['specific_data']['asset2_number'], token2mp)
+                token2amt = self.transaction['specific_data']['asset2_number']
 
             # address validity applies to both senders in ttype 4 and 5; since sender2 is still receiving tokens
             
@@ -396,10 +398,10 @@ class Transactionmanager:
             # resetting to check the balances being sufficient, in futures, make different functions
             self.validity = 0
 
-            startingbalance1 = get_wallet_token_balance_tm(sender1, tokencode1)
+            startingbalance1 = get_wallet_token_balance_tm(sender1, tokencode1, cur)
             if ttype == 4:
                 startingbalance2 = get_wallet_token_balance_tm(
-                    sender2, tokencode2)
+                    sender2, tokencode2, cur)
             if token1amt > startingbalance1:  # sender1 is trying to send more than she owns
                 print("sender1 is trying to send,", token1amt, "she owns,",
                       startingbalance1, " invalidating transaction")
@@ -667,15 +669,21 @@ def get_valid_addresses(transaction):
     return valid_addresses
 
 
-def get_wallet_token_balance_tm(wallet_address, token_code):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
+def get_wallet_token_balance_tm(wallet_address, token_code, cur=None):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cur_opened = True
+    else:
+        cur_opened = False
+
     balance = get_wallet_token_balance(cur, wallet_address, token_code)
     # balance_cursor = cur.execute('SELECT balance FROM balances WHERE wallet_address = :address AND tokencode = :tokencode', {
     #     'address': wallet_address, 'tokencode': token_code})
     # balance_row = balance_cursor.fetchone()
     # balance = balance_row[0] if balance_row is not None else 0
-    cur.close()
+    if cur_opened:
+        cur.close()
     return balance
 
 
