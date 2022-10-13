@@ -51,7 +51,7 @@ class NewrlStakeContract(ContractMaster):
                         "wallet_address": wallet_address,
                         "address": self.address,
                         "staker_wallet_address": json.dumps([{
-                            wallet_address: token_amount
+                            staker_wallet: token_amount
                         }, ])
                     }
                 }

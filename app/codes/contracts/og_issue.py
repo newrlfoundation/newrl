@@ -74,7 +74,7 @@ class og_issue(ContractMaster):
         }
 
         if required_value in value:
-            '''txn type 5 (one way transfer) sample proposal'''
+            '''txn type 5 (one way transfer)'''
             transaction_creator = TransactionCreator()
             transfer_proposal_data = {
                 "transfer_type": 1,

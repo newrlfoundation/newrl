@@ -66,14 +66,15 @@ class og_stake(ContractMaster):
         token_multiplier = cspecs['token_multiplier']
         wallet_address = callparams['wallet_address']
         person_id = callparams['person_id']
-        amount_to_unstake = callparams['og_unstake_amount']
-        amount_to_stake = amount_to_unstake * token_multiplier
-  
+        og_unstake_amount = callparams['og_unstake_amount']
+        newrl_unstake_amount = og_unstake_amount * token_multiplier
+
+        child_transactions = []
 
         transaction_creator = TransactionCreator()
         params = {
-            "token_amount":amount_to_stake,
-            "wallet_address": wallet_address,
+            "token_amount": newrl_unstake_amount,
+            "wallet_address": self.address,
             "person_id": person_id
         }
         txspecdata = {
@@ -84,8 +85,25 @@ class og_stake(ContractMaster):
             "function_caller": self.address
         }
         sc_transaction = transaction_creator.transaction_type_3(txspecdata)
-        return [sc_transaction]
+        child_transactions.append(sc_transaction)  
 
+        # add type 5 transaction to transfer back og
+        '''txn type 5 (one way transfer)'''
+        transaction_creator = TransactionCreator()
+        transfer_proposal_data = {
+            "transfer_type": 1,
+            "asset1_code": "NWRL",
+            "asset2_code": "",
+            "wallet1": self.address,
+            "wallet2": wallet_address,
+            "asset1_number": og_unstake_amount,
+            "asset2_number": 0,
+            "additional_data": {}
+        }
+        transfer_proposal = transaction_creator.transaction_type_5(
+            transfer_proposal_data)
+        child_transactions.append(transfer_proposal)
+        return child_transactions
 
     
     def remove(self, callparamsip, repo: FetchRepository):
