@@ -50,8 +50,35 @@ def update_db_states(cur, block):
     global config_updated
     config_updated = False
 
+    sc_nesting = 0  # Denotes the level of nesting of smart contract call. 1 for a normal sc call. 2 for sc calling sc. 
+    sc_in_failed_state = False  # Used to flag a sc execution failure for flushing out all future child transactions
     for transaction in collated_txns:
-        cur.execute('SAVEPOINT trans_sp')
+        if sc_in_failed_state:  # If any transaction in SC fails, keep flushing future transactions till all parent SCs end
+            if transaction == 'SC_END':
+                sc_nesting -= 1
+                if sc_nesting == 0:
+                    sc_in_failed_state = False
+            continue
+                
+        if transaction == 'SC_START':
+            if sc_nesting == 0:  # One savepoint for complete nested SC
+                cur.execute(f'SAVEPOINT sc_start')
+            sc_nesting += 1
+            continue
+        elif transaction == 'SC_END':
+            sc_nesting -= 1
+            if sc_nesting == 0:
+                cur.execute(f'RELEASE SAVEPOINT sc_start')
+            continue
+        
+        tm = Transactionmanager()
+        tm.transactioncreator(transaction)
+        if not tm.econvalidator(cur=cur):
+            if sc_nesting > 0:
+                sc_in_failed_state = True
+                cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
+            continue
+        
         signature = transaction['signatures']
         transaction = transaction['transaction']
         transaction_data = transaction['specific_data']
@@ -88,11 +115,6 @@ def update_db_states(cur, block):
 
 def update_state_from_transaction(cur, transaction_type, transaction_data, transaction_code, transaction_timestamp,
                                   transaction_signer=None, block_index=None, full_transaction=None):
-    tm = Transactionmanager()
-    tm.transactioncreator({'transaction': full_transaction, 'signatures': []})
-    if not tm.econvalidator(cur=cur):
-        cur.execute('ROLLBACK to SAVEPOINT trans_sp')
-        return
     if transaction_type == TRANSACTION_WALLET_CREATION:  # this is a wallet creation transaction
         add_wallet_pid(cur, transaction_data)
 
@@ -239,8 +261,10 @@ def simplify_transactions(cur, transactions):
             f"Exception during sc txn execution for txn : {transaction}")
         logger.error(traceback.format_exc())
       print(f"Value transactions are {value_txns}")
+      simplified_transactions.append('SC_START')
       simplified_transactions.extend(value_txns)
       simplified_transactions.extend(non_sc_txns)
+      simplified_transactions.append('SC_END')
       value_txns = []
     else:
       simplified_transactions.append(transaction)

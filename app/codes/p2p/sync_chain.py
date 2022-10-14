@@ -227,7 +227,7 @@ def sync_chain_from_node(url, block_index=None):
                 return False
             else:
                 logger.info('Adding block %d', block['index'])
-                con = sqlite3.connect(NEWRL_DB)
+                con = sqlite3.connect(NEWRL_DB, timeout=10)
                 cur = con.cursor()
                 blockchain.add_block(cur, block, hash)
                 con.commit()
@@ -332,7 +332,7 @@ def accept_block(block, hash):
 
     # if hash is None:
     #     hash = calculate_hash(block['data'])
-    con = sqlite3.connect(NEWRL_DB)
+    con = sqlite3.connect(NEWRL_DB, timeout=10)
     cur = con.cursor()
     blockchain.add_block(cur, mutable_block['data'])
     con.commit()

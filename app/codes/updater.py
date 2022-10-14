@@ -80,7 +80,6 @@ def run_updater(add_to_chain=False):
     transaction_fees = 0
 
     for filename in transfiles:
-        cur.execute('SAVEPOINT trans_sp')
         file = MEMPOOL_PATH + filename
         try:
             with open(file, "r") as read_file:
@@ -97,12 +96,10 @@ def run_updater(add_to_chain=False):
         #     continue
         # Pay fee for transaction. If payee doesn't have enough funds, remove transaction
         if not pay_fee_for_transaction(cur, transaction):
-            cur.execute('ROLLBACK to SAVEPOINT trans_sp')
             os.remove(file)
             continue
         if not tmtemp.econvalidator():
             logger.info(f"Economic validation failed for transaction {trandata['transaction']['trans_code']}")
-            cur.execute('ROLLBACK to SAVEPOINT trans_sp')
             os.remove(file)
             continue
 
@@ -111,12 +108,10 @@ def run_updater(add_to_chain=False):
         row = transactions_cursor.fetchone()
         if row is not None:
             # The current transaction is already included in some earlier block
-            cur.execute('ROLLBACK to SAVEPOINT trans_sp')
             os.remove(file)
             continue
         
         if not should_include_transaction(transaction, new_block_index - 1):
-            cur.execute('ROLLBACK to SAVEPOINT trans_sp')
             os.remove(file)
             continue
         
