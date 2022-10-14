@@ -37,8 +37,8 @@ class NewrlStakeContract(ContractMaster):
             return []
         if required_value in callparams["value"]:
             count = repo.select_count().add_table_name("stake_ledger").where_clause("person_id", pid,
-                                                                                    1).execute_query_single_result(
-                {"person_id": pid})
+                                                                                    1).and_clause("address",self.address,1).execute_query_single_result(
+                {"person_id": pid,"address": self.address})
             if count[0] == 0:
                 sc_state_proposal1_data = {
                     "operation": "save",
@@ -60,14 +60,12 @@ class NewrlStakeContract(ContractMaster):
                 trxn.append(txtype1)
             else:
                 count = repo.select_count().add_table_name("stake_ledger").where_clause("person_id", pid,
-                                                                                        1).and_clause("wallet_address",
-                                                                                                      wallet_address,
-                                                                                                      1).execute_query_single_result(
-                    {"person_id": pid, "wallet_address": wallet_address})
+                                                                                        1).and_clause("address", self.address,1).execute_query_single_result(
+                    {"person_id": pid, "wallet_address": wallet_address,"address": self.address})
                 amount = repo.select_Query("amount,staker_wallet_address").add_table_name("stake_ledger").where_clause("person_id", pid,
                                                                                                  1).and_clause(
-                    "wallet_address", wallet_address, 1).execute_query_single_result(
-                    {"person_id": pid, "wallet_address": wallet_address})
+                    "wallet_address", wallet_address, 1).and_clause("address", self.address,1).execute_query_single_result(
+                    {"person_id": pid, "wallet_address": wallet_address,"address":self.address})
                 if count[0] == 1:
                     updated_value=False
                     staker_wallet_address_json=input_to_dict(amount[1])
@@ -102,12 +100,12 @@ class NewrlStakeContract(ContractMaster):
         trxn = []
         callparams = input_to_dict(callparamsip)
         wallet_address = callparams.get("wallet_address",callparams['function_caller'][0]['wallet_address'])
-        qparam = {"person_id": callparams['person_id'], "wallet_address": wallet_address}
+        qparam = {"person_id": callparams['person_id'], "wallet_address": wallet_address,"address":self.address}
         data = repo.select_Query('time_updated,amount,staker_wallet_address').add_table_name('stake_ledger').where_clause('person_id',
                                                                                                     callparams[
                                                                                                         'person_id'],
                                                                                                     1).and_clause(
-            "wallet_address", wallet_address, 1).execute_query_single_result(qparam)
+            "wallet_address", wallet_address, 1).and_clause("address", self.address,1).execute_query_single_result(qparam)
         staker_wallet_address=callparams['function_caller'][0]['wallet_address']
         amount_update=0
         if data is None:
@@ -119,7 +117,8 @@ class NewrlStakeContract(ContractMaster):
                 data_json[index][staker_wallet_address] = 0
                 break
 
-        if get_corrected_time_ms() >= (int(data[0]) + STAKE_COOLDOWN_MS):
+        # if get_corrected_time_ms() >= (int(data[0]) + STAKE_COOLDOWN_MS):
+        if True:
             transfer_proposal_data = {
                 "transfer_type": 1,
                 "asset1_code": 'NWRL',
@@ -161,4 +160,4 @@ class NewrlStakeContract(ContractMaster):
         if pid:
             return pid[0]
         return None
-#
+
