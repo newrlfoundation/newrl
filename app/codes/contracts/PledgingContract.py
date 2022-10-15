@@ -49,7 +49,6 @@ class PledgingContract(ContractMaster):
                     if j["token_code"]==i["token_code"] and j["amount"]==i["amount"]:
                         callparams["value"].pop(j)
                         break
-                callparams["value"]
                 qparam = {"borrower": function_caller,
                           "address": self.address,
                           "lender": lender,
@@ -180,10 +179,10 @@ class PledgingContract(ContractMaster):
         count = repo.select_count().add_table_name("pledge_ledger").where_clause("borrower", wallet_address,
                                                                                  1).and_clause("address",
                                                                                                self.address).and_clause(
-            "lender", lender).and_clause("token_code", i["token_code"]).execute_query_single_result(
+            "lender", lender).and_clause("token_code", token_code).execute_query_single_result(
             qparam)
         if count[0] == 0:
-            raise ContractValidationError("No pledge record found ofr tokencode %s" % i["token_code"])
+            raise ContractValidationError("No pledge record found ofr tokencode %s" % token_code)
 
         data = repo.select_Query("id,amount").add_table_name("pledge_ledger").where_clause("borrower",
                                                                                            wallet_address,
