@@ -294,6 +294,21 @@ def init_db():
                     name text    
                     )
     ''')
+    cur.execute('''
+                    CREATE TABLE IF NOT EXISTS pledge_ledger 
+                    (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    address text NOT NULL, 
+                    borrower text Not NULL, 
+                    lender text Not NULL , 
+                    amount INT, 
+                    token_code text not NULL,
+                    time_updated TIMESTAMP,
+                    status INT,
+                    lender_borrower_token text not NULL ,
+                    unique_column text not NULL 
+                    )
+                    ''')
 
     con.commit()
     con.close()
