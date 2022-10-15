@@ -45,6 +45,10 @@ class PledgingContract(ContractMaster):
 
         for i in tokens:
             if i in callparams["value"]:
+                for j in callparams["value"]:
+                    if j["token_code"]==i["token_code"] and j["amount"]==i["amount"]:
+                        callparams["value"].pop(j)
+                        break
                 callparams["value"]
                 qparam = {"borrower": function_caller,
                           "address": self.address,
