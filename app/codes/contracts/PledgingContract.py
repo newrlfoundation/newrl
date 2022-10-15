@@ -25,7 +25,7 @@ class PledgingContract(ContractMaster):
     def pledge_tokens(self, callparamsip, repo: FetchRepository):
         trxn = []
         callparams = input_to_dict(callparamsip)
-        cspecs = input_to_dict(self.contractparams)
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
         custodian_address = cspecs['custodian_address']
         tokens = callparams['tokens']
         signed_wallets = callparams['function_caller']
@@ -45,10 +45,12 @@ class PledgingContract(ContractMaster):
 
         for i in tokens:
             if i in callparams["value"]:
+                index_count =0
                 for j in callparams["value"]:
                     if j["token_code"]==i["token_code"] and j["amount"]==i["amount"]:
-                        callparams["value"].pop(j)
+                        del callparams["value"][index_count]
                         break
+                    index_count+=1
                 qparam = {"borrower": function_caller,
                           "address": self.address,
                           "lender": lender,
@@ -56,10 +58,10 @@ class PledgingContract(ContractMaster):
                           }
                 count = repo.select_count().add_table_name("pledge_ledger").where_clause("borrower", function_caller,
                                                                                          1).and_clause("address",
-                                                                                                       self.address).and_clause(
-                    "lender", lender).and_clause("token_code", i["token_code"]).execute_query_single_result(
+                                                                                                       self.address,1).and_clause(
+                    "lender", lender,1).and_clause("token_code", i["token_code"],1).execute_query_single_result(
                     qparam)
-                if tokens["i"]['amount'] < 0:
+                if i['amount'] < 0:
                     raise ContractValidationError("amount shall be positive for token code %s" % i)
                 value = function_caller + lender + i["token_code"]
                 result = hashlib.sha256(value.encode()).hexdigest()
@@ -70,12 +72,13 @@ class PledgingContract(ContractMaster):
                         "sc_address": self.address,
                         "data": {
                             "borrower": function_caller,
-                            "amount": tokens["i"]['amount'],
+                            "amount": i['amount'],
                             "time_updated": get_corrected_time_ms(),
                             "lender": lender,
                             "token_code": i["token_code"],
                             "unique_column": result,
-                            "status": 1
+                            "status": 1,
+                            "address":self.address,
                         }
                     }
                     transaction_creator = TransactionCreator()
@@ -85,8 +88,8 @@ class PledgingContract(ContractMaster):
                     amount = repo.select_Query("id,amount").add_table_name("pledge_ledger").where_clause("borrower",
                                                                                                          function_caller,
                                                                                                          1).and_clause(
-                        "address", self.address).and_clause("lender", lender).and_clause("token_code", i[
-                        "token_code"]).execute_query_single_result(
+                        "address", self.address,1).and_clause("lender", lender,1).and_clause("token_code", i[
+                        "token_code"],1).execute_query_single_result(
                         qparam)
                     if count[0] == 1:
                         sc_state_proposal1_data = {
@@ -94,7 +97,7 @@ class PledgingContract(ContractMaster):
                             "table_name": "pledge_ledger",
                             "sc_address": self.address,
                             "data": {
-                                "amount": amount[1] + tokens["i"]['amount'],
+                                "amount": amount[1] + i['amount'],
                                 "time_updated": get_corrected_time_ms()
                             },
                             "unique_column": "id",
@@ -122,8 +125,8 @@ class PledgingContract(ContractMaster):
                       }
             count = repo.select_count().add_table_name("pledge_ledger").where_clause("borrower", wallet_address,
                                                                                      1).and_clause("address",
-                                                                                                   self.address).and_clause(
-                "lender", lender).and_clause("token_code", i["token_code"]).execute_query_single_result(
+                                                                                                   self.address,1).and_clause(
+                "lender", lender,1).and_clause("token_code", i["token_code"],1).execute_query_single_result(
                 qparam)
             if count[0] == 0:
                 raise ContractValidationError("No pledge record found ofr tokencode %s" % i["token_code"])
@@ -131,8 +134,8 @@ class PledgingContract(ContractMaster):
             data = repo.select_Query("id,amount").add_table_name("pledge_ledger").where_clause("borrower",
                                                                                                wallet_address,
                                                                                                1).and_clause("address",
-                                                                                                             self.address).and_clause(
-                "lender", lender).and_clause("token_code", i["token_code"]).execute_query_single_result(
+                                                                                                             self.address,1).and_clause(
+                "lender", lender,1).and_clause("token_code", i["token_code"],1).execute_query_single_result(
                 qparam)
             if i["amount"] > data[1]:
                 raise ContractValidationError(
@@ -178,8 +181,8 @@ class PledgingContract(ContractMaster):
                   }
         count = repo.select_count().add_table_name("pledge_ledger").where_clause("borrower", wallet_address,
                                                                                  1).and_clause("address",
-                                                                                               self.address).and_clause(
-            "lender", lender).and_clause("token_code", token_code).execute_query_single_result(
+                                                                                               self.address,1).and_clause(
+            "lender", lender,1).and_clause("token_code", token_code,1).execute_query_single_result(
             qparam)
         if count[0] == 0:
             raise ContractValidationError("No pledge record found ofr tokencode %s" % token_code)
@@ -187,8 +190,8 @@ class PledgingContract(ContractMaster):
         data = repo.select_Query("id,amount").add_table_name("pledge_ledger").where_clause("borrower",
                                                                                            wallet_address,
                                                                                            1).and_clause("address",
-                                                                                                         self.address).and_clause(
-            "lender", lender).and_clause("token_code", token_code).execute_query_single_result(
+                                                                                                         self.address,1).and_clause(
+            "lender", lender,1).and_clause("token_code", token_code,1).execute_query_single_result(
             qparam)
         transfer_proposal_data = {
             "transfer_type": 1,
@@ -196,7 +199,7 @@ class PledgingContract(ContractMaster):
             "asset2_code": "",
             "wallet1": self.address,
             "wallet2": lender,
-            "asset1_number": data[2],
+            "asset1_number": data[1],
             "asset2_number": 0,
             "additional_data": {}
         }
@@ -217,7 +220,9 @@ class PledgingContract(ContractMaster):
         transaction_creator = TransactionCreator()
         txtype1 = transaction_creator.transaction_type_8(sc_state_proposal1_data)
         trxn.append(txtype1)
-        pass
+
+        return trxn
+
 
     def __get_pid_from_wallet_using_repo(self, repo: FetchRepository, address):
         pid = repo.select_Query('person_id').add_table_name('person_wallet').where_clause('wallet_id', address,

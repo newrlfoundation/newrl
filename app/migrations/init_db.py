@@ -305,7 +305,6 @@ def init_db():
                     token_code text not NULL,
                     time_updated TIMESTAMP,
                     status INT,
-                    lender_borrower_token text not NULL ,
                     unique_column text not NULL 
                     )
                     ''')
