@@ -30,11 +30,12 @@ class og_issue(ContractMaster):
         child_transactions = []
         token_name = cspecs['issuance_token_name']
         token_code = cspecs['issuance_token_code']
-        issuer = cspecs['issuer']
         function_caller = callparams['function_caller'][0]['wallet_address']
 
-        if issuer != function_caller:
-            raise Exception("Caller is not authorized")
+        # Check moved to signatories
+        # issuer = cspecs['issuer']
+        # if issuer != function_caller:
+        #     raise Exception("Caller is not authorized")
 
         for address in recipient_address:
            transaction_creator = TransactionCreator()
@@ -96,12 +97,13 @@ class og_issue(ContractMaster):
 
         withdraw_address = cspecs['withdraw_address']
         amount = callparams['amount']
-        issuer = cspecs['issuer']
 
         function_caller = callparams['function_caller'][0]['wallet_address']
-
-        if issuer != function_caller:
-            raise Exception("Caller is not authorized")
+       
+        # Check moved to signatories
+        # issuer = cspecs['issuer']
+        # if issuer != function_caller:
+        #     raise Exception("Caller is not authorized")
 
         transaction_creator = TransactionCreator()
         transfer_proposal_data = {
