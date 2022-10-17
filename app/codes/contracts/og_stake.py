@@ -161,9 +161,10 @@ class og_stake(ContractMaster):
 
         # if get_corrected_time_ms() >= (int(data[0]) + STAKE_COOLDOWN_MS):
         if True:
+            # add type 5 transaction to transfer back og
             transfer_proposal_data = {
                 "transfer_type": 1,
-                "asset1_code": 'NWRL',
+                "asset1_code": issuance_token_code,
                 "asset2_code": "",
                 "wallet1": self.address,
                 "wallet2": staker_wallet_address,
@@ -207,22 +208,7 @@ class og_stake(ContractMaster):
         sc_transaction = transaction_creator.transaction_type_3(txspecdata)
         child_transactions.append(sc_transaction)  
 
-        # add type 5 transaction to transfer back og
-        '''txn type 5 (one way transfer)'''
-        transaction_creator = TransactionCreator()
-        transfer_proposal_data = {
-            "transfer_type": 1,
-            "asset1_code": issuance_token_code,
-            "asset2_code": "",
-            "wallet1": self.address,
-            "wallet2": wallet_address,
-            "asset1_number": og_unstake_amount,
-            "asset2_number": 0,
-            "additional_data": {}       
-        }
-        transfer_proposal = transaction_creator.transaction_type_5(
-            transfer_proposal_data)
-        child_transactions.append(transfer_proposal)
+ 
         return child_transactions
 
     
