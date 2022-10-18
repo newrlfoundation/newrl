@@ -117,8 +117,7 @@ class NewrlStakeContract(ContractMaster):
                 data_json[index][staker_wallet_address] = 0
                 break
 
-        # if get_corrected_time_ms() >= (int(data[0]) + STAKE_COOLDOWN_MS):
-        if True:
+        if get_corrected_time_ms() >= (int(data[0]) + Configuration.config("STAKE_COOLDOWN_MS")):
             transfer_proposal_data = {
                 "transfer_type": 1,
                 "asset1_code": 'NWRL',

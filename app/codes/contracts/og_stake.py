@@ -6,7 +6,8 @@ from re import T
 from app.codes.db_updater import input_to_dict
 from app.codes.helpers.FetchRespository import FetchRepository
 from app.codes.helpers.TransactionCreator import TransactionCreator
-from app.nvalues import STAKE_CT_ADDRESS, ZERO_ADDRESS
+from app.nvalues import STAKE_COOLDOWN_MS, STAKE_CT_ADDRESS, ZERO_ADDRESS
+from app.Configuration import Configuration
 from .contract_master import ContractMaster
 from ..clock.global_time import get_corrected_time_ms
 
@@ -23,7 +24,6 @@ class og_stake(ContractMaster):
 
     def stake(self, callparamsip, repo: FetchRepository):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
-        # TODO check for self balance
         callparams = input_to_dict(callparamsip)
         token_code = cspecs['issuance_token_code']
         token_multiplier = cspecs['token_multiplier']
@@ -32,6 +32,10 @@ class og_stake(ContractMaster):
         amount_to_issue = value[0]['amount']
         amount_to_stake = amount_to_issue * token_multiplier
         staker_wallet = callparams['function_caller'][0]['wallet_address']
+
+        contract_balance = self._fetch_token_balance("NWRL",self.address,repo)
+        if contract_balance < amount_to_stake:
+            raise Exception("Insufficient balance in the contract")
 
         required_value = {
             "token_code": token_code,
@@ -125,7 +129,6 @@ class og_stake(ContractMaster):
     def unstake(self, callparamsip, repo: FetchRepository):
         
         cspecs = input_to_dict(self.contractparams['contractspecs'])
-        # TODO check for self balance
         callparams = input_to_dict(callparamsip)
         issuance_token_code = cspecs['issuance_token_code']
         token_multiplier = cspecs['token_multiplier']
@@ -159,8 +162,7 @@ class og_stake(ContractMaster):
                 data_json[index][staker_wallet_address] = 0
                 break
 
-        # if get_corrected_time_ms() >= (int(data[0]) + STAKE_COOLDOWN_MS):
-        if True:
+        if get_corrected_time_ms() >= (int(data[0]) + Configuration.config("STAKE_COOLDOWN_MS")):
             # add type 5 transaction to transfer back og
             transfer_proposal_data = {
                 "transfer_type": 1,
@@ -271,3 +273,9 @@ class og_stake(ContractMaster):
 
         return amount_update >= og_unstake_amount*token_multiplier
             
+    def _fetch_token_balance(self, token_code, address, repo):
+        balance = repo.select_Query("balance").add_table_name("balances").where_clause("wallet_address", address, 1).and_clause(
+            "tokencode", token_code, 1).execute_query_single_result({"wallet_address": address, "tokencode": token_code})
+        if balance == None:
+            return 0
+        return balance[0]
