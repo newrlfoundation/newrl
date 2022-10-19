@@ -40,7 +40,8 @@ def propogate_transaction_to_peers(transaction, exclude_nodes=None):
             thread = Thread(target=send_request, args = (url + '/receive-transaction', payload))
             thread.start()
         except Exception as e:
-            logger.error(f"Error broadcasting transaction to peer: {url} Error - {str(e)}")
+            pass
+            # logger.warn(f"Error broadcasting transaction to peer: {url} Error - {str(e)}")
 
 
 def propogate_transaction_batch_to_peers(transactions, exclude_nodes=None):
@@ -67,7 +68,8 @@ def propogate_transaction_batch_to_peers(transactions, exclude_nodes=None):
             thread = Thread(target=send_request, args = (url + '/receive-transactions', payload))
             thread.start()
         except Exception as e:
-            logger.error(f"Error broadcasting block to peer: {url} Error - {str(e)}")
+            pass
+            # logger.warn(f"Error broadcasting block to peer: {url} Error - {str(e)}")
 
 
 def send_request_in_thread(url, data, as_json=True):
@@ -84,7 +86,8 @@ def send_request(url, data, as_json=True):
             data = compress_block_payload(data)
             requests.post(url, data=data, timeout=REQUEST_TIMEOUT)
     except Exception as e:
-        logger.error(f"Error broadcasting block to peer: {url} Error - {str(e)}")
+        pass
+        # logger.warn(f"Error broadcasting block to peer: {url} Error - {str(e)}")
 
 def send(payload):
     response = requests.post(TRANSPORT_SERVER + '/send', json=payload, timeout=REQUEST_TIMEOUT)
@@ -110,7 +113,8 @@ def broadcast_receipt(receipt, nodes):
             thread = Thread(target=send_request, args=(url + '/receive-receipt', payload))
             thread.start()
         except Exception as e:
-            logger.error(f"Error broadcasting receipt to peer: {url} Error - {str(e)}")
+            pass
+            # logger.warn(f"Error broadcasting receipt to peer: {url} Error - {str(e)}")
 
 
 def broadcast_block(block_payload, nodes=None, exclude_nodes=None):
@@ -143,7 +147,8 @@ def broadcast_block(block_payload, nodes=None, exclude_nodes=None):
             # send_request_in_thread(url + '/receive-block', {'block': block_payload})
             send_request_in_thread(url + '/receive-block-binary', block_payload, as_json=False)
         except Exception as e:
-            logger.error(f"Error broadcasting block-binary to peer: {url} Error - {str(e)}")
+            pass
+            # logger.warn(f"Error broadcasting block-binary to peer: {url} Error - {str(e)}")
     return True
 
 
