@@ -18,7 +18,7 @@ from app.codes.helpers.FetchRespository import FetchRepository
 from app.Configuration import Configuration
 
 
-from ..ntypes import TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
+from ..ntypes import TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
 
 from ..constants import CUSTODIAN_OWNER_TYPE, MEMPOOL_PATH, NEWRL_DB
 from .utils import get_time_ms
@@ -465,7 +465,9 @@ class Transactionmanager:
                 self.validity = 0
             else:
                 self.validity = 1
-
+        if self.transaction['type'] == TRANSACTION_SC_UPDATE:
+            self.validity = 1
+            
         if self.validity == 1:
             return True
         else:
