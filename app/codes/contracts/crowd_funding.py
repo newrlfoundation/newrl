@@ -31,8 +31,9 @@ class crowd_funding(ContractMaster):
         pledge_token_name = callparams['pledge_token_name']
         recipient_address = callparams['recipient_address']
 
-        #TODO have new sc state to track raised amount, status?
-
+        #TODO have new sc state to track raised amount, status, time period?
+        #TODO logic to check on time/min/max amount
+        
         child_transactions = []
         transaction_creator = TransactionCreator()
         tokendata = {
