@@ -78,7 +78,6 @@ class og_issue(ContractMaster):
             '''txn type 5 (one way transfer)'''
             transaction_creator = TransactionCreator()
             transfer_proposal_data = {
-                "transfer_type": 1,
                 "asset1_code": "NWRL",
                 "asset2_code": "",
                 "wallet1": self.address,
@@ -107,7 +106,6 @@ class og_issue(ContractMaster):
 
         transaction_creator = TransactionCreator()
         transfer_proposal_data = {
-                "transfer_type": 1,
                 "asset1_code": "NWRL",
                 "asset2_code": "",
                 "wallet1": self.address,

@@ -165,7 +165,6 @@ class og_stake(ContractMaster):
         if get_corrected_time_ms() >= (int(data[0]) + Configuration.config("STAKE_COOLDOWN_MS")):
             # add type 5 transaction to transfer back og
             transfer_proposal_data = {
-                "transfer_type": 1,
                 "asset1_code": issuance_token_code,
                 "asset2_code": "",
                 "wallet1": self.address,
@@ -229,7 +228,6 @@ class og_stake(ContractMaster):
 
         transaction_creator = TransactionCreator()
         transfer_proposal_data = {
-                "transfer_type": 1,
                 "asset1_code": "NWRL",
                 "asset2_code": "",
                 "wallet1": self.address,
