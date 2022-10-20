@@ -9,9 +9,13 @@ from utils import sign_and_wait_mine
 
 def test_trustscore_update():
     source_wallet_address = WALLET['address']
-    destination_wallet_address = '0x9fd9ffeff71a0bbbcdf9761445e156a447c9ac14'
+    destination_wallet_address = '0xb06c59eebda6ba6e2c06661308fa8eebf3b827a1'
     response = requests.get(NODE_URL + f'/get-trustscore-wallets?dst_wallet_address={destination_wallet_address}&src_wallet_address={source_wallet_address}')
-    current_trust_score = response.json()['trust_score']
+    print(response.json())
+    if response.status_code == 200:
+        current_trust_score = response.json()['trust_score']
+    else:
+        current_trust_score = 0
     trust_score_update_request = {
         "source_address": source_wallet_address,
         "destination_address": destination_wallet_address,

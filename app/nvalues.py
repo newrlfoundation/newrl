@@ -104,3 +104,7 @@ else:
         '0x667663f36ac08e78bbf259f1361f02dc7dad593b',
         'ct9dc895fe5905dc73a2273e70be077bf3e94ea3b7'
     ]
+    CUSTODIAN_WALLET_LIST = MEMBER_WALLET_LIST + [
+        ASQI_WALLET,
+        FOUNDATION_WALLET,
+    ]

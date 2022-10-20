@@ -8,14 +8,17 @@ from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
 token_code = 'TSTTK' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
 def test_add_token():
+    add_token()
+
+def add_token(wallet_to_credit=WALLET['address'], amount=100):
     add_wallet_request = {
     "token_name": token_code,
     "token_code": token_code,
     "token_type": "1",
-    "first_owner": WALLET['address'],
+    "first_owner": wallet_to_credit,
     "custodian": WALLET['address'],
     "legal_doc": "",
-    "amount_created": 1000,
+    "amount_created": amount,
     "tokendecimal": 2,
     "disallowed_regions": [],
     "is_smart_contract_token": False,
@@ -48,8 +51,9 @@ def test_add_token():
     assert response.status_code == 200
     token = response.json()
     assert token['tokencode'] == token_code
-    assert token['first_owner'] == WALLET['address']
-    assert token['amount_created'] == 1000
+    assert token['first_owner'] == wallet_to_credit
+    assert token['amount_created'] == amount
 
     print('Test passed.')
+    return token
 

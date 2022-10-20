@@ -4,6 +4,9 @@ import requests
 from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
 
 def test_add_wallet():
+    add_wallet()
+
+def add_wallet():
     response = requests.get(NODE_URL + '/generate-wallet-address')
     wallet = response.json()
     print('New wallet\n', wallet, '\n')
@@ -50,11 +53,12 @@ def test_add_wallet():
 
     response = requests.get(NODE_URL + '/get-wallet?wallet_address=' + wallet_address)
     assert response.status_code == 200
-    wallet = response.json()
-    assert wallet['wallet_address'] == wallet_address
-    assert wallet['wallet_public'] == public_key
+    _wallet = response.json()
+    assert _wallet['wallet_address'] == wallet_address
+    assert _wallet['wallet_public'] == public_key
 
     print('Test passed.')
+    return wallet
 
 
 if __name__ == '__main__':
