@@ -121,16 +121,19 @@ def init_bootstrap_nodes():
     my_peers = get_peers()
 
     for peer in my_peers:
-        address = peer['address']
-        if socket.gethostbyname(address) == my_address:
-            continue
         try:
-            # response = register_me_with_them(address)
-            thread = Thread(target=register_me_with_them, args=(address,))
-            thread.start()
-        except Exception as e:
-            print(f'Peer unreachable: {peer}')
-            # remove_peer(peer['address'])
+            address = peer['address']
+            if socket.gethostbyname(address) == my_address:
+                continue
+            try:
+                # response = register_me_with_them(address)
+                thread = Thread(target=register_me_with_them, args=(address,))
+                thread.start()
+            except Exception as e:
+                print(f'Peer unreachable: {peer}')
+                # remove_peer(peer['address'])
+        except:
+            pass
     return True
 
 
