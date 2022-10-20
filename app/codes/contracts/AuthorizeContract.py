@@ -89,36 +89,37 @@ class AuthorizeContract(ContractMaster):
             return "Invalid Transaction: Error in custodian signature"
 
     def destroyTokens(self,callparamsip ,repo: FetchRepository):
+        trxns=[]
         callparams=input_to_dict(callparamsip)
         cspecs = input_to_dict(self.contractparams)
         custodian_address = cspecs['custodian_address']
         function_caller = callparams['function_caller']
         wallet_present = True
         second_wallet = dict()
-        value = callparams["value"]
+        values = callparams["value"]
         for i in function_caller:
             if i["wallet_address"] == custodian_address:
                 wallet_present = True
             else:
                 second_wallet = i
-
-        if wallet_present:
-            transaction_creator=TransactionCreator()
-            transfer_proposal_data = {
-                "transfer_type": 1,
-                "asset1_code": value["token_code"],
-                "asset2_code": "",
-                "wallet1": self.address,
-                "wallet2": Configuration.config("ZERO_ADDRESS"),
-                "asset1_number": int(value["amount"]),
-                "asset2_number": 0,
-                "additional_data": {}
-            }
-            trxn = transaction_creator.transaction_type_5(transfer_proposal_data)
-            return [trxn]
+        for value in values:
+            if wallet_present:
+                transaction_creator=TransactionCreator()
+                transfer_proposal_data = {
+                    "transfer_type": 1,
+                    "asset1_code": value["token_code"],
+                    "asset2_code": "",
+                    "wallet1": self.address,
+                    "wallet2": Configuration.config("ZERO_ADDRESS"),
+                    "asset1_number": int(value["amount"]),
+                    "asset2_number": 0,
+                    "additional_data": {}
+                }
+                trxn= transaction_creator.transaction_type_5(transfer_proposal_data)
+                trxns.append(trxn)
+            return trxns
         else:
-            return []
-        pass
+            trxns
 
     def createTokens(self, callparamsip, repo: FetchRepository):
         trxn = []
