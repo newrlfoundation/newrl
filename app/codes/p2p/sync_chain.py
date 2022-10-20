@@ -102,8 +102,8 @@ def receive_block(block):
     # Check for sentinel node empty block
     if validate_empty_block(block, check_from_sentinel_node=True):
         logger.info('Accepting timeout block from sentinel node')
-        accept_block(original_block, block['hash'])
-        broadcast_block(original_block)
+        if accept_block(original_block, block['hash']):
+            broadcast_block(original_block)
         return
 
     # store_block_proposal(block)
@@ -126,8 +126,8 @@ def receive_block(block):
             #     broadcast_receipt(receipt_for_invalid_block, committee)
             return False
 
-        accept_block(original_block, block['hash'])
-        broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
+        if accept_block(original_block, block['hash']):
+            broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
     elif consensus == BLOCK_CONSENSUS_INVALID:
         if not validate_empty_block(block):
             logger.warn('Committee empty block received is not valid. Ignoring.')
@@ -327,6 +327,7 @@ def ask_peers_for_block(block_index):
 
 
 def accept_block(block, hash):
+    block_added_successfully = False
     mutable_block = copy.deepcopy(block)
     global TIMERS
 
@@ -334,7 +335,7 @@ def accept_block(block, hash):
     #     hash = calculate_hash(block['data'])
     con = sqlite3.connect(NEWRL_DB, timeout=10)
     cur = con.cursor()
-    blockchain.add_block(cur, mutable_block['data'])
+    block_added_successfully = blockchain.add_block(cur, mutable_block['data'])
     con.commit()
     con.close()
 
@@ -342,7 +343,7 @@ def accept_block(block, hash):
     # start_mining_clock(block_timestamp)
     TIMERS['mining_timer'] = None
     TIMERS['block_receive_timeout'] = None
-    return True
+    return block_added_successfully
 
 
 def receive_receipt(receipt):

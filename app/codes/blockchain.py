@@ -230,7 +230,7 @@ def add_block(cur, block, hash=None, is_state_reconstruction=False):
         last_block = get_last_block(cur)
         if last_block is not None and last_block['hash'] != block['previous_hash']:
             print('Previous block hash does not match current block data')
-            return
+            return False
     # Needed for backward compatibility of blocks
     block_index = block['block_index'] if 'block_index' in block else block['index']
     # transactions_hash = block['transactions_hash'] if 'transactions_hash' in block else ''
@@ -270,6 +270,7 @@ def add_block(cur, block, hash=None, is_state_reconstruction=False):
         transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction['trans_code']
         remove_transaction_from_mempool(transaction_code)
     remove_block_from_temp(block_index)
+    return True
 
 
 def get_last_block_index(db_url=NEWRL_DB):
