@@ -3,6 +3,7 @@ from starlette.requests import Request
 from app.codes.p2p.packager import decompress_block_payload
 from app.codes.p2p.transport import receive
 from app.codes.p2p.sync_chain import receive_block
+from app.limiter import limiter
 
 router = APIRouter()
 
@@ -14,6 +15,7 @@ def recieve_api(payload: dict):
     return receive(payload)
 
 @router.post("/receive-block-binary", tags=[transport_tag], include_in_schema=False)
+@limiter.limit("10/minute")
 async def receive_block_binary_api(req: Request):
     body = req.body()
     block = decompress_block_payload(await body)
