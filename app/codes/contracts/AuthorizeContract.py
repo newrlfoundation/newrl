@@ -106,7 +106,7 @@ class AuthorizeContract(ContractMaster):
             if wallet_present:
                 transaction_creator=TransactionCreator()
                 transfer_proposal_data = {
-                    "transfer_type": 1,
+                    "transfer_type": 5,
                     "asset1_code": value["token_code"],
                     "asset2_code": "",
                     "wallet1": self.address,
