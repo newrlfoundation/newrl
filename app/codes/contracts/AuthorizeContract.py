@@ -91,7 +91,7 @@ class AuthorizeContract(ContractMaster):
     def destroyTokens(self,callparamsip ,repo: FetchRepository):
         trxns=[]
         callparams=input_to_dict(callparamsip)
-        cspecs = input_to_dict(self.contractparams)
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
         custodian_address = cspecs['custodian_address']
         function_caller = callparams['function_caller']
         wallet_present = True
