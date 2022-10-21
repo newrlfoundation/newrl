@@ -8,7 +8,7 @@ from threading import Thread
 from app.codes.p2p.packager import compress_block_payload
 
 from ..clock.global_time import get_corrected_time_ms
-from ...constants import IS_TEST, MAX_BROADCAST_NODES, NEWRL_PORT, REQUEST_TIMEOUT, TRANSPORT_SERVER
+from ...constants import IS_TEST, MAX_BROADCAST_NODES, NETWORK_TRUSTED_ARCHIVE_NODES, NEWRL_PORT, REQUEST_TIMEOUT, TRANSPORT_SERVER
 from ..p2p.utils import get_my_address, get_peers
 from ..p2p.utils import is_my_address
 
@@ -117,7 +117,7 @@ def broadcast_receipt(receipt, nodes):
             # logger.warn(f"Error broadcasting receipt to peer: {url} Error - {str(e)}")
 
 
-def broadcast_block(block_payload, nodes=None, exclude_nodes=None):
+def broadcast_block(block_payload, nodes=None, exclude_nodes=None, send_to_archive=False):
     if IS_TEST:
         return
     if nodes:
@@ -149,6 +149,10 @@ def broadcast_block(block_payload, nodes=None, exclude_nodes=None):
         except Exception as e:
             pass
             # logger.warn(f"Error broadcasting block-binary to peer: {url} Error - {str(e)}")
+    if send_to_archive:
+        for archive_node in NETWORK_TRUSTED_ARCHIVE_NODES:
+            url = 'http://' + archive_node + ':' + str(NEWRL_PORT)
+            send_request_in_thread(url + '/receive-block-binary', block_payload, as_json=False)
     return True
 
 
