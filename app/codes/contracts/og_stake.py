@@ -26,11 +26,11 @@ class og_stake(ContractMaster):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         callparams = input_to_dict(callparamsip)
         token_code = cspecs['issuance_token_code']
-        token_multiplier = cspecs['token_multiplier']
+        token_stake_multiplier = cspecs['token_multiplier']
         value = callparams['value']
         wallet_address = callparams['wallet_address']
         amount_to_issue = value[0]['amount']
-        amount_to_stake = amount_to_issue * token_multiplier
+        amount_to_stake = amount_to_issue * token_stake_multiplier
         staker_wallet = callparams['function_caller'][0]['wallet_address']
 
         contract_balance = self._fetch_token_balance("NWRL",self.address,repo)
@@ -131,13 +131,14 @@ class og_stake(ContractMaster):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         callparams = input_to_dict(callparamsip)
         issuance_token_code = cspecs['issuance_token_code']
-        token_multiplier = cspecs['token_multiplier']
+
+        token_stake_multiplier = cspecs['token_stake_multiplier']
         wallet_address = callparams['wallet_address']
         person_id = callparams['person_id']
         og_unstake_amount = callparams['og_unstake_amount']
-        newrl_unstake_amount = og_unstake_amount * token_multiplier
+        newrl_unstake_amount = og_unstake_amount * token_stake_multiplier
 
-        if not self.__check_if_slashed(wallet_address,person_id,og_unstake_amount, token_multiplier,repo):
+        if not self.__check_if_slashed(wallet_address, person_id, og_unstake_amount, token_stake_multiplier, repo):
             raise Exception("Newrl stake has been slashed, cant withdraw og for now")
         child_transactions = []
 
@@ -162,37 +163,10 @@ class og_stake(ContractMaster):
                 data_json[index][staker_wallet_address] = 0
                 break
 
-        if get_corrected_time_ms() >= (int(data[0]) + Configuration.config("STAKE_COOLDOWN_MS")):
-            # add type 5 transaction to transfer back og
-            transfer_proposal_data = {
-                "asset1_code": issuance_token_code,
-                "asset2_code": "",
-                "wallet1": self.address,
-                "wallet2": staker_wallet_address,
-                "asset1_number": int(amount_update),
-                "asset2_number": 0,
-                "additional_data": {}
-            }
-            transaction_creator = TransactionCreator()
-            child_transactions.append(transaction_creator.transaction_type_5(
-                transfer_proposal_data))
-            sc_state_proposal1_data = {
-                "operation": "update",
-                "table_name": "stake_ledger",
-                "sc_address": self.address,
-                "data": {
-                    "amount": math.floor(data[1]-amount_update),
-                    "time_updated": get_corrected_time_ms(),
-                    "staker_wallet_address": json.dumps(data_json),
-                },
-                "unique_column": "person_id",
-                "unique_value": callparams['person_id']
-            }
-            transaction_creator = TransactionCreator()
-            txtype1 = transaction_creator.transaction_type_8(
-                sc_state_proposal1_data)
-            child_transactions.append(txtype1)
-
+        if not get_corrected_time_ms() >= (int(data[0]) + Configuration.config("STAKE_COOLDOWN_MS")):
+            raise Exception("Cooldown period isnt over yet")
+        
+        #call sc newrl txn
         transaction_creator = TransactionCreator()
         params = {
             "token_amount": newrl_unstake_amount,
@@ -207,9 +181,39 @@ class og_stake(ContractMaster):
             "function_caller": self.address
         }
         sc_transaction = transaction_creator.transaction_type_3(txspecdata)
-        child_transactions.append(sc_transaction)  
+        child_transactions.append(sc_transaction)
 
- 
+        # type 5 transaction to transfer back og
+        transfer_proposal_data = {
+            "asset1_code": issuance_token_code,
+            "asset2_code": "",
+            "wallet1": self.address,
+            "wallet2": staker_wallet_address,
+            "asset1_number": int(amount_update),
+            "asset2_number": 0,
+            "additional_data": {}
+        }
+        transaction_creator = TransactionCreator()
+        child_transactions.append(transaction_creator.transaction_type_5(
+            transfer_proposal_data))
+        
+        # type 8 to change stake ledger data
+        sc_state_proposal1_data = {
+            "operation": "update",
+            "table_name": "stake_ledger",
+            "sc_address": self.address,
+            "data": {
+                "amount": math.floor(data[1]-amount_update),
+                "time_updated": get_corrected_time_ms(),
+                "staker_wallet_address": json.dumps(data_json),
+            },
+            "unique_column": "person_id",
+            "unique_value": callparams['person_id']
+        }
+        transaction_creator = TransactionCreator()
+        txtype1 = transaction_creator.transaction_type_8(
+            sc_state_proposal1_data)
+        child_transactions.append(txtype1)
         return child_transactions
 
     

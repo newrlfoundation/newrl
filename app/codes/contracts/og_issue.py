@@ -69,6 +69,9 @@ class og_issue(ContractMaster):
 
         amount = amount_to_issue*token_multiplier
 
+        ogfl_token_code = cspecs['ogfl_token_code']
+        ogfl_token_name = cspecs['issuance_token_code']
+
         required_value = {
             "token_code": issuance_token_code,
             "amount": amount_to_issue
@@ -88,7 +91,24 @@ class og_issue(ContractMaster):
             }
             transfer_proposal = transaction_creator.transaction_type_5(
                 transfer_proposal_data)
-        return [transfer_proposal]
+
+            #type 2 to create og for life token
+            transaction_creator = TransactionCreator()
+            tokendata = {
+                "tokenname": ogfl_token_name,
+                "tokencode": ogfl_token_code,
+                "tokentype": '1',
+                "tokenattributes": {},
+                "first_owner": recipient_address,
+                "custodian": self.address,
+                "legaldochash": '',
+                "amount_created": 1,
+                "value_created": '',
+                "disallowed": {},
+                "sc_flag": True,
+            }
+            ogfl = transaction_creator.transaction_type_two(tokendata)
+        return [transfer_proposal, ogfl]
     
     def remove(self, callparamsip, repo: FetchRepository):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
