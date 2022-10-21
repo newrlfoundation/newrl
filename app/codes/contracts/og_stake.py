@@ -6,6 +6,7 @@ from re import T
 from app.codes.db_updater import input_to_dict
 from app.codes.helpers.FetchRespository import FetchRepository
 from app.codes.helpers.TransactionCreator import TransactionCreator
+from app.codes.utils import get_last_block_hash
 from app.nvalues import STAKE_COOLDOWN_MS, STAKE_CT_ADDRESS, ZERO_ADDRESS
 from app.Configuration import Configuration
 from .contract_master import ContractMaster
@@ -29,9 +30,13 @@ class og_stake(ContractMaster):
         token_stake_multiplier = cspecs['token_multiplier']
         value = callparams['value']
         wallet_address = callparams['wallet_address']
-        amount_to_issue = value[0]['amount']
+        amount_to_issue = 1
         amount_to_stake = amount_to_issue * token_stake_multiplier
         staker_wallet = callparams['function_caller'][0]['wallet_address']
+        pid = self.__get_pid_from_wallet_using_repo(repo, wallet_address)
+
+        if self.__check_if_already_staked(pid,repo):
+            raise Exception("Staking alredy present for this address")
 
         contract_balance = self._fetch_token_balance("NWRL",self.address,repo)
         if contract_balance < amount_to_stake:
@@ -41,7 +46,6 @@ class og_stake(ContractMaster):
             "token_code": token_code,
             "amount": amount_to_issue
         }
-        pid = self.__get_pid_from_wallet_using_repo(repo, wallet_address)
 
         child_transactions = []    
 
@@ -57,7 +61,7 @@ class og_stake(ContractMaster):
                     "data": {
                         "person_id": pid,
                         "amount": amount_to_issue,
-                        "time_updated": get_corrected_time_ms(),
+                        "time_updated": get_last_block_hash()["timestamp"],
                         "wallet_address": wallet_address,
                         "address": self.address,
                         "staker_wallet_address": json.dumps([{
@@ -93,7 +97,7 @@ class og_stake(ContractMaster):
                         "sc_address": self.address,
                         "data": {
                             "amount": amount[0] + amount_to_issue,
-                            "time_updated": get_corrected_time_ms(),
+                            "time_updated": get_last_block_hash()["timestamp"],
                             "staker_wallet_address":json.dumps(staker_wallet_address_json)
                         },
                         "unique_column": "person_id",
@@ -132,6 +136,10 @@ class og_stake(ContractMaster):
         callparams = input_to_dict(callparamsip)
         issuance_token_code = cspecs['issuance_token_code']
 
+        og_unstake_token_code = cspecs['og_unstake_token_code']
+        og_unstake_token_name = cspecs['og_unstake_token_name']
+
+
         token_stake_multiplier = cspecs['token_stake_multiplier']
         wallet_address = callparams['wallet_address']
         person_id = callparams['person_id']
@@ -163,8 +171,8 @@ class og_stake(ContractMaster):
                 data_json[index][staker_wallet_address] = 0
                 break
 
-        if not get_corrected_time_ms() >= (int(data[0]) + Configuration.config("STAKE_COOLDOWN_MS")):
-            raise Exception("Cooldown period isnt over yet")
+        # if not get_last_block_hash()["timestamp"] >= (int(data[0]) + Configuration.config("STAKE_COOLDOWN_MS")):
+        #     raise Exception("Cooldown period isnt over yet")
         
         #call sc newrl txn
         transaction_creator = TransactionCreator()
@@ -183,20 +191,38 @@ class og_stake(ContractMaster):
         sc_transaction = transaction_creator.transaction_type_3(txspecdata)
         child_transactions.append(sc_transaction)
 
-        # type 5 transaction to transfer back og
-        transfer_proposal_data = {
-            "asset1_code": issuance_token_code,
-            "asset2_code": "",
-            "wallet1": self.address,
-            "wallet2": staker_wallet_address,
-            "asset1_number": int(amount_update),
-            "asset2_number": 0,
-            "additional_data": {}
-        }
-        transaction_creator = TransactionCreator()
-        child_transactions.append(transaction_creator.transaction_type_5(
-            transfer_proposal_data))
+        # # type 5 transaction to transfer back og
+        # transfer_proposal_data = {
+        #     "asset1_code": issuance_token_code,
+        #     "asset2_code": "",
+        #     "wallet1": self.address,
+        #     "wallet2": staker_wallet_address,
+        #     "asset1_number": int(amount_update),
+        #     "asset2_number": 0,
+        #     "additional_data": {}
+        # }
+        # transaction_creator = TransactionCreator()
+        # child_transactions.append(transaction_creator.transaction_type_5(
+        #     transfer_proposal_data))
         
+        # type 2 to issue og_unstake token
+        transaction_creator = TransactionCreator()
+        tokendata = {
+                "tokenname": og_unstake_token_name,
+                "tokencode": og_unstake_token_code,
+                "tokentype": '1',
+                "tokenattributes": {},
+                "first_owner": staker_wallet_address,
+                "custodian": self.address,
+                "legaldochash": '',
+                "amount_created": 1,
+                "value_created": '',
+                "disallowed": {},
+                "sc_flag": True,
+            }
+        og_unstake = transaction_creator.transaction_type_two(tokendata)
+        child_transactions.append(og_unstake)
+
         # type 8 to change stake ledger data
         sc_state_proposal1_data = {
             "operation": "update",
@@ -204,7 +230,7 @@ class og_stake(ContractMaster):
             "sc_address": self.address,
             "data": {
                 "amount": math.floor(data[1]-amount_update),
-                "time_updated": get_corrected_time_ms(),
+                "time_updated": get_last_block_hash()["timestamp"],
                 "staker_wallet_address": json.dumps(data_json),
             },
             "unique_column": "person_id",
@@ -272,7 +298,6 @@ class og_stake(ContractMaster):
             if staker_wallet_address in value.keys():
                 amount_update = value[staker_wallet_address]
                 break
-
         return amount_update >= og_unstake_amount*token_multiplier
             
     def _fetch_token_balance(self, token_code, address, repo):
@@ -281,3 +306,8 @@ class og_stake(ContractMaster):
         if balance == None:
             return 0
         return balance[0]
+
+    def __check_if_already_staked(self,person_id,repo):
+        stakers = repo.select_Query().add_table_name("stake_ledger").where_clause("person_id", person_id,1).and_clause("address", self.address,1).execute_query_single_result({"person_id": person_id, "address": self.address})
+        return stakers[0] != None
+        

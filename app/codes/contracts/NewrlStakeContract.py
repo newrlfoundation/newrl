@@ -7,6 +7,7 @@ from ..db_updater import *
 from ..helpers.FetchRespository import FetchRepository
 from ..helpers.TransactionCreator import TransactionCreator
 import logging
+from app.codes.utils import get_last_block_hash
 
 from ...nvalues import STAKE_COOLDOWN_MS
 
@@ -47,7 +48,7 @@ class NewrlStakeContract(ContractMaster):
                     "data": {
                         "person_id": pid,
                         "amount": token_amount,
-                        "time_updated": get_corrected_time_ms(),
+                        "time_updated": get_last_block_hash()["timestamp"],
                         "wallet_address": wallet_address,
                         "address": self.address,
                         "staker_wallet_address": json.dumps([{
@@ -83,7 +84,7 @@ class NewrlStakeContract(ContractMaster):
                         "sc_address": self.address,
                         "data": {
                             "amount": amount[0] + token_amount,
-                            "time_updated": get_corrected_time_ms(),
+                            "time_updated": get_last_block_hash()["timestamp"],
                             "staker_wallet_address":json.dumps(staker_wallet_address_json)
                         },
                         "unique_column": "person_id",
@@ -117,7 +118,7 @@ class NewrlStakeContract(ContractMaster):
                 data_json[index][staker_wallet_address] = 0
                 break
 
-        if get_corrected_time_ms() >= (int(data[0]) + Configuration.config("STAKE_COOLDOWN_MS")):
+        if get_last_block_hash()["timestamp"] >= (int(data[0]) + Configuration.config("STAKE_COOLDOWN_MS")):
             transfer_proposal_data = {
                 "transfer_type": 1,
                 "asset1_code": 'NWRL',
@@ -136,7 +137,7 @@ class NewrlStakeContract(ContractMaster):
                 "sc_address": self.address,
                 "data": {
                     "amount": math.floor(data[1]-amount_update),
-                    "time_updated": get_corrected_time_ms(),
+                    "time_updated": get_last_block_hash()["timestamp"],
                     "staker_wallet_address":json.dumps(data_json),
                 },
                 "unique_column": "person_id",

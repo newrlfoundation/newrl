@@ -7,6 +7,7 @@ from app.codes.helpers.FetchRespository import FetchRepository
 from app.codes.helpers.TransactionCreator import TransactionCreator
 from app.nvalues import ZERO_ADDRESS
 from .contract_master import ContractMaster
+from app.codes.utils import get_last_block_hash
 
 
 class og_issue(ContractMaster):
@@ -60,6 +61,10 @@ class og_issue(ContractMaster):
     def exchange(self, callparamsip, repo: FetchRepository):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         callparams = input_to_dict(callparamsip)
+
+        exchange_start_date = cspecs['exchange_start_date']
+        if not get_last_block_hash()["timestamp"] >= exchange_start_date:
+            raise Exception("Exchange is not allowed yet")
 
         issuance_token_code = cspecs['issuance_token_code']
         token_multiplier = cspecs['token_multiplier']
