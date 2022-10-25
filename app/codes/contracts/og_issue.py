@@ -63,11 +63,14 @@ class og_issue(ContractMaster):
         callparams = input_to_dict(callparamsip)
 
         exchange_start_date = cspecs['exchange_start_date']
-        if not get_last_block_hash()["timestamp"] >= exchange_start_date:
+        current_time = get_last_block_hash()["timestamp"]
+        if not current_time >= exchange_start_date:
             raise Exception("Exchange is not allowed yet")
 
         issuance_token_code = cspecs['issuance_token_code']
-        token_multiplier = cspecs['token_multiplier']
+        og_unstake_token_code = cspecs['og_unstake_token_code']
+
+        token_multiplier = cspecs['token_exchange_multiplier']
         value = callparams['value']
         recipient_address = callparams['recipient_address']
         amount_to_issue = value[0]['amount']
@@ -82,7 +85,13 @@ class og_issue(ContractMaster):
             "amount": amount_to_issue
         }
 
-        if required_value in value:
+        required_value_unstake_coin = {
+            "token_code": og_unstake_token_code,
+            "amount": amount_to_issue
+        }
+
+
+        if required_value in value or required_value_unstake_coin in value:
             '''txn type 5 (one way transfer)'''
             transaction_creator = TransactionCreator()
             transfer_proposal_data = {
@@ -113,6 +122,8 @@ class og_issue(ContractMaster):
                 "sc_flag": True,
             }
             ogfl = transaction_creator.transaction_type_two(tokendata)
+        else:
+            raise Exception("Incorrect txn value sent")    
         return [transfer_proposal, ogfl]
     
     def remove(self, callparamsip, repo: FetchRepository):
@@ -121,8 +132,6 @@ class og_issue(ContractMaster):
 
         withdraw_address = cspecs['withdraw_address']
         amount = callparams['amount']
-
-        function_caller = callparams['function_caller'][0]['wallet_address']
        
         # Check moved to signatories
         # issuer = cspecs['issuer']
@@ -143,3 +152,10 @@ class og_issue(ContractMaster):
                 transfer_proposal_data)
 
         return [transfer_proposal]
+
+    #validate
+    # issue
+    #   correct token as part of value
+    # exchange
+    #   correct token as part of value
+    #   enough balance in the contract  

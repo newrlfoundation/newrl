@@ -118,36 +118,35 @@ class NewrlStakeContract(ContractMaster):
                 data_json[index][staker_wallet_address] = 0
                 break
 
-        if get_last_block_hash()["timestamp"] >= (int(data[0]) + Configuration.config("STAKE_COOLDOWN_MS")):
-            transfer_proposal_data = {
-                "transfer_type": 1,
-                "asset1_code": 'NWRL',
-                "asset2_code": "",
-                "wallet1": self.address,
-                "wallet2": staker_wallet_address,
-                "asset1_number": int(amount_update),
-                "asset2_number": 0,
-                "additional_data": {}
-            }
-            transaction_creator = TransactionCreator()
-            trxn.append(transaction_creator.transaction_type_5(transfer_proposal_data))
-            sc_state_proposal1_data = {
-                "operation": "update",
-                "table_name": "stake_ledger",
-                "sc_address": self.address,
-                "data": {
-                    "amount": math.floor(data[1]-amount_update),
-                    "time_updated": get_last_block_hash()["timestamp"],
-                    "staker_wallet_address":json.dumps(data_json),
-                },
-                "unique_column": "person_id",
-                "unique_value": callparams['person_id']
-            }
-            transaction_creator = TransactionCreator()
-            txtype1 = transaction_creator.transaction_type_8(sc_state_proposal1_data)
-            trxn.append(txtype1)
-        else:
-            self.logger.info("can not unstake before cooldown time.")
+        # if get_last_block_hash()["timestamp"] >= (int(data[0]) + Configuration.config("STAKE_COOLDOWN_MS")):
+        transfer_proposal_data = {
+            "transfer_type": 1,
+            "asset1_code": 'NWRL',
+            "asset2_code": "",
+            "wallet1": self.address,
+            "wallet2": staker_wallet_address,
+            "asset1_number": int(amount_update),
+            "asset2_number": 0,
+            "additional_data": {}
+        }
+        transaction_creator = TransactionCreator()
+        trxn.append(transaction_creator.transaction_type_5(transfer_proposal_data))
+        sc_state_proposal1_data = {
+            "operation": "update",
+            "table_name": "stake_ledger",
+            "sc_address": self.address,
+            "data": {
+                "amount": math.floor(data[1]-amount_update),
+                "time_updated": get_last_block_hash()["timestamp"],
+                "staker_wallet_address":json.dumps(data_json),
+            },
+            "unique_column": "person_id",
+            "unique_value": callparams['person_id']
+        }
+        transaction_creator = TransactionCreator()
+        txtype1 = transaction_creator.transaction_type_8(sc_state_proposal1_data)
+        trxn.append(txtype1)
+
         return trxn
 
 
