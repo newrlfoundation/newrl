@@ -46,14 +46,21 @@ def transfer_tokens_and_update_balances(cur, sender, reciever, tokencode, amount
     if sender == reciever:
         print('Sender and receiver cannot be the same')
         return False
+    if sender == Configuration.config('ZERO_ADDRESS') :
+        print('Sender can not be zero address')
+        return False
+    if reciever == Configuration.config('ZERO_ADDRESS'):
+        sender_balance = get_wallet_token_balance(cur, sender, tokencode)
+        sender_balance = sender_balance - amount
+        update_wallet_token_balance(cur, sender, tokencode, sender_balance)
+    else:
+        sender_balance = get_wallet_token_balance(cur, sender, tokencode)
+        reciever_balance = get_wallet_token_balance(cur, reciever, tokencode)
+        sender_balance = sender_balance - amount
+        reciever_balance = reciever_balance + amount
+        update_wallet_token_balance(cur, sender, tokencode, sender_balance)
+        update_wallet_token_balance(cur, reciever, tokencode, reciever_balance)
 
-    sender_balance = get_wallet_token_balance(cur, sender, tokencode)
-    reciever_balance = get_wallet_token_balance(cur, reciever, tokencode)
-    sender_balance = sender_balance - amount
-    reciever_balance = reciever_balance + amount
-    update_wallet_token_balance(cur, sender, tokencode, sender_balance)
-    update_wallet_token_balance(cur, reciever, tokencode, reciever_balance)
-    
 
 
 def update_wallet_token_balance(cur, wallet_address, token_code, balance):
@@ -312,15 +319,15 @@ def add_miner(cur, wallet_address, network_address, broadcast_timestamp, block_i
             return
     cur.execute('''INSERT OR REPLACE INTO miners
 				(id, wallet_address, network_address, last_broadcast_timestamp, block_index)
-				 VALUES (?, ?, ?, ?, ?)''', 
+				 VALUES (?, ?, ?, ?, ?)''',
                  (wallet_address, wallet_address, network_address, broadcast_timestamp, block_index))
-    
+
     person_id = get_pid_from_wallet(cur, wallet_address)
     if person_id is not None:
         cur.execute(f'''
         INSERT OR IGNORE INTO trust_scores
         (src_person_id, dest_person_id, score, last_time)
-        VALUES (?, ?, ?, ?)''', 
+        VALUES (?, ?, ?, ?)''',
         (Configuration.config("NETWORK_TRUST_MANAGER_PID"), person_id,
         INITIAL_NETWORK_TRUST_SCORE, get_corrected_time_ms()))
 
