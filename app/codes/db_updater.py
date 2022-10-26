@@ -366,7 +366,7 @@ def slashing_tokens(cur,address,is_block):
             for i in value.keys():
                 burn_amount=data_json[index][i]-(data_json[index][i]/actual_balance)*balance
                 data_json[index][i]=(data_json[index][i]/actual_balance)*balance
-                transfer_tokens_and_update_balances(cur,Configuration.config("STAKE_CT_ADDRESS"),Configuration.config("ZERO_ADDRESS"),NEWRL_TOKEN_CODE,math.ceil(burn_amount))
+                transfer_tokens_and_update_balances(cur,Configuration.config("STAKE_CT_ADDRESS"),Configuration.config("NETWORK_TREASURY_ADDRESS"),NEWRL_TOKEN_CODE,math.ceil(burn_amount))
                 deducted_amount=deducted_amount+math.ceil(burn_amount)
         # updating stake_ledger table with the new updated address amount
         cur.execute(f'''UPDATE stake_ledger set amount=:amount, staker_wallet_address=:staker_wallet_address where wallet_address=:address''', {"amount": actual_balance-deducted_amount,

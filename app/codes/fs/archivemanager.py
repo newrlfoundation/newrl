@@ -1,4 +1,6 @@
 import json
+import glob
+import os
 from app.constants import BLOCK_ARCHIVE_PATH
 
 
@@ -18,3 +20,13 @@ def get_block_from_archive(block_index):
     except Exception as e:
         return None
     return block
+
+
+def cleanup_old_archive_blocks(block_index):
+    blocks_to_persist = set()
+    for i in range(max(block_index - 1000, 0), block_index):
+        blocks_to_persist.add(f'{BLOCK_ARCHIVE_PATH}block_{i}.json')
+
+    for block_file in glob.glob(f'{BLOCK_ARCHIVE_PATH}/block_*.json'):
+        if block_file not in blocks_to_persist:
+            os.remove(block_file)

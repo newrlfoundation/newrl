@@ -52,19 +52,27 @@ def initialze_params():
                         action="store_true")
     parser.add_argument("--disableupdate", help="run the node without updating software", action="store_true")
     parser.add_argument("--disablebootstrap", help="run the node without bootstrapping", action="store_true")
+    parser.add_argument("--fullnode", help="run a full/archive node", action="store_true")
     _args = parser.parse_args()
     args = {
         'disablenetwork': _args.disablenetwork,
         'disableupdate': _args.disableupdate,
         'disablebootstrap': _args.disablebootstrap,
+        'fullnode': _args.fullnode,
     }
     return args
-# args = initialze_params()  # TODO - This is causing tests to fail
-args = args = {
-    'disablenetwork': False,
-    'disableupdate': False,
-    'disablebootstrap': False,
-}
+
+try:
+    args = initialze_params()
+    print('args', args)
+except:
+    args = {
+        'disablenetwork': False,
+        'disableupdate': False,
+        'disablebootstrap': False,
+        'fullnode': False,
+    }
+Configuration.conf['FULL_NODE'] = args["fullnode"]
 
 
 @app.on_event('startup')
@@ -82,7 +90,7 @@ def app_startup():
         print('Bootstrap failed')
         logging.critical(e, exc_info=True)
 
-    if not IS_TEST:
+    if not not IS_TEST:
         if not am_i_sentinel_node():
             logger.info('Participating in mining')
             start_miner_broadcast_clock()
