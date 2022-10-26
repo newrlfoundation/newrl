@@ -103,7 +103,7 @@ def update_network_trust_score_from_receipt(cur, receipt):
                         score = get_invalid_receipt_score(existing_score)
                         logger.info('Committee member voted positive for invalid block %d. Slashing voter %s',
                             actual_block['block_index'], wallet_address)
-                        slashing_tokens(cur, wallet_address, False)
+                        # slashing_tokens(cur, wallet_address, False)
 
                     else:
                         score = get_valid_receipt_score(existing_score)
