@@ -170,58 +170,61 @@ class og_stake(ContractMaster):
                 data_json[index][staker_wallet_address] = 0
                 break
 
+        if get_last_block_hash()["timestamp"] >= (int(data[0]) + int(Configuration.config("STAKE_COOLDOWN_MS"))):
         #call sc newrl txn
-        transaction_creator = TransactionCreator()
-        params = {
-            "token_amount": newrl_unstake_amount,
-            "wallet_address": wallet_address,
-            "person_id": person_id
-        }
-        txspecdata = {
-            "address": STAKE_CT_ADDRESS,
-            "function": 'unstake_tokens',
-            "signers": [self.address],
-            "params": params,
-            "function_caller": self.address
-        }
-        sc_transaction = transaction_creator.transaction_type_3(txspecdata)
-        child_transactions.append(sc_transaction)
-
-        # type 2 to issue og_unstake token
-        transaction_creator = TransactionCreator()
-        tokendata = {
-                "tokenname": og_unstake_token_name,
-                "tokencode": og_unstake_token_code,
-                "tokentype": '1',
-                "tokenattributes": {},
-                "first_owner": staker_wallet_address,
-                "custodian": self.address,
-                "legaldochash": '',
-                "amount_created": 1,
-                "value_created": '',
-                "disallowed": {},
-                "sc_flag": True,
+            transaction_creator = TransactionCreator()
+            params = {
+                "token_amount": newrl_unstake_amount,
+                "wallet_address": wallet_address,
+                "person_id": person_id
             }
-        og_unstake = transaction_creator.transaction_type_two(tokendata)
-        child_transactions.append(og_unstake)
+            txspecdata = {
+                "address": STAKE_CT_ADDRESS,
+                "function": 'unstake_tokens',
+                "signers": [self.address],
+                "params": params,
+                "function_caller": self.address
+            }
+            sc_transaction = transaction_creator.transaction_type_3(txspecdata)
+            child_transactions.append(sc_transaction)
 
-        # type 8 to change stake ledger data
-        sc_state_proposal1_data = {
-            "operation": "update",
-            "table_name": "stake_ledger",
-            "sc_address": self.address,
-            "data": {
-                "amount": math.floor(data[1]-amount_update),
-                "time_updated": get_last_block_hash()["timestamp"],
-                "staker_wallet_address": json.dumps(data_json),
-            },
-            "unique_column": "person_id",
-            "unique_value": callparams['person_id']
-        }
-        transaction_creator = TransactionCreator()
-        txtype1 = transaction_creator.transaction_type_8(
-            sc_state_proposal1_data)
-        child_transactions.append(txtype1)
+            # type 2 to issue og_unstake token
+            transaction_creator = TransactionCreator()
+            tokendata = {
+                    "tokenname": og_unstake_token_name,
+                    "tokencode": og_unstake_token_code,
+                    "tokentype": '1',
+                    "tokenattributes": {},
+                    "first_owner": staker_wallet_address,
+                    "custodian": self.address,
+                    "legaldochash": '',
+                    "amount_created": 1,
+                    "value_created": '',
+                    "disallowed": {},
+                    "sc_flag": True,
+                }
+            og_unstake = transaction_creator.transaction_type_two(tokendata)
+            child_transactions.append(og_unstake)
+
+            # type 8 to change stake ledger data
+            sc_state_proposal1_data = {
+                "operation": "update",
+                "table_name": "stake_ledger",
+                "sc_address": self.address,
+                "data": {
+                    "amount": math.floor(data[1]-amount_update),
+                    "time_updated": get_last_block_hash()["timestamp"],
+                    "staker_wallet_address": json.dumps(data_json),
+                },
+                "unique_column": "person_id",
+                "unique_value": callparams['person_id']
+            }
+            transaction_creator = TransactionCreator()
+            txtype1 = transaction_creator.transaction_type_8(
+                sc_state_proposal1_data)
+            child_transactions.append(txtype1)
+        else:
+            raise Exception("Stake cooldown period not yet finished")    
         return child_transactions
 
     
