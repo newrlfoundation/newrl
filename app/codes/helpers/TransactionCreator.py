@@ -2,6 +2,7 @@ from app.codes.kycwallet import create_add_wallet_transaction
 from app.codes.tokenmanager import create_token_transaction
 from app.codes.transactionmanager import Transactionmanager
 from app.codes.transfermanager import Transfermanager
+from app.codes.utils import get_time_ms
 from app.routers.request_models import CreateTokenRequest, CreateWalletRequest
 
 
@@ -60,7 +61,7 @@ class TransactionCreator:
         }
         fulltrandata = {
             "transaction": {
-                "timestamp": "",
+                "timestamp": get_time_ms(),
                 "trans_code": "000000",
                 "type": 2,
                 "currency": "NWRL",
@@ -96,7 +97,9 @@ class TransactionCreator:
                 "block_index": 0,
                 "specific_data": txspecdata
             },
-            "signatures": []
+            "signatures": [{
+                "wallet_address": data['signers'][0]
+            }]
         }
         newtx = Transactionmanager()
         newtx.transactioncreator(fulltrandata)
