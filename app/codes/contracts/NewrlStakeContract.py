@@ -7,6 +7,7 @@ from ..db_updater import *
 from ..helpers.FetchRespository import FetchRepository
 from ..helpers.TransactionCreator import TransactionCreator
 import logging
+from app.codes.utils import get_last_block_hash
 
 from ...nvalues import STAKE_COOLDOWN_MS
 
@@ -37,8 +38,8 @@ class NewrlStakeContract(ContractMaster):
             return []
         if required_value in callparams["value"]:
             count = repo.select_count().add_table_name("stake_ledger").where_clause("person_id", pid,
-                                                                                    1).execute_query_single_result(
-                {"person_id": pid})
+                                                                                    1).and_clause("address",self.address,1).execute_query_single_result(
+                {"person_id": pid,"address": self.address})
             if count[0] == 0:
                 sc_state_proposal1_data = {
                     "operation": "save",
@@ -47,11 +48,11 @@ class NewrlStakeContract(ContractMaster):
                     "data": {
                         "person_id": pid,
                         "amount": token_amount,
-                        "time_updated": get_corrected_time_ms(),
+                        "time_updated": get_last_block_hash()["timestamp"],
                         "wallet_address": wallet_address,
                         "address": self.address,
                         "staker_wallet_address": json.dumps([{
-                            wallet_address: token_amount
+                            staker_wallet: token_amount
                         }, ])
                     }
                 }
@@ -60,14 +61,12 @@ class NewrlStakeContract(ContractMaster):
                 trxn.append(txtype1)
             else:
                 count = repo.select_count().add_table_name("stake_ledger").where_clause("person_id", pid,
-                                                                                        1).and_clause("wallet_address",
-                                                                                                      wallet_address,
-                                                                                                      1).execute_query_single_result(
-                    {"person_id": pid, "wallet_address": wallet_address})
+                                                                                        1).and_clause("address", self.address,1).execute_query_single_result(
+                    {"person_id": pid, "wallet_address": wallet_address,"address": self.address})
                 amount = repo.select_Query("amount,staker_wallet_address").add_table_name("stake_ledger").where_clause("person_id", pid,
                                                                                                  1).and_clause(
-                    "wallet_address", wallet_address, 1).execute_query_single_result(
-                    {"person_id": pid, "wallet_address": wallet_address})
+                    "wallet_address", wallet_address, 1).and_clause("address", self.address,1).execute_query_single_result(
+                    {"person_id": pid, "wallet_address": wallet_address,"address":self.address})
                 if count[0] == 1:
                     updated_value=False
                     staker_wallet_address_json=input_to_dict(amount[1])
@@ -85,7 +84,7 @@ class NewrlStakeContract(ContractMaster):
                         "sc_address": self.address,
                         "data": {
                             "amount": amount[0] + token_amount,
-                            "time_updated": get_corrected_time_ms(),
+                            "time_updated": get_last_block_hash()["timestamp"],
                             "staker_wallet_address":json.dumps(staker_wallet_address_json)
                         },
                         "unique_column": "person_id",
@@ -102,12 +101,12 @@ class NewrlStakeContract(ContractMaster):
         trxn = []
         callparams = input_to_dict(callparamsip)
         wallet_address = callparams.get("wallet_address",callparams['function_caller'][0]['wallet_address'])
-        qparam = {"person_id": callparams['person_id'], "wallet_address": wallet_address}
+        qparam = {"person_id": callparams['person_id'], "wallet_address": wallet_address,"address":self.address}
         data = repo.select_Query('time_updated,amount,staker_wallet_address').add_table_name('stake_ledger').where_clause('person_id',
                                                                                                     callparams[
                                                                                                         'person_id'],
                                                                                                     1).and_clause(
-            "wallet_address", wallet_address, 1).execute_query_single_result(qparam)
+            "wallet_address", wallet_address, 1).and_clause("address", self.address,1).execute_query_single_result(qparam)
         staker_wallet_address=callparams['function_caller'][0]['wallet_address']
         amount_update=0
         if data is None:
@@ -119,7 +118,7 @@ class NewrlStakeContract(ContractMaster):
                 data_json[index][staker_wallet_address] = 0
                 break
 
-        if get_corrected_time_ms() >= (int(data[0]) + STAKE_COOLDOWN_MS):
+        if get_last_block_hash()["timestamp"] >= (int(data[0]) + int(Configuration.config("STAKE_COOLDOWN_MS"))):
             transfer_proposal_data = {
                 "transfer_type": 1,
                 "asset1_code": 'NWRL',
@@ -138,7 +137,7 @@ class NewrlStakeContract(ContractMaster):
                 "sc_address": self.address,
                 "data": {
                     "amount": math.floor(data[1]-amount_update),
-                    "time_updated": get_corrected_time_ms(),
+                    "time_updated": get_last_block_hash()["timestamp"],
                     "staker_wallet_address":json.dumps(data_json),
                 },
                 "unique_column": "person_id",
@@ -147,8 +146,7 @@ class NewrlStakeContract(ContractMaster):
             transaction_creator = TransactionCreator()
             txtype1 = transaction_creator.transaction_type_8(sc_state_proposal1_data)
             trxn.append(txtype1)
-        else:
-            self.logger.info("can not unstake before cooldown time.")
+
         return trxn
 
 
@@ -161,4 +159,4 @@ class NewrlStakeContract(ContractMaster):
         if pid:
             return pid[0]
         return None
-#
+
