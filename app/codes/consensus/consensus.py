@@ -21,12 +21,8 @@ from ..minermanager import get_committee_for_current_block, get_miner_for_curren
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-try:
-    wallet_data = get_wallet()
-except:
-    wallet_data = {
-        'wallet': {'public': '', 'private': ''},
-    }
+wallet_data = get_wallet()
+
 wallet_address = wallet_data['address']
 public_key = wallet_data['public']
 private_key = wallet_data['private']
