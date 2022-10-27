@@ -312,7 +312,7 @@ class Transactionmanager:
             if 'participants' in self.transaction['specific_data']['params']:
                 for wallet in self.transaction['specific_data']['params']['participants']:
                     if not is_wallet_valid(wallet):
-                        self.validity = 0          
+                        self.validity = 0
             if 'value' in self.transaction['specific_data']['params']:
                 for value in self.transaction['specific_data']['params']['value']:
                     print(value)
@@ -322,7 +322,7 @@ class Transactionmanager:
                     sender_balance = get_wallet_token_balance_tm(self.transaction['specific_data']['signers'][0], value['token_code'], cur)
                     if value['amount'] > sender_balance:
                         self.validity = 0
-                        break  
+                        break
     #	self.validity=0
         if self.transaction['type'] == TRANSACTION_TWO_WAY_TRANSFER or self.transaction['type'] == TRANSACTION_ONE_WAY_TRANSFER:
             ttype = self.transaction['type']
@@ -356,9 +356,9 @@ class Transactionmanager:
                 token2amt = self.transaction['specific_data']['asset2_number']
 
             # address validity applies to both senders in ttype 4 and 5; since sender2 is still receiving tokens
-            
+
             sender1valid = is_wallet_valid(sender1)
-            sender2valid = is_wallet_valid(sender2)
+            sender2valid = is_wallet_valid(sender2) or (sender2 == Configuration.config("ZERO_ADDRESS") and ttype==5)
             if not sender1valid:
                 print("Invalid sender1 wallet")
             #	self.transaction['valid']=0
@@ -457,7 +457,7 @@ class Transactionmanager:
                         self.validity = 0
                     else:
                         self.validity = 1
-        
+
         if self.transaction['type'] == TRANSACTION_MINER_ADDITION:
             # No checks for fee in the beginning
             if not is_wallet_valid(self.transaction['specific_data']['wallet_address']):
@@ -467,7 +467,7 @@ class Transactionmanager:
                 self.validity = 1
         if self.transaction['type'] == TRANSACTION_SC_UPDATE:
             self.validity = 1
-            
+
         if self.validity == 1:
             return True
         else:
@@ -483,7 +483,7 @@ class Transactionmanager:
         con = sqlite3.connect(NEWRL_DB)
         cur = con.cursor()
         contract = get_contract_from_address(cur, specific_data['address'])
-  
+
         try:
             module = importlib.import_module(
                 ".codes.contracts." + contract['name'], package="app")
@@ -511,7 +511,7 @@ class Transactionmanager:
         # check the token restrictions on ownertype and check the type of the recipient
 
 
-    
+
 
 def get_public_key_from_address(address):
     con = sqlite3.connect(NEWRL_DB)
@@ -540,7 +540,7 @@ def is_wallet_valid(address):
     cur = con.cursor()
     if is_smart_contract(address):
         return True
-        
+
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
     wallet = wallet_cursor.fetchone()
@@ -701,7 +701,7 @@ def is_smart_contract(address):
     if sc_id is None:
         return False
     else:
-        return True 
+        return True
 
 def __str__(self):
     return str(self.get_transaction_complete())

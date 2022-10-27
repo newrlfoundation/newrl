@@ -355,7 +355,7 @@ def sentitnel_node_mine_empty():
             remove_block_from_temp(new_block_index)
         else:
             logger.info(f"Existing block proposal exists with index {new_block_index}. Broadcasting existing one.")
-            broadcast_block_proposal(existing_block_proposals[0])
+            broadcast_block(existing_block_proposals[0], send_to_archive=True)
             return existing_block_proposals[0]
     blockchain = Blockchain()
     current_time_ms = get_corrected_time_ms()
@@ -372,7 +372,7 @@ def sentitnel_node_mine_empty():
         'receipts': [block_receipt]
     }
     store_block_to_temp(block_payload)
-    broadcast_block(block_payload=block_payload)
+    broadcast_block(block_payload=block_payload, send_to_archive=True)
 
 
 def committee_mine_empty():
