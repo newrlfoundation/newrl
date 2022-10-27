@@ -24,7 +24,7 @@ def init_newrl_tokens():
     create_wallet(cur, SENTINEL_NODE_WALLET, SENTINEL_NODE_WALLET_PUBLIC)
     create_wallet(cur, NETWORK_TRUST_MANAGER_WALLET, '')
 
-    create_newrl_tokens(cur, FOUNDATION_RESERVE * 2)
+    create_newrl_tokens(cur, FOUNDATION_RESERVE + ASQI_RESERVE)
     
     credit_wallet(cur, FOUNDATION_TREASURY_ADDRESS, FOUNDATION_RESERVE)
     credit_wallet(cur, ASQI_TREASURY_ADDRESS, ASQI_RESERVE)

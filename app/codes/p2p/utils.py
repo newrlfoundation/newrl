@@ -38,6 +38,9 @@ def get_my_address():
 
 def is_my_address(address):
     my_address = get_my_address()
-    if socket.gethostbyname(address) == my_address:
-        return True
+    try:
+        if socket.gethostbyname(address) == my_address:
+            return True
+    except:
+        pass
     return False
