@@ -44,7 +44,6 @@ def get_auth():
             wallet = auth_data
             private_key = wallet['private']
             auth_data = {
-                'person_id': auth_data['person_id'],
                 'wallet_id': wallet['address'],
                 'public': wallet['public'],
             }
