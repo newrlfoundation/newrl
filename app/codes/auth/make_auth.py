@@ -16,17 +16,13 @@ def make_auth_json(createnewwallet = False):
         # wallet_exists = input('Do you have an existing wallet?[Y/n]:')
         # if wallet_exists == 'Y' or wallet_exists == 'y'):
         auth_data = json.loads(input('Paste your .auth.json file contents:\n'))
-        wallet = auth_data['wallet']
+        wallet = auth_data
         with open(AUTH_FILE_PATH, 'w') as f:
             json.dump(auth_data, f)
     else:
         wallet = generate_wallet_address()
-        person_id = get_person_id_for_wallet_address(wallet['address'])
 
-        auth_data = {
-            'person_id': person_id,
-            'wallet': wallet
-        }
+        auth_data = wallet
 
         with open(AUTH_FILE_PATH, 'w') as f:
             json.dump(auth_data, f)

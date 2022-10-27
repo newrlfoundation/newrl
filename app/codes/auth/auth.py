@@ -29,20 +29,19 @@ def get_node_wallet_address():
 
 
 def get_wallet():
-    try:
-        with open(AUTH_FILE_PATH, 'r') as f:
-            auth_data = json.load(f)
-            wallet = auth_data['wallet']
-            return wallet
-    except:
-        return {}
+    with open(AUTH_FILE_PATH, 'r') as f:
+        auth_data = json.load(f)
+        wallet = auth_data
+        if 'private' not in wallet:
+            raise Exception('Invalid auth file')
+        return wallet
 
 
 def get_auth():
     try:
         with open(AUTH_FILE_PATH, 'r') as f:
             auth_data = json.load(f)
-            wallet = auth_data['wallet']
+            wallet = auth_data
             private_key = wallet['private']
             auth_data = {
                 'person_id': auth_data['person_id'],
