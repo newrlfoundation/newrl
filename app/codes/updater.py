@@ -146,7 +146,7 @@ def run_updater(add_to_chain=False):
 
     # transactionsdata['previous_block_receipts'] = get_receipts_from_storage(previous_block['index'])
     if previous_block is not None:
-        transactionsdata['previous_block_receipts'] = get_receipt_in_temp_not_in_chain(exclude_block_index=previous_block['index'] + 1)
+        transactionsdata['previous_block_receipts'] = get_receipt_in_temp_not_in_chain(exclude_block=previous_block['index'] + 1)
         receipts_to_include_count = MAX_BLOCK_SIZE - len(textarray)
         transactionsdata['previous_block_receipts'] = transactionsdata['previous_block_receipts'][:receipts_to_include_count]
     else:
