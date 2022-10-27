@@ -11,7 +11,7 @@ if __name__ == '__main__':
     try:
       with open('data_' + environment + '/.auth.json', 'r') as f:
         auth_file = json.load(f)
-        print(json.dumps(auth_file['wallet']))
+        print(json.dumps(auth_file))
     except Exception as e:
       print('Error: ', str(e))
       print('Error retrieving wallet. Make sure you have the right environment installed and wallet file is valid')

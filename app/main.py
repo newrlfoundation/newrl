@@ -64,8 +64,9 @@ def initialze_params():
 
 try:
     args = initialze_params()
-    print('args', args)
-except:
+    logger.info('Running with arguments: ' + str(args))
+except Exception as e:
+    logger.error('Cannot parse params: ' + str(e))
     args = {
         'disablenetwork': False,
         'disableupdate': False,
@@ -87,7 +88,7 @@ def app_startup():
             sync_chain_from_peers()
             update_my_address()
     except Exception as e:
-        print('Bootstrap failed')
+        logger.error('Bootstrap failed')
         logging.critical(e, exc_info=True)
 
     if not IS_TEST:
