@@ -90,7 +90,7 @@ def app_startup():
         print('Bootstrap failed')
         logging.critical(e, exc_info=True)
 
-    if not not IS_TEST:
+    if not IS_TEST:
         if not am_i_sentinel_node():
             logger.info('Participating in mining')
             start_miner_broadcast_clock()

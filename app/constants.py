@@ -15,8 +15,8 @@ if NEWRL_ENV == 'testnet':
     DATA_PATH = 'data_testnet/'
     print('Using testnet constants')
 elif NEWRL_ENV == 'mainnet':
-    BOOTSTRAP_NODES = ['mainnet.newrl.net']
-    NETWORK_TRUSTED_ARCHIVE_NODES = ['mainnetarchive1.newrl.net', 'mainnetarchive2.newrl.net']
+    BOOTSTRAP_NODES = ['bootstrap1-mainnet.newrl.net']
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['archive1-mainnet.newrl.net']
     NEWRL_PORT = 8456
     DATA_PATH = 'data_mainnet/'
     print('Using mainnet constants')
