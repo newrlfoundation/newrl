@@ -53,7 +53,7 @@ def initialze_params():
     parser.add_argument("--disableupdate", help="run the node without updating software", action="store_true")
     parser.add_argument("--disablebootstrap", help="run the node without bootstrapping", action="store_true")
     parser.add_argument("--fullnode", help="run a full/archive node", action="store_true")
-    _args = parser.parse_args()
+    _args, unknown = parser.parse_known_args()
     args = {
         'disablenetwork': _args.disablenetwork,
         'disableupdate': _args.disableupdate,

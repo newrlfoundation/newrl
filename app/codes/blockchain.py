@@ -278,12 +278,16 @@ def get_last_block_index(db_url=NEWRL_DB):
     """Get last block index from db"""
     con = sqlite3.connect(db_url)
     cur = con.cursor()
-    last_block_cursor = cur.execute(
-        'SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1'
-    )
-    last_block = last_block_cursor.fetchone()
+    try:
+        last_block_cursor = cur.execute(
+            'SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1'
+        )
+        last_block = last_block_cursor.fetchone()
+        last_block_index = last_block[0]
+    except Exception as e:
+        last_block_index = 0
     con.close()
-    return last_block[0] if last_block is not None else 0
+    return last_block_index
 
 
 def get_last_block(cur=None):

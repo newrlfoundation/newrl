@@ -319,6 +319,7 @@ def revert_chain_quick(revert_to_snapshot=True):
         revert_to_last_snapshot()
     else:
         clear_db()
+        init_db()
     SYNC_STATUS['IS_SYNCING'] = False
 
 

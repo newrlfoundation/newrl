@@ -36,6 +36,17 @@
                 "NEWRL_ENV": "testnet",
                 "NEWRL_TEST": "N",
             }
+        },
+        {
+            "name": "Newrl: Mainnet",
+            "type": "python",
+            "request": "launch",
+            "module": "app.main",
+            "justMyCode": true,
+            "env": {
+                "NEWRL_ENV": "mainnet",
+                "NEWRL_TEST": "N",
+            }
         }
     ]
 }

@@ -197,7 +197,7 @@ def sync_chain_from_node(url, block_index=None):
         logger.info('I am in sync with the node. Aborting sync.')
         return True
 
-    if my_last_block < their_last_block_index - 1000:
+    if my_last_block < their_last_block_index - 1000 or my_last_block == 0:
         quick_sync(url + '/get-newrl-db')
         return True
     block_idx = my_last_block + 1
