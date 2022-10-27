@@ -11,6 +11,7 @@ from app.codes.dbmanager import check_and_create_snapshot_in_thread
 from app.codes.fs.archivemanager import cleanup_old_archive_blocks
 from app.codes.fs.temp_manager import store_receipt_to_temp
 from app.codes.p2p.sync_chain import sync_chain_from_peers
+from app.codes.receiptmanager import get_receipt_in_temp_not_in_chain
 from app.codes.timers import SYNC_STATUS
 
 # from app.codes.receiptmanager import get_receipts_for_block_from_db
@@ -145,7 +146,7 @@ def run_updater(add_to_chain=False):
 
     # transactionsdata['previous_block_receipts'] = get_receipts_from_storage(previous_block['index'])
     if previous_block is not None:
-        transactionsdata['previous_block_receipts'] = get_all_receipts_from_storage(exclude_block_index=previous_block['index'] + 1)
+        transactionsdata['previous_block_receipts'] = get_receipt_in_temp_not_in_chain(exclude_block_index=previous_block['index'] + 1)
         receipts_to_include_count = MAX_BLOCK_SIZE - len(textarray)
         transactionsdata['previous_block_receipts'] = transactionsdata['previous_block_receipts'][:receipts_to_include_count]
     else:
