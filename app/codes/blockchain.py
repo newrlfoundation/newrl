@@ -70,28 +70,8 @@ class Blockchain:
         
         if block_cursor is None:
             return None
+        
         block = dict(block_cursor)
-        block = {
-            'index': block['block_index'],
-            'timestamp': int(block['timestamp']),
-            'proof': block['proof'],
-            'previous_hash': block['previous_hash'],
-            'creator_wallet': block['creator_wallet'],
-            'expected_miner': block['expected_miner'],
-            'committee': block['committee'],
-            'hash': block['hash'],
-        }
-
-        transactions_cursor = cur.execute(
-            'SELECT * FROM transactions where block_index=?', (block_index,)).fetchall()
-        transactions = [dict(ix) for ix in transactions_cursor]
-        transactions = list(map(lambda t: 
-            {'transaction': t, 'signatures': [] if t['signatures'] is None else json.loads(t['signatures'])},
-            transactions))
-        block['text'] = {
-            'transactions': transactions,
-            'previous_block_receipts': get_receipts_included_in_block_from_db(block_index)
-        }
 
         if new_cursor:
             con.close()
