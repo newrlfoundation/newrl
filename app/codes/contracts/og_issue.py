@@ -78,7 +78,7 @@ class og_issue(ContractMaster):
         amount = amount_to_issue*token_multiplier
 
         ogfl_token_code = cspecs['ogfl_token_code']
-        ogfl_token_name = cspecs['issuance_token_code']
+        ogfl_token_name = cspecs['ogfl_token_name']
 
         required_value = {
             "token_code": issuance_token_code,
@@ -153,6 +153,53 @@ class og_issue(ContractMaster):
 
         return [transfer_proposal]
 
+    def initialize_tokens(self, callparamsip, repo: FetchRepository):
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
+        og_token_name = cspecs['issuance_token_name']
+        og_token_code = cspecs['issuance_token_code']
+
+        ogfl_token_code = cspecs['ogfl_token_code']
+        ogfl_token_name = cspecs['ogfl_token_name']
+
+        child_transactions = []
+
+        transaction_creator = TransactionCreator()
+        tokendata = {
+            "tokenname": og_token_name,
+            "tokencode": og_token_code,
+               "tokentype": '1',
+               "tokenattributes": {},
+               "first_owner": self.address,
+               "custodian": self.address,
+               "legaldochash": '',
+               "amount_created": 1,
+               "value_created": '',
+               "disallowed": {},
+               "sc_flag": True,
+           }
+        child_transactions.append(
+               transaction_creator.transaction_type_two(tokendata))
+        
+        
+        #type 2 to create og for life token
+        transaction_creator = TransactionCreator()
+        tokendata = {
+            "tokenname": ogfl_token_name,
+            "tokencode": ogfl_token_code,
+            "tokentype": '1',
+            "tokenattributes": {},
+            "first_owner": self.address,
+            "custodian": self.address,
+            "legaldochash": '',
+            "amount_created": 1,
+            "value_created": '',
+            "disallowed": {},
+            "sc_flag": True,
+        }
+        ogfl = transaction_creator.transaction_type_two(tokendata)
+        child_transactions.append(ogfl)
+
+        return child_transactions    
     #validate
     # issue
     #   correct token as part of value
