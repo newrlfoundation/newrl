@@ -356,6 +356,32 @@ class og_stake(ContractMaster):
 
         return [transfer_proposal]
 
+    def initialize_tokens(self, callparamsip, repo: FetchRepository):
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
+
+        og_unstake_token_code = cspecs['og_unstake_token_code']
+        og_unstake_token_name = cspecs['og_unstake_token_name']
+
+        child_transactions = []
+        # type 2 to issue og_unstake token
+        transaction_creator = TransactionCreator()
+        tokendata = {
+            "tokenname": og_unstake_token_name,
+            "tokencode": og_unstake_token_code,
+            "tokentype": '1',
+            "tokenattributes": {},
+            "first_owner": self.address,
+            "custodian": self.address,
+            "legaldochash": '',
+            "amount_created": 1,
+            "value_created": '',
+            "disallowed": {},
+            "sc_flag": True,
+        }
+        og_unstake = transaction_creator.transaction_type_two(tokendata)
+        child_transactions.append(og_unstake)
+        return child_transactions
+
     def __get_pid_from_wallet_using_repo(self, repo: FetchRepository, address):
         pid = repo.select_Query('person_id').add_table_name('person_wallet').where_clause('wallet_id', address,
                                                                                           1).execute_query_single_result(
