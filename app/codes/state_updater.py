@@ -5,6 +5,7 @@ import importlib
 from lib2to3.pgen2 import token
 import re
 import traceback
+from app.codes.auth.auth import get_wallet
 from app.codes.helpers.FetchRespository import FetchRepository
 from app.codes.helpers.TransactionCreator import TransactionCreator
 
@@ -22,7 +23,7 @@ from ..nvalues import NETWORK_TRUST_MANAGER_PID, TREASURY_WALLET_ADDRESS
 from app.nvalues import NETWORK_TRUST_MANAGER_PID, MIN_STAKE_AMOUNT, STAKE_PENALTY_RATIO, ZERO_ADDRESS
 
 from ..constants import ALLOWED_FEE_PAYMENT_TOKENS, COMMITTEE_SIZE, INITIAL_NETWORK_TRUST_SCORE, MAX_RECEIPT_HISTORY_BLOCKS, NEWRL_DB
-from ..ntypes import BLOCK_STATUS_MINING_TIMEOUT, BLOCK_VOTE_MINER, NEWRL_TOKEN_CODE, NEWRL_TOKEN_DECIMAL, NEWRL_TOKEN_NAME, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
+from ..ntypes import BLOCK_STATUS_MINING_TIMEOUT, BLOCK_VOTE_MINER, NEWRL_TOKEN_CODE, NEWRL_TOKEN_DECIMAL, NEWRL_TOKEN_MULTIPLIER, NEWRL_TOKEN_NAME, NUSD_TOKEN_CODE, NUSD_TOKEN_MULTIPLIER, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ def update_db_states(cur, block):
             'trans_code']
 
         try:
-            if pay_fee_for_transaction(cur, transaction):
+            if pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
                 update_state_from_transaction(
                     cur,
                     transaction['type'],
@@ -371,15 +372,24 @@ def get_fees_for_transaction(transaction):
         return 0
 
 
-def pay_fee_for_transaction(cur, transaction):
-    fee = get_fees_for_transaction(transaction)
-
-    # Check for 0 fee transactions and deprioritize accordingly
-    if fee == 0:
+def pay_fee_for_transaction(cur, transaction, creator):
+    if transaction['type'] == TRANSACTION_MINER_ADDITION:
         return True
 
+    fee = get_fees_for_transaction(transaction)
+
+    if fee < 0:
+        return False
+
     currency = transaction['currency']
-    if currency not in ALLOWED_FEE_PAYMENT_TOKENS:
+
+    if currency == NEWRL_TOKEN_CODE:
+        if fee < NEWRL_TOKEN_MULTIPLIER:
+            return False
+    elif currency == NUSD_TOKEN_CODE:
+        if fee < NUSD_TOKEN_MULTIPLIER:
+            return False
+    else:
         return False
 
     payers = get_valid_addresses(transaction)
@@ -387,14 +397,21 @@ def pay_fee_for_transaction(cur, transaction):
     for payee in payers:
         balance = get_wallet_token_balance(cur, payee, currency)
         fee_to_charge = math.ceil(fee / len(payers))
-        if balance < fee_to_charge:
+        if balance < fee_to_charge:  # TODO - This should also account for payout/values in the transaction
             return False
         transfer_tokens_and_update_balances(
             cur,
             payee,
             TREASURY_WALLET_ADDRESS,
             transaction['currency'],
-            fee_to_charge
+            fee_to_charge * 0.8
+        )
+        transfer_tokens_and_update_balances(
+            cur,
+            payee,
+            creator,
+            transaction['currency'],
+            fee_to_charge * 0.2
         )
     return True
 

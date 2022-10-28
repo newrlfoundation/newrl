@@ -36,6 +36,7 @@ from .p2p.outgoing import broadcast_block, broadcast_receipt, send_request_in_th
 from .auth.auth import get_wallet
 from .fs.mempool_manager import mempool_cleanup
 from .timers import TIMERS
+from .auth.auth import get_wallet
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -97,7 +98,7 @@ def run_updater(add_to_chain=False):
         #     os.remove(file)
         #     continue
         # Pay fee for transaction. If payee doesn't have enough funds, remove transaction
-        if not pay_fee_for_transaction(cur, transaction):
+        if not pay_fee_for_transaction(cur, transaction, get_wallet()['address']):
             os.remove(file)
             continue
         if not tmtemp.econvalidator():

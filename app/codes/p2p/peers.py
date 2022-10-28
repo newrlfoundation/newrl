@@ -9,7 +9,6 @@ from app.codes.signmanager import sign_object
 from app.codes.validator import validate_signature
 from app.migrations.init import init_newrl
 from ...constants import BOOTSTRAP_NODES, REQUEST_TIMEOUT, NEWRL_P2P_DB, NEWRL_PORT, MY_ADDRESS
-from ..auth.auth import get_auth
 from .utils import get_my_address
 
 
@@ -138,10 +137,10 @@ def init_bootstrap_nodes():
 
 
 def register_me_with_them(address):
-    auth_data = get_auth()
+    # auth_data = get_auth()
     logger.info(f'Registering me with node {address}')
     try:
-        response = requests.post('http://' + address + f':{NEWRL_PORT}/add-peer', json=auth_data, timeout=REQUEST_TIMEOUT)
+        response = requests.post('http://' + address + f':{NEWRL_PORT}/add-peer', timeout=REQUEST_TIMEOUT)
         return response.json()
     except Exception as e:
         pass
