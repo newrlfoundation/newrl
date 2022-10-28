@@ -32,8 +32,12 @@ def get_wallet():
     with open(AUTH_FILE_PATH, 'r') as f:
         auth_data = json.load(f)
         wallet = auth_data
-        if 'private' not in wallet:
-            raise Exception('Invalid auth file')
+        if 'wallet' in wallet:
+            return wallet['wallet']
+        else:
+            return wallet
+        # if 'private' not in wallet:
+        #     raise Exception('Invalid auth file')
         return wallet
 
 

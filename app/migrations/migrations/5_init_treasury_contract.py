@@ -80,11 +80,11 @@ def create_treasury_contract(cur, address,dao_address=FOUNDATION_DAO_ADDRESS):
     transfer_limits = [
         int(0),
         int(0),
+        int(100000*multiplier_newrl),
         int(1000000*multiplier_newrl),
+        int(5000000*multiplier_newrl),
         int(10000000*multiplier_newrl),
-        int(50000000*multiplier_newrl),
-        int(100000000*multiplier_newrl),
-        int(100000000*multiplier_newrl),
+        int(10000000*multiplier_newrl),
         int(100000000*multiplier_newrl)
     ]
 

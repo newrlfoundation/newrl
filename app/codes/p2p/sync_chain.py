@@ -491,16 +491,16 @@ def get_majority_random_node(return_many=False):
             else:
                 hash_url_map[hash] = [url]
         queried_peers += 1
-        if valid_peers < COMMITTEE_SIZE and queried_peers > COMMITTEE_SIZE * 2:
+        if valid_peers < COMMITTEE_SIZE and queried_peers > COMMITTEE_SIZE * 4:
             break    
-    if valid_peers < COMMITTEE_SIZE or True:  # TODO - Remove this once network stabilise
-        trusted_node = random.choice(NETWORK_TRUSTED_ARCHIVE_NODES)
-        url = 'http://' + trusted_node + ':' + str(NEWRL_PORT)
-        logger.info('Could not find a majority chain. Using archive node %s', url)
-        return url
+    # if valid_peers < COMMITTEE_SIZE:
+    trusted_node = random.choice(NETWORK_TRUSTED_ARCHIVE_NODES)
+    url = 'http://' + trusted_node + ':' + str(NEWRL_PORT)
+    logger.info('Could not find a majority chain. Using archive node %s', url)
+    return url
 
-    logger.warn('Could not find a majority chain and enough peers responded with hash.')
-    return None
+    # logger.warn('Could not find a majority chain and enough peers responded with hash.')
+    # return None
 
 
 # def get_majority_random_node_parallel():  # TODO - Need to fix for memory leakage
