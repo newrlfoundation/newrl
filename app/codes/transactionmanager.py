@@ -16,12 +16,13 @@ from app.codes.db_updater import get_contract_from_address, get_wallet_token_bal
 from app.codes.helpers.CustomExceptions import ContractValidationError
 from app.codes.helpers.FetchRespository import FetchRepository
 from app.Configuration import Configuration
+from app.nvalues import CUSTODIAN_DAO_ADDRESS
 
 
 from ..ntypes import TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
 
 from ..constants import CUSTODIAN_OWNER_TYPE, MEMPOOL_PATH, NEWRL_DB
-from .utils import get_time_ms
+from .utils import get_person_id_for_wallet_address, get_time_ms
 
 logger = logging.getLogger(__name__)
 
@@ -560,9 +561,17 @@ def is_custodian_wallet(address):
     if address in custodian_wallet_list:
         return True
 
-    # TODO - Also check for Custodian DAO membership
+    custodian_dao_pid = get_person_id_for_wallet_address(CUSTODIAN_DAO_ADDRESS)
+    wallet_pid = get_person_id_for_wallet_address(address)
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
+    pid_cursor = cur.execute(
+        'SELECT count(*) FROM dao_membership WHERE dao_person_id=? and member_person_id=?', (custodian_dao_pid, wallet_pid))
+    pid = pid_cursor.fetchone()
+    is_valid_custodian = pid != None
+    con.close()
 
-    return False
+    return is_valid_custodian
 
 
 def get_wallets_from_pid(personidinput):
