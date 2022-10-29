@@ -373,7 +373,7 @@ def get_fees_for_transaction(transaction):
 
 
 def pay_fee_for_transaction(cur, transaction, creator):
-    if transaction['type'] == TRANSACTION_MINER_ADDITION:
+    if transaction['type'] in [TRANSACTION_MINER_ADDITION, TRANSACTION_SC_UPDATE]:
         return True
 
     fee = get_fees_for_transaction(transaction)
