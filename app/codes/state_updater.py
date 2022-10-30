@@ -92,7 +92,7 @@ def update_db_states(cur, block):
             'trans_code']
 
         try:
-            if pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
+            if sc_nesting > 0 or pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
                 update_state_from_transaction(
                     cur,
                     transaction['type'],
@@ -104,7 +104,7 @@ def update_db_states(cur, block):
                     transaction
                 )
             else:
-                logger.info(f'Fee payment failed for transaction {transaction_code}')
+                logger.error(f'Fee payment failed for transaction {transaction_code}')
         except Exception as e:
             logger.error(f'Error in transaction: {str(transaction)}')
             logger.error(str(e))

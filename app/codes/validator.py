@@ -33,9 +33,14 @@ def validate(transaction, propagate=False, validate_economics=True):
             'valid': False,
             'msg': 'Transaction is old'
         }
-    existing_transaction = get_mempool_transaction(transaction['transaction']['trans_code'])
+
+    existing_transaction = get_mempool_transaction(
+        transaction['transaction']['trans_code'])
     if existing_transaction is not None:
         return {'valid': True, 'msg': 'Already validated and in mempool', 'new_transaction': False}
+    
+    if transaction['transaction']['fee'] < 1000000:
+        return {'valid': False, 'msg': 'Not enough fee. Min of 1 NWRL is required', 'new_transaction': True}
 
     if len(json.dumps(transaction)) > MAX_TRANSACTION_SIZE:
         return {'valid': False, 'msg': 'Transaction size exceeded', 'new_transaction': True}
