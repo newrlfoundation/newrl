@@ -71,6 +71,12 @@ def update_db_states(cur, block):
             if sc_nesting == 0:
                 cur.execute(f'RELEASE SAVEPOINT sc_start')
             continue
+
+        if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
+            if not pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
+                sc_in_failed_state = True
+                cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
+                continue
         
         tm = Transactionmanager()
         tm.transactioncreator(transaction)
@@ -263,6 +269,7 @@ def simplify_transactions(cur, transactions):
         logger.error(traceback.format_exc())
       print(f"Value transactions are {value_txns}")
       simplified_transactions.append('SC_START')
+      simplified_transactions.append(transaction)
       simplified_transactions.extend(value_txns)
       simplified_transactions.extend(non_sc_txns)
       simplified_transactions.append('SC_END')
