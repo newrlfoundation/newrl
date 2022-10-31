@@ -15,7 +15,7 @@ from app.codes.receiptmanager import get_receipt_in_temp_not_in_chain
 from app.codes.timers import SYNC_STATUS
 
 # from app.codes.receiptmanager import get_receipts_for_block_from_db
-from app.ntypes import BLOCK_STATUS_CONSENSUS_TIMEOUT, BLOCK_STATUS_MINING_TIMEOUT, BLOCK_VOTE_MINER
+from app.ntypes import BLOCK_STATUS_CONSENSUS_TIMEOUT, BLOCK_STATUS_MINING_TIMEOUT, BLOCK_VOTE_MINER, TRANSACTION_MINER_ADDITION
 
 from .clock.global_time import get_corrected_time_ms, get_time_difference
 from .fs.temp_manager import get_all_receipts_from_storage, get_blocks_for_index_from_storage, remove_block_from_temp, store_block_to_temp
@@ -98,7 +98,7 @@ def run_updater(add_to_chain=False):
         #     os.remove(file)
         #     continue
         # Pay fee for transaction. If payee doesn't have enough funds, remove transaction
-        if not pay_fee_for_transaction(cur, transaction, get_wallet()['address']):
+        if transaction['type'] != TRANSACTION_MINER_ADDITION and not pay_fee_for_transaction(cur, transaction, get_wallet()['address']):
             os.remove(file)
             continue
         if not tmtemp.econvalidator():
