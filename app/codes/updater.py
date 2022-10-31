@@ -318,7 +318,7 @@ def global_internal_clock():
                 elif am_i_sentinel_node():
                     if should_i_mine(last_block):
                         start_mining_clock(last_block_ts)
-                    elif time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 16:
+                    elif time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 8:
                         # Sentinel node empty mining is the last resort. 
                         logger.info('I am sentitnel node. Mining empty block')
                         sentitnel_node_mine_empty()
