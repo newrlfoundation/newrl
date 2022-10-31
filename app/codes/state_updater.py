@@ -73,6 +73,8 @@ def update_db_states(cur, block):
             continue
 
         if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
+            if sc_nesting > 1:  # Not to charge fee for child sc transactions
+                continue
             if not pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
                 sc_in_failed_state = True
                 cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
@@ -411,14 +413,14 @@ def pay_fee_for_transaction(cur, transaction, creator):
             payee,
             TREASURY_WALLET_ADDRESS,
             transaction['currency'],
-            fee_to_charge * 0.8
+            int(fee_to_charge * 0.8)
         )
         transfer_tokens_and_update_balances(
             cur,
             payee,
             creator,
             transaction['currency'],
-            fee_to_charge * 0.2
+            fee_to_charge - int(fee_to_charge * 0.8)
         )
     return True
 
