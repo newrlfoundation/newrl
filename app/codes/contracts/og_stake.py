@@ -27,7 +27,7 @@ class og_stake(ContractMaster):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         callparams = input_to_dict(callparamsip)
         token_code = cspecs['issuance_token_code']
-        token_stake_multiplier = cspecs['token_multiplier']
+        token_stake_multiplier = cspecs['token_stake_multiplier']
         value = callparams['value']
         wallet_address = callparams['wallet_address']
         amount_to_issue = cspecs['stake_allowed']
