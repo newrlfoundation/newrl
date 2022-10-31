@@ -12,7 +12,7 @@ from app.codes.crypto import calculate_hash
 
 from app.codes.fs.mempool_manager import get_mempool_transaction
 from app.codes.p2p.transport import send
-from app.ntypes import BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID
+from app.ntypes import BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID, TRANSACTION_MINER_ADDITION
 from .utils import get_last_block_hash
 from .transactionmanager import Transactionmanager
 from ..constants import IS_TEST, MAX_TRANSACTION_SIZE, MEMPOOL_PATH, MEMPOOL_TRANSACTION_LIFETIME_SECONDS
@@ -39,7 +39,7 @@ def validate(transaction, propagate=False, validate_economics=True):
     if existing_transaction is not None:
         return {'valid': True, 'msg': 'Already validated and in mempool', 'new_transaction': False}
     
-    if transaction['transaction']['fee'] < 1000000:
+    if transaction['transaction']['type'] != TRANSACTION_MINER_ADDITION and transaction['transaction']['fee'] < 1000000:
         return {'valid': False, 'msg': 'Not enough fee. Min of 1 NWRL is required', 'new_transaction': True}
 
     if len(json.dumps(transaction)) > MAX_TRANSACTION_SIZE:
