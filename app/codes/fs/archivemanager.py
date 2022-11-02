@@ -23,8 +23,9 @@ def get_block_from_archive(block_index):
 
 
 def cleanup_old_archive_blocks(block_index):
+    return False  # Archive cleanup disabled 
     blocks_to_persist = set()
-    for i in range(max(block_index - 1000, 0), block_index):
+    for i in range(max(block_index - 10000, 0), block_index):
         blocks_to_persist.add(f'{BLOCK_ARCHIVE_PATH}block_{i}.json')
 
     for block_file in glob.glob(f'{BLOCK_ARCHIVE_PATH}/block_*.json'):
