@@ -26,6 +26,12 @@ elif NEWRL_ENV == 'test':
     NEWRL_PORT = 4018
     DATA_PATH = 'data_test/'
     print('Using test constants')
+elif NEWRL_ENV == 'subnet':
+    BOOTSTRAP_NODES = ['54.226.199.212']
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['localhost']
+    NEWRL_PORT = 8090
+    DATA_PATH = 'data_subnet/'
+    print('Using test constants')
 elif NEWRL_ENV == 'devnet':
     BOOTSTRAP_NODES = ['devnet.newrl.net']
     NETWORK_TRUSTED_ARCHIVE_NODES = ['devnetarchive1.newrl.net']
