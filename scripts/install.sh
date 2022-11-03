@@ -5,5 +5,5 @@ pip install --upgrade pip
 pip install -r requirements.txt
 export NEWRL_ENV=$1
 python3 -m app.migrations.init
-# python -m app.migrations.migrate_db
-# python3 -m app.codes.auth.make_auth --createnewwallet
+python -m app.migrations.migrate_db
+python3 -m app.codes.auth.make_auth --createnewwallet
