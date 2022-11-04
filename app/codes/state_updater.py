@@ -80,6 +80,24 @@ def update_db_states(cur, block):
                 cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
                 continue
         
+        while isinstance(transaction_data, str):
+            transaction_data = json.loads(transaction_data)
+            transaction['specific_data']=transaction_data
+
+        signature = transaction['signatures']
+        transaction = transaction['transaction']
+        transaction_data = transaction['specific_data']
+
+        transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
+            'trans_code']
+        
+        if sc_nesting == 0 and not pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
+            logger.error(f'Fee payment failed for transaction {transaction_code}')
+            if sc_nesting > 0:
+                sc_in_failed_state = True
+                cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
+            continue
+
         tm = Transactionmanager()
         tm.transactioncreator(transaction)
         if not tm.econvalidator(cur=cur):
@@ -87,32 +105,18 @@ def update_db_states(cur, block):
                 sc_in_failed_state = True
                 cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
             continue
-        
-        signature = transaction['signatures']
-        transaction = transaction['transaction']
-        transaction_data = transaction['specific_data']
-
-        while isinstance(transaction_data, str):
-            transaction_data = json.loads(transaction_data)
-            transaction['specific_data']=transaction_data
-
-        transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
-            'trans_code']
 
         try:
-            if sc_nesting > 0 or pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
-                update_state_from_transaction(
-                    cur,
-                    transaction['type'],
-                    transaction_data,
-                    transaction_code,
-                    transaction['timestamp'],
-                    signature,
-                    newblockindex,
-                    transaction
-                )
-            else:
-                logger.error(f'Fee payment failed for transaction {transaction_code}')
+            update_state_from_transaction(
+                cur,
+                transaction['type'],
+                transaction_data,
+                transaction_code,
+                transaction['timestamp'],
+                signature,
+                newblockindex,
+                transaction
+            )
         except Exception as e:
             logger.error(f'Error in transaction: {str(transaction)}')
             logger.error(str(e))
