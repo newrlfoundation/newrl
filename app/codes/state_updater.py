@@ -429,6 +429,7 @@ def pay_fee_for_transaction(cur, transaction, creator):
 
 
 def state_cleanup(cur, block):
+    return False  # Do not clean blocks
     # Delete old blocks as well. Not useful to keep them on light nodes.
     if not Configuration.conf['FULL_NODE']:
         cur.execute('DELETE FROM blocks where block_index < ?', (block['index'] - MAX_RECEIPT_HISTORY_BLOCKS * 2, ))

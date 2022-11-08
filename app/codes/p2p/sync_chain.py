@@ -209,18 +209,19 @@ def sync_chain_from_node(url, block_index=None):
         logger.info(f'Asking block node {url} for blocks from {start_block} to {end_block}')
         blocks_data = get_block_from_url_retry(url, start_block, end_block)
 
-        if blocks_data is None or len(blocks_data['hashes']) == 0:
+        if blocks_data is None or len(blocks_data['blocks']) == 0:
             logger.warn('Finished getting blocks from the node')
             return True  # To prevent revert
 
-        for i in range(0, len(blocks_data['hashes'])):
+        for i in range(0, len(blocks_data['blocks'])):
             block = blocks_data['blocks'][i]
-            hash = blocks_data['hashes'][i]
+            # hash = blocks_data['hashes'][i]
+            hash = calculate_hash(block)
 
-            block_hash = calculate_hash(block)
-            if hash != block_hash:
-                logger.warn('Block hash does not match caculated hash. Aborting sync.')
-                # return True
+            # block_hash = calculate_hash(block)
+            # if hash != block_hash:
+            #     logger.warn('Block hash does not match caculated hash. Aborting sync.')
+            #     # return True
 
             if not validate_block_data(block):
                 logger.warn('Invalid block. Aborting sync.')
