@@ -23,6 +23,7 @@ from app.migrations.init_db import revert_chain
 from app.codes.p2p.peers import call_api_on_peers
 from app.codes.auth.auth import get_node_wallet_public
 from app.codes.minermanager import add_miners_as_peers, broadcast_miner_update, get_miner_info
+from app.codes.dbmanager import snapshot_schedule, get_snapshot_last_block_index
 
 router = APIRouter()
 
@@ -42,6 +43,10 @@ async def get_node_info():
         'time': get_time_stats(),
         'last_block': last_block,
         'timers': get_timers(),
+        'snapshot': {
+            'snapshot_schedule': snapshot_schedule,
+            'snapshot_last_block': get_snapshot_last_block_index()
+        },
         'miners': get_miner_info(),
         'peers': get_peers(),
         # 'recent_blocks': get_blocks(list(range(last_block_index - 5, last_block_index))),
