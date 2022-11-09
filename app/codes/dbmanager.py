@@ -42,7 +42,7 @@ def create_block_snapshot(block_index):
     global snapshot_schedule
     if (
         snapshot_schedule['next_snapshot'] == -1 or 
-        block_index == snapshot_schedule['next_snapshot']):
+        block_index >= snapshot_schedule['next_snapshot']):
         try:
             snapshot_last_block = get_last_block_index(NEWRL_DB + '.snapshot')
         except Exception as e:
@@ -54,9 +54,12 @@ def create_block_snapshot(block_index):
             return
 
         snapshot_schedule['snapshot_creation_in_progress'] = True
-        create_db_snapshot(f'.snapshot')
-        snapshot_schedule['next_snapshot'] = block_index + random.randint(500, 1000)
-        logger.info('Next snapshot creation scheduled for block %d', snapshot_schedule['next_snapshot'])
+        try:
+            create_db_snapshot(f'.snapshot')
+            snapshot_schedule['next_snapshot'] = block_index + random.randint(500, 1000)
+            logger.info('Next snapshot creation scheduled for block %d', snapshot_schedule['next_snapshot'])
+        except Exception as e:
+            logger.error('Error during snapshot creation' + str(e))
         snapshot_schedule['snapshot_creation_in_progress'] = False
     # Set the next_snapshot schedule variable based on block size
     # Next snapshot increase ~ block size
