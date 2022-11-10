@@ -366,7 +366,7 @@ def sign_transaction(wallet_data: dict, transaction_data: dict):
     return singed_transaction_file
 
 @router.post("/submit-transaction", tags=[submit_tag])
-@limiter.limit("1/second")
+@limiter.limit("100/second")
 async def submit_transaction(request: Request):
     """Submit a signed transaction and adds it to the chain"""
     try:
