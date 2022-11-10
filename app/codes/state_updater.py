@@ -80,13 +80,13 @@ def update_db_states(cur, block):
                 cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
                 continue
         
-        while isinstance(transaction_data, str):
-            transaction_data = json.loads(transaction_data)
-            transaction['specific_data']=transaction_data
-
+        transaction_all = transaction
         signature = transaction['signatures']
         transaction = transaction['transaction']
         transaction_data = transaction['specific_data']
+        while isinstance(transaction_data, str):
+            transaction_data = json.loads(transaction_data)
+            transaction['specific_data']=transaction_data
 
         transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
             'trans_code']
@@ -99,7 +99,8 @@ def update_db_states(cur, block):
             continue
 
         tm = Transactionmanager()
-        tm.transactioncreator(transaction)
+        tm.set_transaction_data(transaction_all)
+        tm.transactioncreator(transaction_all)
         if not tm.econvalidator(cur=cur):
             if sc_nesting > 0:
                 sc_in_failed_state = True
