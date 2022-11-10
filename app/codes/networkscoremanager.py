@@ -77,7 +77,7 @@ def update_network_trust_score_from_receipt(cur, receipt):
         actual_block_hash = actual_block['hash']
         if vote == BLOCK_VOTE_MINER:
             if actual_block['proof'] == 42:  # Empty block check
-                if actual_block['status'] == 2:
+                if actual_block['status'] == BLOCK_STATUS_INVALID_MINED:
                     score = get_invalid_block_creation_score(existing_score)
                 else:
                     score = existing_score

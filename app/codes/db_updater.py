@@ -329,7 +329,7 @@ def add_miner(cur, wallet_address, network_address, broadcast_timestamp, block_i
         (src_person_id, dest_person_id, score, last_time)
         VALUES (?, ?, ?, ?)''',
         (Configuration.config("NETWORK_TRUST_MANAGER_PID"), person_id,
-        INITIAL_NETWORK_TRUST_SCORE, get_corrected_time_ms()))
+        INITIAL_NETWORK_TRUST_SCORE, broadcast_timestamp))
 
 def add_pid_contract_add(cur,ct_add):
     pid = get_person_id_for_wallet_address(ct_add)
