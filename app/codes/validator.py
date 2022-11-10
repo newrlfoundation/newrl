@@ -28,11 +28,11 @@ logger = logging.getLogger(__name__)
 def validate(transaction, propagate=False, validate_economics=True):
     if not validate_transaction_structure(transaction):
         return {'valid': False, 'msg': 'Invalid transaction structure'}
-    if transaction['transaction']['timestamp'] < get_corrected_time_ms() - MEMPOOL_TRANSACTION_LIFETIME_SECONDS * 1000:
-        return {
-            'valid': False,
-            'msg': 'Transaction is old'
-        }
+    # if transaction['transaction']['timestamp'] < get_corrected_time_ms() - MEMPOOL_TRANSACTION_LIFETIME_SECONDS * 1000:
+    #     return {
+    #         'valid': False,
+    #         'msg': 'Transaction is old'
+    #     }
 
     existing_transaction = get_mempool_transaction(
         transaction['transaction']['trans_code'])
