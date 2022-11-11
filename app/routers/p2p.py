@@ -66,14 +66,14 @@ def get_blocks_in_range_api(start_index: int, end_index: int):
 #     return validate_transaction(signed_transaction, propagate=True)
 
 @router.post("/receive-transactions", tags=[p2p_tag])
-@limiter.limit("20/minute")
+@limiter.limit("100/minute")
 async def receive_transactions_api(request: Request):
     request_body = await request.json()
     return process_transaction_batch(request_body['transactions'],
         request_body['peers_already_broadcasted'])
 
 @router.post("/receive-block", tags=[p2p_tag])
-@limiter.limit("20/minute")
+@limiter.limit("100/minute")
 async def receive_block_api(request: Request):
     request_body = await request.json()
     return receive_block(request_body['block'])
