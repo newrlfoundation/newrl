@@ -387,9 +387,11 @@ async def submit_transactions(request: Request):
     """
     try:
         request_body = await request.json()
-        new_transactions = process_transaction_batch(request_body)
+        new_transactions, failed_transactions = process_transaction_batch(request_body)
+        new_transaction_codes = list(map(lambda x: x['transaction']['trans_code'], new_transactions))
         response = {
-            'accepted_transactions': len(new_transactions)
+            'accepted_transactions': new_transaction_codes,
+            'failed_transactions': failed_transactions
         }
     except Exception as e:
         logger.exception(e)
