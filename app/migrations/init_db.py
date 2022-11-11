@@ -4,13 +4,16 @@ import os
 import logging
 
 from app.codes.dbmanager import revert_to_last_snapshot
+from app.codes.fs.archivemanager import get_block_from_archive
 
 from ..codes.blockchain import Blockchain, add_block
+from ..codes import blockchain
 from ..codes.state_updater import add_block_reward, update_state_from_transaction, update_trust_scores
 from ..codes.receiptmanager import update_receipts_in_state
 from .migrate_db import run_migrations
 from ..constants import NEWRL_DB, NEWRL_P2P_DB
 from ..codes.timers import SYNC_STATUS
+from app.constants import BLOCK_ARCHIVE_PATH
 
 db_path = NEWRL_DB
 
@@ -320,6 +323,7 @@ def revert_chain_quick(revert_to_snapshot=True):
     else:
         clear_db()
         init_db()
+        run_migrations()
     SYNC_STATUS['IS_SYNCING'] = False
 
 
@@ -400,6 +404,24 @@ def init_peer_db():
     # Todo - link node to a person and add record in the node db
     con.commit()
     con.close()
+
+def clear_state_and_make_from_archive():
+    revert_chain_quick(revert_to_snapshot=False)
+
+    block_index = 1
+
+    while True:
+        logger.info(f'Adding block: {block_index}')
+        block = get_block_from_archive(block_index)
+        if block is None:
+            logger.info(f'Finished archive block at index: {block_index}')
+            break
+        con = sqlite3.connect(NEWRL_DB, timeout=10)
+        cur = con.cursor()
+        blockchain.add_block(cur, block)
+        con.commit()
+        con.close()
+        block_index += 1
 
 
 if __name__ == '__main__':
