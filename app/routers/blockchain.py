@@ -380,7 +380,7 @@ async def submit_transaction(request: Request):
 
 
 @router.post("/submit-transaction-batch", tags=[submit_tag])
-@limiter.limit("10/minute")
+@limiter.limit("100/minute")
 async def submit_transactions(request: Request):
     """
         Submit a list of signed transactions to 
