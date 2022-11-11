@@ -1,3 +1,4 @@
+import logging
 from random import randint
 import sys
 import threading
@@ -16,14 +17,20 @@ from app.codes.fs.mempool_manager import clear_mempool
 from app.codes.p2p.peers import add_peer, clear_peers, get_peers, remove_dead_peers, update_software
 from app.codes.p2p.sync_chain import get_blocks, get_last_block_index, sync_chain_from_node, sync_chain_from_peers
 from app.codes.p2p.sync_mempool import list_mempool_transactions, sync_mempool_transactions
+from app.codes.timers import SYNC_STATUS
 from app.codes.updater import TIMERS, get_timers
 from app.codes.utils import get_last_block_hash
 from app.constants import SOFTWARE_VERSION
-from app.migrations.init_db import revert_chain
+from app.migrations.init_db import clear_state_and_make_from_archive, revert_chain
 from app.codes.p2p.peers import call_api_on_peers
 from app.codes.auth.auth import get_node_wallet_public
 from app.codes.minermanager import add_miners_as_peers, broadcast_miner_update, get_miner_info
 from app.codes.dbmanager import snapshot_schedule, get_snapshot_last_block_index
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 router = APIRouter()
 
@@ -167,4 +174,16 @@ def revert_chain_api(api_key, block_index: int, propogate: bool = False):
     revert_chain(block_index)
     if propogate:
         call_api_on_peers(f'/revert-chain?block_index={block_index}')
+    return {'status': 'SUCCESS'}
+
+@router.post("/make-state-from-archive", tags=[p2p_tag])
+def make_state_from_archive_api(api_key):
+    if calculate_hash(api_key) != '4a01127180cb827a4752abe578b47cbe23ba677037b5bb0cd420549bdb4a274d':
+        return {'status': 'INVALID_KEY'}
+    SYNC_STATUS['IS_SYNCING'] = True
+    try:
+        clear_state_and_make_from_archive()
+    except:
+        print('Error making state from archive')
+    SYNC_STATUS['IS_SYNCING'] = False
     return {'status': 'SUCCESS'}
