@@ -91,21 +91,38 @@ def update_db_states(cur, block):
         transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
             'trans_code']
         
-        if sc_nesting == 0 and not pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
-            logger.error(f'Fee payment failed for transaction {transaction_code}')
-            if sc_nesting > 0:
-                sc_in_failed_state = True
-                cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
-            continue
+        if newblockindex > 60000:  # prior to this block, the account balance could've been negative
+            if sc_nesting == 0 and not pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
+                logger.error(f'Fee payment failed for transaction {transaction_code}')
+                if sc_nesting > 0:
+                    sc_in_failed_state = True
+                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
+                continue
 
-        tm = Transactionmanager()
-        tm.set_transaction_data(transaction_all)
-        tm.transactioncreator(transaction_all)
-        if not tm.econvalidator(cur=cur):
-            if sc_nesting > 0:
-                sc_in_failed_state = True
-                cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
-            continue
+            tm = Transactionmanager()
+            tm.set_transaction_data(transaction_all)
+            tm.transactioncreator(transaction_all)
+            if not tm.econvalidator(cur=cur):
+                if sc_nesting > 0:
+                    sc_in_failed_state = True
+                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
+                continue
+        else:
+            tm = Transactionmanager()
+            tm.set_transaction_data(transaction_all)
+            tm.transactioncreator(transaction_all)
+            if not tm.econvalidator(cur=cur):
+                if sc_nesting > 0:
+                    sc_in_failed_state = True
+                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
+                continue
+            
+            if sc_nesting == 0 and not pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
+                logger.error(f'Fee payment failed for transaction {transaction_code}')
+                if sc_nesting > 0:
+                    sc_in_failed_state = True
+                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
+                continue
 
         try:
             update_state_from_transaction(
