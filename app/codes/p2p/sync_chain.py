@@ -81,16 +81,18 @@ def get_last_block_index():
 
 def receive_block(block):
     if SYNC_STATUS['IS_SYNCING']:
-        logger.info('Syncing with network. Ignoring incoming block.')
+        logger.info('Syncing/processing block. Ignoring incoming block.')
         return
+    SYNC_STATUS['IS_SYNCING'] = True
     block_index = block['index']
     if block_index > get_last_block_index() + 1:
         logger.info('Node not in sync. Cannot add block')
-        # sync_chain_from_peers()
+        SYNC_STATUS['IS_SYNCING'] = False
         return
 
     if blockchain.block_exists(block_index):
         logger.info('Block alredy exist in chain. Ignoring.')
+        SYNC_STATUS['IS_SYNCING'] = False
         return False
     
     # Check block for index for index and hash already in temp. If yes append receipts from local block from to the received block
@@ -104,6 +106,7 @@ def receive_block(block):
         logger.info('Accepting timeout block from sentinel node')
         if accept_block(original_block, block['hash']):
             broadcast_block(original_block)
+        SYNC_STATUS['IS_SYNCING'] = False
         return
 
     # store_block_proposal(block)
@@ -111,6 +114,7 @@ def receive_block(block):
     if not validate_block_miner_committee(block):
         # Store proposal to penalise false miner. But a dishonest node can flood with blocks
         # causing chain to grow a lot as a DoS attack
+        SYNC_STATUS['IS_SYNCING'] = False
         return False
 
 
@@ -124,6 +128,7 @@ def receive_block(block):
             #     receipt_for_invalid_block = generate_block_receipt(block['data'], vote=0)
             #     committee = get_committee_for_current_block()
             #     broadcast_receipt(receipt_for_invalid_block, committee)
+            SYNC_STATUS['IS_SYNCING'] = False
             return False
 
         if accept_block(original_block, block['hash']):
@@ -131,6 +136,7 @@ def receive_block(block):
     elif consensus == BLOCK_CONSENSUS_INVALID:
         if not validate_empty_block(block):
             logger.warn('Committee empty block received is not valid. Ignoring.')
+            SYNC_STATUS['IS_SYNCING'] = False
             return False
         
         logger.info('Committee empty block received for invalid block proposal by valid miner. Accepting and broadcasting.')
@@ -152,6 +158,7 @@ def receive_block(block):
                         broadcast_receipt(my_receipt, nodes=committee)
                     else:  # Not possible
                         logger.warn('Unexpected behaviour after adding my valid vote. Consensus became invalid. Not broadcasting')
+                        SYNC_STATUS['IS_SYNCING'] = False
                         return False
                 else:
                     logger.info('My receipt is already in the received block and no consensus yet.')
@@ -165,7 +172,7 @@ def receive_block(block):
                 committee = get_committee_for_current_block()
                 time.sleep(1)
                 broadcast_receipt(my_receipt, nodes=committee)
-
+    SYNC_STATUS['IS_SYNCING'] = False
     return
     #     else:
     #         committee = get_committee_for_current_block()
