@@ -269,7 +269,8 @@ def should_include_transaction(transaction, my_last_block_index=0):
                 return False
             software_version = transaction['specific_data']['software_version']
             last_block_index = transaction['specific_data']['last_block_index']
-            if software_version < SOFTWARE_VERSION or last_block_index < my_last_block_index:
+            # if software_version < SOFTWARE_VERSION or last_block_index < my_last_block_index - 100:
+            if last_block_index < my_last_block_index - 300:
                 return False
     except Exception as e:
         logger.error(f'Invalid transaction format {str(transaction)}, {str(e)}')
