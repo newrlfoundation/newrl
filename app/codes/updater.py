@@ -74,6 +74,7 @@ def run_updater(add_to_chain=False):
 
     logger.info(f'Proposing new block {new_block_index}')
     filenames = os.listdir(MEMPOOL_PATH)  # this is the mempool
+    filenames.sort(key=lambda x: os.path.getctime(MEMPOOL_PATH + x))  # sort by created time. need to change
     logger.info(f"Transactions in mempool: {len(filenames)}")
     textarray = []
     transfiles = filenames
