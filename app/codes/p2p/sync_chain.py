@@ -84,7 +84,32 @@ def receive_block(block):
         logger.info('Syncing/processing block. Ignoring incoming block.')
         return
     SYNC_STATUS['IS_SYNCING'] = True
+    try:
+        process_block(block)
+    except Exception as e:
+        logger.error('Error processing block')
+    SYNC_STATUS['IS_SYNCING'] = False
+    return
+    #     else:
+    #         committee = get_committee_for_current_block()
+    #         if (len(committee) < MINIMUM_ACCEPTANCE_VOTES and
+    #             block['data']['creator_wallet'] == SENTINEL_NODE_WALLET):
+    #                 logger.info('Inadequate committee for block. Accepting from sentinel node.')
+    #                 accept_block(block, block['hash'])
+    #                 broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
+    #                 return
+    #         if my_receipt:
+    #             logger.info('Broadcasting my receipt')
+    #             broadcast_receipt(my_receipt, committee)
+    #         logger.info('Stored block to temp')
+    #         store_block_to_temp(block)
+    
+    # return True
+
+
+def process_block(block):
     block_index = block['index']
+    logger.info(f'Processing block {block_index}')
     if block_index > get_last_block_index() + 1:
         logger.info('Node not in sync. Cannot add block')
         SYNC_STATUS['IS_SYNCING'] = False
@@ -172,24 +197,6 @@ def receive_block(block):
                 committee = get_committee_for_current_block()
                 time.sleep(1)
                 broadcast_receipt(my_receipt, nodes=committee)
-    SYNC_STATUS['IS_SYNCING'] = False
-    return
-    #     else:
-    #         committee = get_committee_for_current_block()
-    #         if (len(committee) < MINIMUM_ACCEPTANCE_VOTES and
-    #             block['data']['creator_wallet'] == SENTINEL_NODE_WALLET):
-    #                 logger.info('Inadequate committee for block. Accepting from sentinel node.')
-    #                 accept_block(block, block['hash'])
-    #                 broadcast_block(original_block, exclude_nodes=broadcast_exclude_nodes)
-    #                 return
-    #         if my_receipt:
-    #             logger.info('Broadcasting my receipt')
-    #             broadcast_receipt(my_receipt, committee)
-    #         logger.info('Stored block to temp')
-    #         store_block_to_temp(block)
-    
-    # return True
-
 
 def sync_chain_from_node(url, block_index=None):
     """Update local chain and state from remote node"""

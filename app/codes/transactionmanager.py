@@ -493,18 +493,23 @@ class Transactionmanager:
             funct = getattr(sc_instance, funct_name)
             fetchRepository = FetchRepository(cur)
             funct(specific_data, fetchRepository)
+            con.close()
         except TypeError as e:
             logger.warn(f"Validate method not implemented for {sc_class}")
+            con.close()
             return True
         except AttributeError as e:
             logger.warn(f"Validate method not implemented for {sc_class}")
+            con.close()
             return True
         except ContractValidationError as e:
             logger.error(f"Contract validation failed {e}")
+            con.close()
             return False
         except Exception as e:
             logger.error(f"{type(e)}")
             logger.error(f"Error validating the contract call {e}")
+            con.close()
             return False
 
         return True
@@ -520,6 +525,7 @@ def get_public_key_from_address(address):
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
     public_key = wallet_cursor.fetchone()
+    con.close()
     if public_key is None:
         return None
     return public_key[0]
@@ -531,6 +537,7 @@ def is_token_valid(token_code):
     token_cursor = cur.execute(
         'SELECT tokencode FROM tokens WHERE tokencode=?', (token_code, ))
     token = token_cursor.fetchone()
+    con.close()
     if token is None:
         return False
     return True
@@ -545,6 +552,7 @@ def is_wallet_valid(address):
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
     wallet = wallet_cursor.fetchone()
+    con.close()
     if wallet is None:
         return False
 
@@ -582,6 +590,7 @@ def get_wallets_from_pid(personidinput):
     if wallet_cursor is None:
         return False
     wallets = [dict(wlt) for wlt in wallet_cursor]
+    con.close()
     return wallets
 
 
@@ -593,6 +602,7 @@ def get_pid_from_wallet(walletaddinput):
     pid = pid_cursor.fetchone()
     if pid is None:
         return False
+    con.close()
     return pid[0]
 
 
@@ -604,6 +614,7 @@ def get_custodian_from_token(token_code):
     custodian = token_cursor.fetchone()
     if custodian is None:
         return False
+    con.close()
     return custodian[0]
 
 
@@ -620,6 +631,7 @@ def get_miner_count_person_id(person_id):
     result = token_cursor.fetchone()
     if result is None:
         return 0
+    con.close()
     return result[0]
 
 
@@ -707,6 +719,7 @@ def is_smart_contract(address):
     sc_cursor = cur.execute(
         'SELECT COUNT (*) FROM contracts WHERE address=?', (address, ))
     sc_id = sc_cursor.fetchone()
+    con.close()
     if sc_id is None:
         return False
     else:
