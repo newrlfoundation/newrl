@@ -27,7 +27,7 @@ def get_number_from_hash(block):
     """
     # return hash(block_hash) % 1000000
     if block['index'] > 94000:
-        seed = block['index'] + ord(block['hash'])
+        seed = block['index'] + ord(block['hash'][0])
         seed = seed % 1000000
     else:
         seed = ord(block['hash'][0])
