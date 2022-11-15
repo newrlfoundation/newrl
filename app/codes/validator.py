@@ -10,7 +10,7 @@ import os
 from app.codes.clock.global_time import get_corrected_time_ms
 from app.codes.crypto import calculate_hash
 
-from app.codes.fs.mempool_manager import get_mempool_transaction
+from app.codes.fs.mempool_manager import transaction_exists_in_mempool
 from app.codes.p2p.transport import send
 from app.ntypes import BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID, TRANSACTION_MINER_ADDITION
 from .utils import get_last_block_hash
@@ -34,9 +34,9 @@ def validate(transaction, propagate=False, validate_economics=True):
     #         'msg': 'Transaction is old'
     #     }
 
-    existing_transaction = get_mempool_transaction(
+    transaction_exists = transaction_exists_in_mempool(
         transaction['transaction']['trans_code'])
-    if existing_transaction is not None:
+    if transaction_exists:
         return {'valid': True, 'msg': 'Already validated and in mempool', 'new_transaction': False}
     
     if transaction['transaction']['type'] != TRANSACTION_MINER_ADDITION and transaction['transaction']['fee'] < 1000000:
