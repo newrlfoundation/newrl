@@ -88,6 +88,7 @@ def receive_block(block):
         process_block(block)
     except Exception as e:
         logger.error('Error processing block')
+        logger.error(e, exc_info=True)
     SYNC_STATUS['IS_SYNCING'] = False
     return
     #     else:
