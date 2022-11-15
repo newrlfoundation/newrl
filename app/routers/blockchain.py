@@ -3,6 +3,7 @@ import logging
 import sqlite3
 from types import new_class
 from typing import List
+import traceback
 
 from fastapi import APIRouter
 from fastapi.datastructures import UploadFile
@@ -403,7 +404,7 @@ async def submit_transactions(request: Request):
             'failed_transactions': failed_transactions
         }
     except Exception as e:
-        logger.exception(e)
+        logger.exception(traceback.print_exc())
         raise HTTPException(status_code=500, detail=str(e))
     return {"status": "SUCCESS", "response": response}
 

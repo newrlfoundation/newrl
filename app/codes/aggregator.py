@@ -1,6 +1,11 @@
+import logging
 from app.codes.validator import validate as validate_transaction
 from app.codes.p2p.outgoing import propogate_transaction_batch_to_peers
 from app.constants import MAX_TRANSACTION_BATCH_SIZE
+
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 def process_transaction_batch(transaction_list, exclude_nodes_broadcast=None):
@@ -9,7 +14,8 @@ def process_transaction_batch(transaction_list, exclude_nodes_broadcast=None):
         Return the accepted transactions
     """
     if len(transaction_list) > MAX_TRANSACTION_BATCH_SIZE:
-        return []
+        logger.warn(f'Exceeded maximum batch {len(transaction_list)}')
+        return [[], []]
     new_transactions = []
     failed_transactions = []
     for transaction_data in transaction_list:
