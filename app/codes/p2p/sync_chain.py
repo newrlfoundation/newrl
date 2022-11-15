@@ -121,7 +121,7 @@ def process_block(block):
         return False
     
     # Check block for index for index and hash already in temp. If yes append receipts from local block from to the received block
-    logger.info(f'Received new block: {json.dumps(block)}')
+    logger.info(f'Received new block: {block_index}')
 
 
     broadcast_exclude_nodes = block['peers_already_broadcasted'] if 'peers_already_broadcasted' in block else None
