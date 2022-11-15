@@ -11,6 +11,7 @@ from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 from starlette.responses import FileResponse
 from starlette.requests import Request
+from app.codes.timers import SYNC_STATUS
 
 from app.limiter import limiter
 from app.codes.helpers.FetchRespository import FetchRepository
@@ -370,6 +371,9 @@ def sign_transaction(wallet_data: dict, transaction_data: dict):
 async def submit_transaction(request: Request):
     """Submit a signed transaction and adds it to the chain"""
     try:
+        if SYNC_STATUS['IS_SYNCING']:
+            logger.info('Syncing/processing block. Ignoring incoming block.')
+            return {"status": "FAILURE", "response": "NODE_BUSY"}
         request_body = await request.json()
         print('Received transaction: ', request_body)
         response = validator.validate(request_body, propagate=True, validate_economics=True)
@@ -386,8 +390,13 @@ async def submit_transactions(request: Request):
         Submit a list of signed transactions to 
     """
     try:
+        if SYNC_STATUS['IS_SYNCING']:
+            logger.info('Syncing/processing block. Ignoring incoming block.')
+            return {"status": "FAILURE", "response": "NODE_BUSY"}
         request_body = await request.json()
-        new_transactions, failed_transactions = process_transaction_batch(request_body)
+        batch_result = process_transaction_batch(request_body)
+        new_transactions = batch_result[0]
+        failed_transactions = batch_result[1]
         new_transaction_codes = list(map(lambda x: x['transaction']['trans_code'], new_transactions))
         response = {
             'accepted_transactions': new_transaction_codes,

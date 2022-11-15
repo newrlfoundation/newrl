@@ -66,7 +66,7 @@ def get_block_hashes(start_index, end_index):
             'timestamp': row[2],
         }
         results.append(block)
-
+    con.close()
     return results
 
 

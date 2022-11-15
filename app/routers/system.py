@@ -98,8 +98,9 @@ def get_config_api():
 @router.post("/update-software", tags=[p2p_tag])
 def update_software_api(propogate: bool = False):
     # update_software(propogate)
-    timer = threading.Timer(randint(30, 120), update_software, [propogate])
-    timer.start()
+    # timer = threading.Timer(randint(30, 120), update_software, [propogate])
+    # timer.start()
+    update_software(propogate)
     return {'status': 'SUCCESS'}
 
 

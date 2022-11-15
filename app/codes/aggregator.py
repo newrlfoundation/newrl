@@ -24,4 +24,4 @@ def process_transaction_batch(transaction_list, exclude_nodes_broadcast=None):
             })
     if len(new_transactions) > 0:
         propogate_transaction_batch_to_peers(new_transactions, exclude_nodes=exclude_nodes_broadcast)
-    return new_transactions, failed_transactions
+    return [new_transactions, failed_transactions]
