@@ -26,7 +26,7 @@ def get_number_from_hash(block):
     Return a number from a string determinstically
     """
     # return hash(block_hash) % 1000000
-    if block['index'] > 90000:
+    if block['index'] > 94000:
         seed = block['index'] + ord(block['hash'])
         seed = seed % 1000000
     else:
