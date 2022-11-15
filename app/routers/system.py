@@ -14,7 +14,7 @@ from fastapi.responses import PlainTextResponse
 from app.codes.chainscanner import download_chain, download_state, get_config
 from app.codes.clock.global_time import get_time_stats
 from app.codes.fs.mempool_manager import clear_mempool
-from app.codes.p2p.peers import add_peer, clear_peers, get_peers, remove_dead_peers, update_software
+from app.codes.p2p.peers import add_peer, clear_peers, get_peers, init_bootstrap_nodes, remove_dead_peers, update_software
 from app.codes.p2p.sync_chain import get_blocks, get_last_block_index, sync_chain_from_node, sync_chain_from_peers
 from app.codes.p2p.sync_mempool import list_mempool_transactions, sync_mempool_transactions
 from app.codes.timers import SYNC_STATUS
@@ -130,6 +130,12 @@ def get_status_api():
 def get_status_api():
     add_miners_as_peers()
     remove_dead_peers()
+    return {'status': 'SUCCESS'}
+
+
+@router.post("/init-nodes", tags=[p2p_tag])
+def get_status_api():
+    init_bootstrap_nodes()
     return {'status': 'SUCCESS'}
 
 
