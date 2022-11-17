@@ -182,28 +182,28 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
         tstamp = transaction_timestamp
         update_trust_score(cur, personid1, personid2, new_score, tstamp)
 
-    if transaction_type == TRANSACTION_SMART_CONTRACT:  # smart contract transaction
-        funct = transaction_data['function']
-        if funct == "setup":  # sc is being set up
-            contract = dict(transaction_data['params'])
-            transaction_data['params']['parent'] = transaction_code
-        else:
-            contract = get_contract_from_address(
-                cur, transaction_data['address'])
-        module = importlib.import_module(
-            ".codes.contracts." + contract['name'], package="app")
-        sc_class = getattr(module, contract['name'])
-        sc_instance = sc_class(transaction_data['address'])
-        #    sc_instance = nusd1(transaction['specific_data']['address'])
-        funct = getattr(sc_instance, funct)
-        params_for_funct = transaction_data['params']
-        # adding singers address to the dict
-        params_for_funct['function_caller'] = transaction_signer
-        try:
-            funct(cur, params_for_funct)
-        except Exception as e:
-            print('Exception durint smart contract function run', e)
-            # logger.log(e)
+    # if transaction_type == TRANSACTION_SMART_CONTRACT:  # smart contract transaction
+    #     funct = transaction_data['function']
+    #     if funct == "setup":  # sc is being set up
+    #         contract = dict(transaction_data['params'])
+    #         transaction_data['params']['parent'] = transaction_code
+    #     else:
+    #         contract = get_contract_from_address(
+    #             cur, transaction_data['address'])
+    #     module = importlib.import_module(
+    #         ".codes.contracts." + contract['name'], package="app")
+    #     sc_class = getattr(module, contract['name'])
+    #     sc_instance = sc_class(transaction_data['address'])
+    #     #    sc_instance = nusd1(transaction['specific_data']['address'])
+    #     funct = getattr(sc_instance, funct)
+    #     params_for_funct = transaction_data['params']
+    #     # adding singers address to the dict
+    #     params_for_funct['function_caller'] = transaction_signer
+    #     try:
+    #         funct(cur, params_for_funct)
+    #     except Exception as e:
+    #         print('Exception durint smart contract function run', e)
+    #         # logger.log(e)
 
     if transaction_type == TRANSACTION_MINER_ADDITION:
         add_miner(
