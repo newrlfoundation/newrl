@@ -3,6 +3,7 @@
 import math
 from re import T
 from app.codes.db_updater import input_to_dict
+from app.codes.helpers.CustomExceptions import ContractValidationError
 from app.codes.helpers.FetchRespository import FetchRepository
 from app.codes.helpers.TransactionCreator import TransactionCreator
 from app.nvalues import ZERO_ADDRESS
@@ -199,3 +200,30 @@ class nlt(ContractMaster):
         if balance == None or balance[0] == None:
             return 0
         return balance[0]
+
+    def validate(self, txn_data, repo: FetchRepository):
+        method = txn_data["function"]
+        callparams = txn_data["params"]
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
+
+        if (method == "issue"):
+            max_supply = cspecs['max_supply']
+            token_code = cspecs['issuance_token_code']
+            current_tokens_issued = self._get_outstanding(token_code, repo)
+            amount = callparams['amount']
+
+            if current_tokens_issued + amount > max_supply:
+                raise ContractValidationError(
+                    "Maximum supply has been reached, can't issue tokens for given amount")
+
+        if (method == "exchange"):
+            exchange_start_date = cspecs['exchange_start_date']
+            exchange_end_date = cspecs['exchange_end_date']
+
+            current_time = get_last_block_hash()["timestamp"]
+
+            if not current_time >= exchange_start_date:
+                raise Exception("Exchange is not allowed yet")
+            if not current_time <= exchange_end_date:
+                raise Exception("Exchange is closed")
+        pass
