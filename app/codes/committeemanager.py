@@ -21,12 +21,17 @@ miner_committee_cache = {
 }
 
 
-def get_number_from_hash(block_hash):
+def get_number_from_hash(block):
     """
     Return a number from a string determinstically
     """
     # return hash(block_hash) % 1000000
-    return ord(block_hash[0])
+    if block['index'] > 94000:
+        seed = block['index'] + ord(block['hash'][0])
+        seed = seed % 1000000
+    else:
+        seed = ord(block['hash'][0])
+    return seed
 
 
 def weighted_random_choices(population, weights, k, seed_prefix=0):
@@ -73,7 +78,7 @@ def get_miner_for_current_block(last_block=None):
         logger.info('Inadequate committee. Sentinel node is the miner.')
         return {'wallet_address': SENTINEL_NODE_WALLET}
 
-    random.seed(get_number_from_hash(last_block['hash']))
+    random.seed(get_number_from_hash(last_block))
     miner = random.choice(committee_list)
     miner_committee_cache = {
         'current_block_hash': last_block['hash'],
@@ -153,7 +158,7 @@ def get_committee_for_current_block(last_block=None):
         miners,
         weights,
         committee_size,
-        get_number_from_hash(last_block['hash']))
+        get_number_from_hash(last_block))
     committee = sorted(committee, key=lambda d: d['wallet_address']) 
     return committee
 
