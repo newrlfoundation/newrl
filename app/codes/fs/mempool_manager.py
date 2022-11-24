@@ -43,6 +43,13 @@ def append_receipt_to_block(block, new_receipt):
     return False
 
 
+def transaction_exists_in_mempool(transaction_code):
+    existing_files_for_block = glob.glob(f'{MEMPOOL_PATH}transaction-*-{transaction_code}*.json')
+    if len(existing_files_for_block) == 0:
+        return False
+    return True
+
+
 def get_mempool_transaction(transaction_code):
     existing_files_for_block = glob.glob(f'{MEMPOOL_PATH}transaction-*-{transaction_code}*.json')
     if len(existing_files_for_block) == 0:

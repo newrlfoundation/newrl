@@ -38,7 +38,7 @@ def get_receipts_included_in_block_from_db(block_index):
             "signature": _receipt['signature'],
         }
         receipts.append(receipt)
-
+    con.close()
     return receipts
 
 

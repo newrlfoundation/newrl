@@ -64,6 +64,7 @@ def get_miner_status(wallet_address):
         'network_address': miner_cursor[1],
         'broadcast_timestamp': miner_cursor[2]
     }
+    con.close()
     return miner_info
 
 
