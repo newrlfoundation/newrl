@@ -45,6 +45,7 @@ def get_peers():
     cur = con.cursor()
     peer_cursor = cur.execute('SELECT * FROM peers').fetchall()
     peers = [dict(ix) for ix in peer_cursor]
+    con.close()
     return peers
 
 

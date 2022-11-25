@@ -2,6 +2,7 @@
 import importlib
 from logging import Logger
 import logging
+import math
 from re import A
 import time
 import ecdsa
@@ -19,7 +20,7 @@ from app.Configuration import Configuration
 from app.nvalues import CUSTODIAN_DAO_ADDRESS
 
 
-from ..ntypes import TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
+from ..ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_MULTIPLIER, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
 
 from ..constants import CUSTODIAN_OWNER_TYPE, MEMPOOL_PATH, NEWRL_DB
 from .utils import get_person_id_for_wallet_address, get_time_ms
@@ -65,6 +66,7 @@ class Transactionmanager:
         self.transaction['descr'] = tran_data['descr']
         self.transaction['valid'] = 1  # default at creation is unverified
         self.transaction['specific_data'] = tran_data['specific_data']
+        self.transaction['is_child_txn'] = True if 'is_child_txn' in tran_data else False
         trstr = json.dumps(self.transaction).encode()
         hs = hashlib.blake2b(digest_size=20)
         hs.update(trstr)
@@ -223,6 +225,25 @@ class Transactionmanager:
         # from mempool only include transactions that reduce balance and not those that increase
         # check if the sender has enough balance to spend
         self.validity = 0
+        
+        if 'fee' in self.transaction:
+            fee = self.transaction['fee']
+        else:
+            fee = 0
+
+        if 'is_child_txn' in self.transaction:
+            is_child_sc = self.transaction['is_child_txn']
+        else:
+            is_child_sc = False
+
+        if not (self.transaction['type'] in [TRANSACTION_MINER_ADDITION, TRANSACTION_SC_UPDATE] or is_child_sc) :
+            currency = self.transaction['currency']
+            if currency == NEWRL_TOKEN_CODE:
+                    if fee < NEWRL_TOKEN_MULTIPLIER:
+                        return False
+            else:
+                return False            
+
         if self.transaction['type'] == TRANSACTION_WALLET_CREATION:
             custodian = self.transaction['specific_data']['custodian_wallet']
             walletaddress = self.transaction['specific_data']['wallet_address']
@@ -403,25 +424,30 @@ class Transactionmanager:
             if ttype == 4:
                 startingbalance2 = get_wallet_token_balance_tm(
                     sender2, tokencode2, cur)
-            if token1amt > startingbalance1:  # sender1 is trying to send more than she owns
-                print("sender1 is trying to send,", token1amt, "she owns,",
-                      startingbalance1, " invalidating transaction")
-            #	self.transaction['valid']=0;
-                self.validity = 0
+
+
+            # if token1amt  > startingbalance1:  # sender1 is trying to send more than she owns
+            #     print("sender1 is trying to send,", token1amt, "she owns,",
+            #           startingbalance1, " invalidating transaction")
+            # #	self.transaction['valid']=0;
+            #     self.validity = 0
+
+            # if ttype == 4:
+            #     if token2amt + (fee/2)> startingbalance2:  # sender2 is trying to send more than she owns
+            #         print(
+            #             "sender2 is trying to send more than she owns, invalidating transaction")
+            # #		self.transaction['valid']=0;
+            #         self.validity = 0
+
             if ttype == 4:
-                if token2amt > startingbalance2:  # sender2 is trying to send more than she owns
-                    print(
-                        "sender2 is trying to send more than she owns, invalidating transaction")
-            #		self.transaction['valid']=0;
-                    self.validity = 0
-            if ttype == 4:
-                if token1amt <= startingbalance1 and token2amt <= startingbalance2:  # double checking
+                # double checking
+                if token1amt + math.ceil(fee/2) <= startingbalance1 and token2amt + math.ceil(fee/2) <= startingbalance2:
                     print(
                         "Valid economics of transaction. Changing economic validity value to 1")
                 #	self.transaction['valid']=1;
                     self.validity = 1
             if ttype == 5:
-                if token1amt <= startingbalance1:
+                if token1amt + fee <= startingbalance1:
                     print(
                         "Valid economics of transaction. Changing economic validity value to 1")
                 #	self.transaction['valid']=1;
@@ -495,17 +521,23 @@ class Transactionmanager:
             funct(specific_data, fetchRepository)
         except TypeError as e:
             logger.warn(f"Validate method not implemented for {sc_class}")
+            con.close()
             return True
         except AttributeError as e:
             logger.warn(f"Validate method not implemented for {sc_class}")
+            con.close()
             return True
         except ContractValidationError as e:
             logger.error(f"Contract validation failed {e}")
+            con.close()
             return False
         except Exception as e:
             logger.error(f"{type(e)}")
             logger.error(f"Error validating the contract call {e}")
+            con.close()
             return False
+
+        con.close()
 
         return True
 #	def legalvalidator(self):
@@ -520,6 +552,7 @@ def get_public_key_from_address(address):
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
     public_key = wallet_cursor.fetchone()
+    con.close()
     if public_key is None:
         return None
     return public_key[0]
@@ -531,6 +564,7 @@ def is_token_valid(token_code):
     token_cursor = cur.execute(
         'SELECT tokencode FROM tokens WHERE tokencode=?', (token_code, ))
     token = token_cursor.fetchone()
+    con.close()
     if token is None:
         return False
     return True
@@ -545,6 +579,7 @@ def is_wallet_valid(address):
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
     wallet = wallet_cursor.fetchone()
+    con.close()
     if wallet is None:
         return False
 
@@ -582,6 +617,7 @@ def get_wallets_from_pid(personidinput):
     if wallet_cursor is None:
         return False
     wallets = [dict(wlt) for wlt in wallet_cursor]
+    con.close()
     return wallets
 
 
@@ -591,6 +627,7 @@ def get_pid_from_wallet(walletaddinput):
     pid_cursor = cur.execute(
         'SELECT person_id FROM person_wallet WHERE wallet_id=?', (walletaddinput, ))
     pid = pid_cursor.fetchone()
+    con.close()
     if pid is None:
         return False
     return pid[0]
@@ -602,6 +639,7 @@ def get_custodian_from_token(token_code):
     token_cursor = cur.execute(
         'SELECT custodian FROM tokens WHERE tokencode=?', (token_code, ))
     custodian = token_cursor.fetchone()
+    con.close()
     if custodian is None:
         return False
     return custodian[0]
@@ -618,6 +656,7 @@ def get_miner_count_person_id(person_id):
             where person_id = ?)
         ''', (person_id, ))
     result = token_cursor.fetchone()
+    con.close()
     if result is None:
         return 0
     return result[0]
@@ -707,6 +746,7 @@ def is_smart_contract(address):
     sc_cursor = cur.execute(
         'SELECT COUNT (*) FROM contracts WHERE address=?', (address, ))
     sc_id = sc_cursor.fetchone()
+    con.close()
     if sc_id is None:
         return False
     else:

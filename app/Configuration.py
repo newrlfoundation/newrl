@@ -100,6 +100,7 @@ class Configuration:
         con = sqlite3.connect(NEWRL_DB)
         cur = con.cursor()
         Configuration.updateDataFromDB(cur)
+        con.close()
         return True
 
     @staticmethod

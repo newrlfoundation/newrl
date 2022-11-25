@@ -15,7 +15,7 @@ def recieve_api(payload: dict):
     return receive(payload)
 
 @router.post("/receive-block-binary", tags=[transport_tag], include_in_schema=False)
-@limiter.limit("20/minute")
+@limiter.limit("100/minute")
 async def receive_block_binary_api(request: Request):
     body = request.body()
     block = decompress_block_payload(await body)

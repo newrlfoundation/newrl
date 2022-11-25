@@ -74,7 +74,8 @@ def download_state():
     
     stake_ledger_cursor = cur.execute('SELECT * FROM stake_ledger ORDER BY address').fetchall()
     stake_ledger = [dict(ix) for ix in stake_ledger_cursor]
-
+    
+    con.close()
     state = {
         'wallets': wallets,
         'tokens': tokens,
@@ -97,6 +98,7 @@ def get_transaction(transaction_code):
     cur = con.cursor()
     transaction_cursor = cur.execute(
         'SELECT * FROM transactions where transaction_code=?', (transaction_code,)).fetchone()
+    con.close()
     if transaction_cursor is None:
         return None
     return dict(transaction_cursor)
@@ -119,6 +121,7 @@ def get_wallet(wallet_address):
     pid = pid_cursor.fetchone()
     person_id = pid['person_id'] if pid is not None else ''
     wallet['person_id'] = person_id
+    con.close()
     return wallet
 
 
@@ -128,6 +131,7 @@ def get_token(token_code):
     cur = con.cursor()
     cur = cur.execute(
         'SELECT * FROM tokens where tokencode=?', (token_code,)).fetchone()
+    con.close()
     if cur is None:
         return None
     return dict(cur)
@@ -138,6 +142,7 @@ def get_contract(contract_address):
     cur = con.cursor()
     cur = cur.execute(
         'SELECT * FROM contracts where address=?', (contract_address,)).fetchone()
+    con.close()
     if cur is None:
         return None
     return dict(cur)

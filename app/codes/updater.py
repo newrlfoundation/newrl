@@ -42,7 +42,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-MAX_BLOCK_SIZE = 1000
+MAX_BLOCK_SIZE = 500
 
 
 def run_updater(add_to_chain=False):
@@ -173,7 +173,7 @@ def run_updater(add_to_chain=False):
     # store_receipt_to_temp(block_receipt)
     logger.info(f"Stored block to temp with index {block_payload['index']} and hash {block_payload['hash']}")
     broadcast_block_proposal(block_payload, block_receipt)
-
+    con.close()
     return block_payload
 
 

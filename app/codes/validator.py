@@ -10,7 +10,7 @@ import os
 from app.codes.clock.global_time import get_corrected_time_ms
 from app.codes.crypto import calculate_hash
 
-from app.codes.fs.mempool_manager import get_mempool_transaction
+from app.codes.fs.mempool_manager import transaction_exists_in_mempool
 from app.codes.p2p.transport import send
 from app.ntypes import BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID, TRANSACTION_MINER_ADDITION
 from .utils import get_last_block_hash
@@ -28,15 +28,13 @@ logger = logging.getLogger(__name__)
 def validate(transaction, propagate=False, validate_economics=True):
     if not validate_transaction_structure(transaction):
         return {'valid': False, 'msg': 'Invalid transaction structure'}
-    if transaction['transaction']['timestamp'] < get_corrected_time_ms() - MEMPOOL_TRANSACTION_LIFETIME_SECONDS * 1000:
-        return {
-            'valid': False,
-            'msg': 'Transaction is old'
-        }
+    # if transaction['transaction']['timestamp'] < get_corrected_time_ms() - MEMPOOL_TRANSACTION_LIFETIME_SECONDS * 1000:
+    #     return {
+    #         'valid': False,
+    #         'msg': 'Transaction is old'
+    #     }
 
-    existing_transaction = get_mempool_transaction(
-        transaction['transaction']['trans_code'])
-    if existing_transaction is not None:
+    if transaction_exists_in_mempool(transaction['transaction']['trans_code']):
         return {'valid': True, 'msg': 'Already validated and in mempool', 'new_transaction': False}
     
     if transaction['transaction']['type'] != TRANSACTION_MINER_ADDITION and transaction['transaction']['fee'] < 1000000:
