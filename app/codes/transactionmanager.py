@@ -230,12 +230,13 @@ class Transactionmanager:
         else:
             fee = 0
 
-        currency = self.transaction['currency']
-        if currency == NEWRL_TOKEN_CODE:
-                if fee < NEWRL_TOKEN_MULTIPLIER:
-                    return False
-        else:
-            return False            
+        if not self.transaction['type'] in [TRANSACTION_MINER_ADDITION, TRANSACTION_SC_UPDATE]:
+            currency = self.transaction['currency']
+            if currency == NEWRL_TOKEN_CODE:
+                    if fee < NEWRL_TOKEN_MULTIPLIER:
+                        return False
+            else:
+                return False            
 
         if self.transaction['type'] == TRANSACTION_WALLET_CREATION:
             custodian = self.transaction['specific_data']['custodian_wallet']
