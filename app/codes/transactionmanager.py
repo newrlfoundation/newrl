@@ -2,6 +2,7 @@
 import importlib
 from logging import Logger
 import logging
+import math
 from re import A
 import time
 import ecdsa
@@ -19,7 +20,7 @@ from app.Configuration import Configuration
 from app.nvalues import CUSTODIAN_DAO_ADDRESS
 
 
-from ..ntypes import TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
+from ..ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_MULTIPLIER, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
 
 from ..constants import CUSTODIAN_OWNER_TYPE, MEMPOOL_PATH, NEWRL_DB
 from .utils import get_person_id_for_wallet_address, get_time_ms
@@ -223,6 +224,19 @@ class Transactionmanager:
         # from mempool only include transactions that reduce balance and not those that increase
         # check if the sender has enough balance to spend
         self.validity = 0
+        
+        if 'fee' in self.transaction:
+            fee = self.transaction['fee']
+        else:
+            fee = 0
+
+        currency = self.transaction['currency']
+        if currency == NEWRL_TOKEN_CODE:
+                if fee < NEWRL_TOKEN_MULTIPLIER:
+                    return False
+        else:
+            return False            
+
         if self.transaction['type'] == TRANSACTION_WALLET_CREATION:
             custodian = self.transaction['specific_data']['custodian_wallet']
             walletaddress = self.transaction['specific_data']['wallet_address']
@@ -403,25 +417,30 @@ class Transactionmanager:
             if ttype == 4:
                 startingbalance2 = get_wallet_token_balance_tm(
                     sender2, tokencode2, cur)
-            if token1amt > startingbalance1:  # sender1 is trying to send more than she owns
-                print("sender1 is trying to send,", token1amt, "she owns,",
-                      startingbalance1, " invalidating transaction")
-            #	self.transaction['valid']=0;
-                self.validity = 0
+
+
+            # if token1amt  > startingbalance1:  # sender1 is trying to send more than she owns
+            #     print("sender1 is trying to send,", token1amt, "she owns,",
+            #           startingbalance1, " invalidating transaction")
+            # #	self.transaction['valid']=0;
+            #     self.validity = 0
+
+            # if ttype == 4:
+            #     if token2amt + (fee/2)> startingbalance2:  # sender2 is trying to send more than she owns
+            #         print(
+            #             "sender2 is trying to send more than she owns, invalidating transaction")
+            # #		self.transaction['valid']=0;
+            #         self.validity = 0
+
             if ttype == 4:
-                if token2amt > startingbalance2:  # sender2 is trying to send more than she owns
-                    print(
-                        "sender2 is trying to send more than she owns, invalidating transaction")
-            #		self.transaction['valid']=0;
-                    self.validity = 0
-            if ttype == 4:
-                if token1amt <= startingbalance1 and token2amt <= startingbalance2:  # double checking
+                # double checking
+                if token1amt + math.ceil(fee/2) <= startingbalance1 and token2amt + math.ceil(fee/2) <= startingbalance2:
                     print(
                         "Valid economics of transaction. Changing economic validity value to 1")
                 #	self.transaction['valid']=1;
                     self.validity = 1
             if ttype == 5:
-                if token1amt <= startingbalance1:
+                if token1amt + fee <= startingbalance1:
                     print(
                         "Valid economics of transaction. Changing economic validity value to 1")
                 #	self.transaction['valid']=1;
