@@ -25,7 +25,8 @@ class TransactionCreator:
             'fee': 0.0,
             'descr': 'New wallet',
             'valid': -1,
-            'specific_data': add_wallet_request
+            'specific_data': add_wallet_request,
+            "is_child_txn": True
         }
         transaction_data = {'transaction': transaction_data, 'signatures': []}
         transaction_manager = Transactionmanager()
@@ -69,7 +70,9 @@ class TransactionCreator:
                 "descr": "",
                 "valid": 1,
                 "block_index": 0,
-                "specific_data": add_token_request
+                "specific_data": add_token_request,
+                "is_child_txn": True
+
             },
             "signatures": []
         }
@@ -95,7 +98,9 @@ class TransactionCreator:
                 "descr": "",
                 "valid": 1,
                 "block_index": 0,
-                "specific_data": txspecdata
+                "specific_data": txspecdata,
+                "is_child_txn": True
+
             },
             "signatures": [{
                 "wallet_address": data['signers'][0]
@@ -126,7 +131,9 @@ class TransactionCreator:
                 "descr": data.get('description', ""),
                 "valid": 1,
                 "block_index": 0,
-                "specific_data": trandata
+                "specific_data": trandata,
+                "is_child_txn": True
+
             },
             "signatures": []
         }
@@ -151,7 +158,9 @@ class TransactionCreator:
                 "descr": "",
                 "valid": 1,
                 "block_index": 0,
-                "specific_data": txspecdata
+                "specific_data": txspecdata,
+                "is_child_txn": True
+
             },
             "signatures": []
         }
@@ -179,7 +188,8 @@ class TransactionCreator:
                 "descr": "",
                 "valid": 1,
                 "block_index": 0,
-                "specific_data": txspecdata
+                "specific_data": txspecdata,
+                "is_child_txn": True
             },
             "signatures": []
         }

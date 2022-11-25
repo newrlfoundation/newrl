@@ -66,6 +66,7 @@ class Transactionmanager:
         self.transaction['descr'] = tran_data['descr']
         self.transaction['valid'] = 1  # default at creation is unverified
         self.transaction['specific_data'] = tran_data['specific_data']
+        self.transaction['is_child_txn'] = True if 'is_child_txn' in tran_data else False
         trstr = json.dumps(self.transaction).encode()
         hs = hashlib.blake2b(digest_size=20)
         hs.update(trstr)
@@ -230,7 +231,12 @@ class Transactionmanager:
         else:
             fee = 0
 
-        if not self.transaction['type'] in [TRANSACTION_MINER_ADDITION, TRANSACTION_SC_UPDATE]:
+        if 'is_child_txn' in self.transaction:
+            is_child_sc = self.transaction['is_child_txn']
+        else:
+            is_child_sc = False
+
+        if not (self.transaction['type'] in [TRANSACTION_MINER_ADDITION, TRANSACTION_SC_UPDATE] or is_child_sc) :
             currency = self.transaction['currency']
             if currency == NEWRL_TOKEN_CODE:
                     if fee < NEWRL_TOKEN_MULTIPLIER:
