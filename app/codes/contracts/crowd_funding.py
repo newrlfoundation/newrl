@@ -1,18 +1,19 @@
 import math
 from app.codes.contracts.contract_master import ContractMaster
+from app.codes.contracts.dao_main_template import DaoMainTemplate
 from app.codes.db_updater import input_to_dict
 from app.codes.helpers.FetchRespository import FetchRepository
 from app.codes.helpers.TransactionCreator import TransactionCreator
 
 
-class crowd_funding(ContractMaster):
+class crowd_funding(DaoMainTemplate):
     codehash = ""  # this is the hash of the entire document excluding this line, it is same for all instances of this class
 
     def __init__(self, contractaddress=None):
         self.template = "crowd_funding"
         self.version = ""
-        ContractMaster.__init__(self, self.template,
-                                self.version, contractaddress)
+        self.dao_type = 1
+        super().__init__(contractaddress)
     
     def invest(self, callparamsip, repo: FetchRepository):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
