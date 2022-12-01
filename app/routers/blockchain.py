@@ -11,6 +11,7 @@ from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 from starlette.responses import FileResponse
 from starlette.requests import Request
+import traceback
 
 from app.limiter import limiter
 from app.codes.helpers.FetchRespository import FetchRepository
@@ -33,6 +34,7 @@ from app.codes import updater
 from app.codes.aggregator import process_transaction_batch
 from app.codes.contracts.contract_master import create_contract_address
 from ..Configuration import Configuration
+from app.codes.timers import SYNC_STATUS
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -380,19 +382,26 @@ async def submit_transaction(request: Request):
 
 
 @router.post("/submit-transaction-batch", tags=[submit_tag])
-@limiter.limit("10/minute")
+@limiter.limit("100/minute")
 async def submit_transactions(request: Request):
     """
         Submit a list of signed transactions to 
     """
     try:
+        if SYNC_STATUS['IS_SYNCING']:
+            logger.info('Syncing/processing block. Ignoring incoming block.')
+            return {"status": "FAILURE", "response": "NODE_BUSY"}
         request_body = await request.json()
-        new_transactions = process_transaction_batch(request_body)
+        batch_result = process_transaction_batch(request_body)
+        new_transactions = batch_result[0]
+        failed_transactions = batch_result[1]
+        new_transaction_codes = list(map(lambda x: x['transaction']['trans_code'], new_transactions))
         response = {
-            'accepted_transactions': len(new_transactions)
+            'accepted_transactions': new_transaction_codes,
+            'failed_transactions': failed_transactions
         }
     except Exception as e:
-        logger.exception(e)
+        logger.exception(traceback.print_exc())
         raise HTTPException(status_code=500, detail=str(e))
     return {"status": "SUCCESS", "response": response}
 
