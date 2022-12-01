@@ -9,9 +9,9 @@ NEWRL_ENV = os.environ.get('NEWRL_ENV')
 IS_TEST = os.environ.get('NEWRL_TEST') == 'Y'
 
 if NEWRL_ENV == 'testnet':
-    BOOTSTRAP_NODES = ['bootstrap1-lakeshore.newrl.net']
-    NETWORK_TRUSTED_ARCHIVE_NODES = ['archive1-lakeshore.newrl.net']
-    NEWRL_PORT = 8424
+    BOOTSTRAP_NODES = ['bootstrap1-testnet1.newrl.net']
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['archive1-testnet1.newrl.net']
+    NEWRL_PORT = 8421
     DATA_PATH = 'data_testnet/'
     print('Using testnet constants')
 elif NEWRL_ENV == 'mainnet':
