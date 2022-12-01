@@ -17,6 +17,7 @@ from .utils import get_last_block_hash
 from .transactionmanager import Transactionmanager
 from ..constants import IS_TEST, MAX_TRANSACTION_SIZE, MEMPOOL_PATH, MEMPOOL_TRANSACTION_LIFETIME_SECONDS
 from .p2p.outgoing import propogate_transaction_to_peers
+from .chainscanner import get_transaction
 
 from jsonschema import validate as jsonvalidate
 
@@ -37,6 +38,9 @@ def validate(transaction, propagate=False, validate_economics=True):
     if transaction_exists_in_mempool(transaction['transaction']['trans_code']):
         return {'valid': True, 'msg': 'Already validated and in mempool', 'new_transaction': False}
     
+    if get_transaction(transaction['transaction']['trans_code']) is not None:
+        return {'valid': True, 'msg': 'Transaction exists in chain', 'new_transaction': False}
+
     if transaction['transaction']['type'] != TRANSACTION_MINER_ADDITION and transaction['transaction']['fee'] < 1000000:
         return {'valid': False, 'msg': 'Not enough fee. Min of 1 NWRL is required', 'new_transaction': True}
 
