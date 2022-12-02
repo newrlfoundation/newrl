@@ -42,7 +42,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-MAX_BLOCK_SIZE = 50
+MAX_BLOCK_SIZE = 40
 
 
 def run_updater(add_to_chain=False):
