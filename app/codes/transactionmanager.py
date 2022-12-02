@@ -26,6 +26,7 @@ from .utils import get_person_id_for_wallet_address, get_time_ms
 
 logger = logging.getLogger(__name__)
 
+
 class Transactionmanager:
     def __init__(self):
         self.transaction = {
@@ -635,7 +636,7 @@ def get_miner_count_person_id(person_id):
     return result[0]
 
 
-def get_sc_validadds(transaction):
+def get_sc_validadds(transaction, cur=None):
     validadds = []
     funct = transaction['specific_data']['function']
     address = transaction['specific_data']['address']
@@ -645,11 +646,16 @@ def get_sc_validadds(transaction):
     if not address:
         print("Invalid call to a function of a contract yet to be set up.")
         return [-1]
-    con = sqlite3.connect(f'file:{NEWRL_DB}?mode=ro')
-    cur = con.cursor()
+    if cur is None:
+        con = sqlite3.connect(f'file:{NEWRL_DB}?mode=ro', timeout=8)
+        cur = con.cursor()
+        connection_opened = True
+    else:
+        connection_opened = False
     signatories = cur.execute(
         'SELECT signatories FROM contracts WHERE address=?', (address, )).fetchone()
-    con.close()
+    if connection_opened:
+        con.close()
     if signatories is None:
         print("Contract does not exist.")
         return [-1]
@@ -666,7 +672,7 @@ def get_sc_validadds(transaction):
         return [-1]
 
 
-def get_valid_addresses(transaction):
+def get_valid_addresses(transaction, cur=None):
     """Get valid signature addresses for a transaction"""
     transaction_type = transaction['type']
     valid_addresses = []
@@ -676,7 +682,7 @@ def get_valid_addresses(transaction):
     if transaction_type == TRANSACTION_TOKEN_CREATION:    # Custodian needs to sign
         valid_addresses.append(transaction['specific_data']['custodian'])
     if transaction_type == TRANSACTION_SMART_CONTRACT:
-        valid_addresses = get_sc_validadds(transaction)
+        valid_addresses = get_sc_validadds(transaction, cur)
     if transaction_type == TRANSACTION_TWO_WAY_TRANSFER:  # Both senders need to sign
         if transaction['specific_data']['wallet1'] == transaction['specific_data']['wallet2']:
             raise Exception('Both senders cannot be same')
