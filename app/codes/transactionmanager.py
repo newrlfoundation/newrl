@@ -645,7 +645,7 @@ def get_sc_validadds(transaction):
     if not address:
         print("Invalid call to a function of a contract yet to be set up.")
         return [-1]
-    con = sqlite3.connect(NEWRL_DB)
+    con = sqlite3.connect(f'file:{NEWRL_DB}?mode=ro')
     cur = con.cursor()
     signatories = cur.execute(
         'SELECT signatories FROM contracts WHERE address=?', (address, )).fetchone()
