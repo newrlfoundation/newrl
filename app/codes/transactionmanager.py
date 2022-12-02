@@ -359,8 +359,8 @@ class Transactionmanager:
 
             # address validity applies to both senders in ttype 4 and 5; since sender2 is still receiving tokens
 
-            sender1valid = is_wallet_valid(sender1)
-            sender2valid = is_wallet_valid(sender2) or (sender2 == Configuration.config("ZERO_ADDRESS") and ttype==5)
+            sender1valid = is_wallet_valid(sender1, cur=cur)
+            sender2valid = is_wallet_valid(sender2, cur=cur) or (sender2 == Configuration.config("ZERO_ADDRESS") and ttype==5)
             if not sender1valid:
                 print("Invalid sender1 wallet")
             #	self.transaction['valid']=0
@@ -544,16 +544,22 @@ def is_token_valid(token_code):
     return True
 
 
-def is_wallet_valid(address):
+def is_wallet_valid(address, cur=None):
     if is_smart_contract(address):
         return True
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
 
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
     wallet = wallet_cursor.fetchone()
-    con.close()
+
+    if cursor_opened:
+        con.close()
     if wallet is None:
         return False
 
