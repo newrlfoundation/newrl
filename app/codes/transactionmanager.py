@@ -244,7 +244,7 @@ class Transactionmanager:
                     else:
                         self.validity = 0  # other custodian cannot sign someone's linked wallet address
                 else:   # this is a new wallet and person
-                    if is_wallet_valid(walletaddress) and not is_smart_contract(walletaddress):
+                    if is_wallet_valid(walletaddress, cur=cur) and not is_smart_contract(walletaddress, cur=cur):
                         print("Wallet with address",
                               walletaddress, " already exists.")
                         self.validity = 0
@@ -258,7 +258,7 @@ class Transactionmanager:
             fovalidity = False
             custvalidity = False
             if firstowner:
-                if is_wallet_valid(firstowner):
+                if is_wallet_valid(firstowner, cur=cur):
                     # print("Valid first owner")
                     fovalidity = True
                 else:
@@ -270,7 +270,7 @@ class Transactionmanager:
                     fovalidity = False  # amount cannot be non-zero if no first owner
                 else:
                     fovalidity = True
-            if is_wallet_valid(custodian):
+            if is_wallet_valid(custodian, cur=cur):
                 # print("Valid custodian")
                 custvalidity = True
             if not fovalidity:
@@ -309,11 +309,11 @@ class Transactionmanager:
         if self.transaction['type'] == TRANSACTION_SMART_CONTRACT:
             self.validity = 1
             for wallet in self.transaction['specific_data']['signers']:
-                if not is_wallet_valid(wallet):
+                if not is_wallet_valid(wallet, cur=cur):
                     self.validity = 0
             if 'participants' in self.transaction['specific_data']['params']:
                 for wallet in self.transaction['specific_data']['params']['participants']:
-                    if not is_wallet_valid(wallet):
+                    if not is_wallet_valid(wallet, cur=cur):
                         self.validity = 0
             if 'value' in self.transaction['specific_data']['params']:
                 for value in self.transaction['specific_data']['params']['value']:
@@ -437,15 +437,15 @@ class Transactionmanager:
             wallet1valid = False
             wallet2valid = False
 
-            wallet1valid = is_wallet_valid(wallet1)
-            wallet2valid = is_wallet_valid(wallet2)
+            wallet1valid = is_wallet_valid(wallet1, cur=cur)
+            wallet2valid = is_wallet_valid(wallet2, cur=cur)
             if not wallet1valid or not wallet2valid:
                 print("One of the wallets is invalid")
                 self.validity = 0
             else:
                 #    if get_pid_from_wallet(wallet1) != personid1 or get_pid_from_wallet(wallet2) != personid2:
-                pid_1 = get_pid_from_wallet(wallet1)
-                pid_2 = get_pid_from_wallet(wallet2)
+                pid_1 = get_pid_from_wallet(wallet1, cur=cur)
+                pid_2 = get_pid_from_wallet(wallet2, cur=cur)
                 if not pid_1 or not pid_2:
                     print(
                         "One of the wallet addresses does not have a valid associated personids.")
@@ -462,7 +462,7 @@ class Transactionmanager:
 
         if self.transaction['type'] == TRANSACTION_MINER_ADDITION:
             # No checks for fee in the beginning
-            if not is_wallet_valid(self.transaction['specific_data']['wallet_address']):
+            if not is_wallet_valid(self.transaction['specific_data']['wallet_address'], cur=cur):
                 print("Miner wallet not in chain")
                 self.validity = 0
             else:
