@@ -544,10 +544,10 @@ def is_token_valid(token_code):
 
 
 def is_wallet_valid(address):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
     if is_smart_contract(address):
         return True
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
 
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
@@ -711,10 +711,10 @@ def get_wallet_token_balance_tm(wallet_address, token_code, cur=None):
 
 
 def is_smart_contract(address):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
     if not address.startswith('ct'):
         return False
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
 
     sc_cursor = cur.execute(
         'SELECT COUNT (*) FROM contracts WHERE address=?', (address, ))
