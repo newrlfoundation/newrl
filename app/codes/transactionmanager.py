@@ -532,13 +532,18 @@ def get_public_key_from_address(address):
     return public_key[0]
 
 
-def is_token_valid(token_code):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
+def is_token_valid(token_code, cur=None):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = True
     token_cursor = cur.execute(
         'SELECT tokencode FROM tokens WHERE tokencode=?', (token_code, ))
     token = token_cursor.fetchone()
-    con.close()
+    if cursor_opened:
+        con.close()
     if token is None:
         return False
     return True
