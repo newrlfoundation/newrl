@@ -288,7 +288,7 @@ class Transactionmanager:
                 if 'tokencode' in self.transaction['specific_data']:
                     tcode = self.transaction['specific_data']['tokencode']
                     if tcode and tcode != "0" and tcode != "" and tcode != "string":
-                        if is_token_valid(self.transaction['specific_data']['tokencode']):
+                        if is_token_valid(self.transaction['specific_data']['tokencode'], cur=cur):
                             existing_custodian = get_custodian_from_token(
                                 self.transaction['specific_data']['tokencode'])
                             if custodian == existing_custodian:
@@ -318,7 +318,7 @@ class Transactionmanager:
             if 'value' in self.transaction['specific_data']['params']:
                 for value in self.transaction['specific_data']['params']['value']:
                     print(value)
-                    if not is_token_valid(value['token_code']):
+                    if not is_token_valid(value['token_code'], cur=cur):
                         self.validity = 0
                         break
                     sender_balance = get_wallet_token_balance_tm(self.transaction['specific_data']['signers'][0], value['token_code'], cur)
@@ -377,8 +377,8 @@ class Transactionmanager:
             if ttype == 4:
                 # by keeping it here, we ensure that no code refers to token2valid for type5
                 token2valid = False
-            token1valid = is_token_valid(tokencode1)
-            token2valid = ttype == 4 and is_token_valid(tokencode2)
+            token1valid = is_token_valid(tokencode1, cur=cur)
+            token2valid = ttype == 4 and is_token_valid(tokencode2, cur=cur)
             if not token1valid:
                 print("Invalid asset1 code")
                 self.validity = 0
