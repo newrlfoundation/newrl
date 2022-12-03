@@ -29,14 +29,9 @@ class ContractMaster():
         self.template=template
         self.new_contract = False
         if contractaddress:     #as in this is an existing contract
-            if contractaddress in DB_CACHE['contract_params']:
-                params = DB_CACHE['contract_params'][contractaddress]
-            else:
-                con = sqlite3.connect(NEWRL_DB)
-                cur = con.cursor()
-                params = self.loadcontract(cur, contractaddress)  #this will populate the params for a given instance of the contract
-                DB_CACHE['contract_params'][contractaddress] = params
-                con.close()    
+            
+            params = self.loadcontract(contractaddress)  #this will populate the params for a given instance of the contract
+            
             if not params:
                 self.new_contract = True
                 self.contractparams = self.get_default_contract_params(
@@ -144,14 +139,21 @@ class ContractMaster():
         #this loads the contract from the state db
         #it should take as input contractaddress and output the contractparams as they are in the db as of the time of calling it
         #the output will populate self.contractparams to be used by other functions
-        contract_cursor = cur.execute('SELECT * FROM contracts WHERE address = :address', {
-                    'address': contractaddress})
-        contract_row = contract_cursor.fetchone()
-        if not contract_row:
-            self.new_contract = True
-            return False
+        if contractaddress in DB_CACHE['contract_params']:
+            self.contractparams = DB_CACHE['contract_params'][contractaddress]
+        else:
+            con = sqlite3.connect(NEWRL_DB)
+            cur = con.cursor()
+            contract_cursor = cur.execute('SELECT * FROM contracts WHERE address = :address', {
+                        'address': contractaddress})
+            contract_row = contract_cursor.fetchone()
+            con.close()
+            if not contract_row:
+                self.new_contract = True
+                return False
 
-        self.contractparams = {k[0]: v for k, v in list(zip(contract_cursor.description, contract_row))}
+            self.contractparams = {k[0]: v for k, v in list(zip(contract_cursor.description, contract_row))}
+            DB_CACHE['contract_params'][contractaddress] = self.contractparams
         self.contractparams['contractspecs']=json.loads(self.contractparams['contractspecs'])
         self.contractparams['legalparams']=json.loads(self.contractparams['legalparams'])
         self.contractparams['signatories']=json.loads(self.contractparams['signatories'])
