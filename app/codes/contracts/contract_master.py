@@ -12,6 +12,7 @@ import json
 import datetime
 import time
 import sqlite3
+from app.codes.cache import DB_CACHE
 
 from app.codes.helpers.TransactionCreator import TransactionCreator
 #import hashlib
@@ -28,14 +29,18 @@ class ContractMaster():
         self.template=template
         self.new_contract = False
         if contractaddress:     #as in this is an existing contract
-            con = sqlite3.connect(NEWRL_DB)
-            cur = con.cursor()
-            params = self.loadcontract(cur, contractaddress)  #this will populate the params for a given instance of the contract
+            if contractaddress in DB_CACHE['contract_params']:
+                params = DB_CACHE['contract_params'][contractaddress]
+            else:
+                con = sqlite3.connect(NEWRL_DB)
+                cur = con.cursor()
+                params = self.loadcontract(cur, contractaddress)  #this will populate the params for a given instance of the contract
+                DB_CACHE['contract_params'][contractaddress] = params
+                con.close()    
             if not params:
                 self.new_contract = True
                 self.contractparams = self.get_default_contract_params(
                     template, version)
-            con.close()    
         else:   #either no contractaddress provided or new adddress not in db
             self.address = create_contract_address()
             self.contractparams=self.get_default_contract_params(template, version)
