@@ -154,7 +154,8 @@ class ContractMaster():
 
             self.contractparams = {k[0]: v for k, v in list(zip(contract_cursor.description, contract_row))}
             DB_CACHE['contract_params'][contractaddress] = self.contractparams
-        self.contractparams['contractspecs']=json.loads(self.contractparams['contractspecs'])
+        print('contractspecs', json.dumps(self.contractparams))
+        self.contractparams['contractspecs']=json.loads(self.contractparams['contractspecs']) if isinstance(self.contractparams['contractspecs'], str) else self.contractparams['contractspecs']
         self.contractparams['legalparams']=json.loads(self.contractparams['legalparams'])
         self.contractparams['signatories']=json.loads(self.contractparams['signatories'])
         self.contractparams['oracleids'] = json.loads(self.contractparams['oracleids'])
