@@ -135,7 +135,7 @@ class ContractMaster():
             sc_state_proposal1_data)
 
         return [add_contract_proposal]
-    def loadcontract(self, cur, contractaddress):
+    def loadcontract(self, contractaddress):
         #this loads the contract from the state db
         #it should take as input contractaddress and output the contractparams as they are in the db as of the time of calling it
         #the output will populate self.contractparams to be used by other functions
