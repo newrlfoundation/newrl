@@ -538,7 +538,7 @@ def is_token_valid(token_code, cur=None):
         cur = con.cursor()
         cursor_opened = True
     else:
-        cursor_opened = True
+        cursor_opened = False
     token_cursor = cur.execute(
         'SELECT tokencode FROM tokens WHERE tokencode=?', (token_code, ))
     token = token_cursor.fetchone()
