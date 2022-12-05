@@ -36,9 +36,11 @@ def validate(transaction, propagate=False, validate_economics=True):
     #     }
 
     if transaction_exists_in_mempool(transaction['transaction']['trans_code']):
+        logger.info('Transaction exists in mempool')
         return {'valid': True, 'msg': 'Already validated and in mempool', 'new_transaction': False}
     
     if get_transaction(transaction['transaction']['trans_code']) is not None:
+        logger.info('Transaction exists in state')
         return {'valid': True, 'msg': 'Transaction exists in chain', 'new_transaction': False}
 
     if transaction['transaction']['type'] != TRANSACTION_MINER_ADDITION and transaction['transaction']['fee'] < 1000000:

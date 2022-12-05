@@ -1,3 +1,5 @@
+import json
+import logging
 from random import randint
 import sys
 import threading
@@ -25,6 +27,9 @@ from app.codes.validator import validate as validate_transaction
 from app.codes.minermanager import get_miner_info
 
 router = APIRouter()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 p2p_tag = 'P2P'
 
@@ -63,6 +68,7 @@ def get_blocks_in_range_api(start_index: int, end_index: int):
 @limiter.limit("10/second")
 async def receive_transaction_api(request: Request):
     signed_transaction = (await request.json())['signed_transaction']
+    logger.info(f'Recieve transaction from {request.client.host} : {json.dumps(signed_transaction)}')
     return validate_transaction(signed_transaction, propagate=True)
 
 @router.post("/receive-transactions", tags=[p2p_tag])
