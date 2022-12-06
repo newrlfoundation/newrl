@@ -487,7 +487,7 @@ class Transactionmanager:
 
         if self.transaction['type'] == TRANSACTION_MINER_ADDITION:
             # No checks for fee in the beginning
-            if not is_wallet_valid(self.transaction['specific_data']['wallet_address']):
+            if not is_wallet_valid(self.transaction['specific_data']['wallet_address'], cur=cur, check_sc=False):
                 print("Miner wallet not in chain")
                 self.validity = 0
             else:
@@ -558,28 +558,39 @@ def get_public_key_from_address(address):
     return public_key[0]
 
 
-def is_token_valid(token_code):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
+def is_token_valid(token_code, cur=None):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
     token_cursor = cur.execute(
         'SELECT tokencode FROM tokens WHERE tokencode=?', (token_code, ))
     token = token_cursor.fetchone()
-    con.close()
+    if cursor_opened:
+        con.close()
     if token is None:
         return False
     return True
 
 
-def is_wallet_valid(address):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
-    if is_smart_contract(address):
-        return True
+def is_wallet_valid(address, cur=None, check_sc=True):
+    if check_sc:
+        if is_smart_contract(address):
+            return True
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
 
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
     wallet = wallet_cursor.fetchone()
-    con.close()
+    if cursor_opened:
+        con.close()
     if wallet is None:
         return False
 
@@ -738,10 +749,10 @@ def get_wallet_token_balance_tm(wallet_address, token_code, cur=None):
 
 
 def is_smart_contract(address):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
     if not address.startswith('ct'):
         return False
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
 
     sc_cursor = cur.execute(
         'SELECT COUNT (*) FROM contracts WHERE address=?', (address, ))

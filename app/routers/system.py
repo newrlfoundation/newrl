@@ -15,7 +15,7 @@ from app.codes.chainscanner import download_chain, download_state, get_config
 from app.codes.clock.global_time import get_time_stats
 from app.codes.fs.mempool_manager import clear_mempool
 from app.codes.p2p.peers import add_peer, clear_peers, get_peers, init_bootstrap_nodes, remove_dead_peers, update_software
-from app.codes.p2p.sync_chain import get_blocks, get_last_block_index, sync_chain_from_node, sync_chain_from_peers
+from app.codes.p2p.sync_chain import get_blocks, get_last_block_index, quick_sync, sync_chain_from_node, sync_chain_from_peers
 from app.codes.p2p.sync_mempool import list_mempool_transactions, sync_mempool_transactions
 from app.codes.timers import SYNC_STATUS
 from app.codes.updater import TIMERS, get_timers
@@ -84,6 +84,14 @@ def sync_chain_from_node_api(url: str = 'https://newrl-devnet1.herokuapp.com'):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/quick-sync-chain-from-node", tags=[p2p_tag])
+def sync_chain_from_node_api(api_key, url: str = 'http://archive1-mainnet.newrl.net:8456'):
+    if calculate_hash(api_key) != '4a01127180cb827a4752abe578b47cbe23ba677037b5bb0cd420549bdb4a274d':
+        return {'status': 'INVALID_KEY'}
+    try:
+        quick_sync(url + '/get-newrl-db')
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/sync-chain-from-peers", tags=[p2p_tag])
 async def sync_chain_from_peers_api():
