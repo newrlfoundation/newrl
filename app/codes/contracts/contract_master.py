@@ -18,6 +18,7 @@ from app.codes.helpers.TransactionCreator import TransactionCreator
 
 from ...constants import NEWRL_DB
 from ..db_updater import *
+from ..cache import DB_CACHE
 
 
 class ContractMaster():
@@ -28,14 +29,13 @@ class ContractMaster():
         self.template=template
         self.new_contract = False
         if contractaddress:     #as in this is an existing contract
-            con = sqlite3.connect(NEWRL_DB)
-            cur = con.cursor()
-            params = self.loadcontract(cur, contractaddress)  #this will populate the params for a given instance of the contract
+            params = self.loadcontract(contractaddress) #this will populate the params for a given instance of the contract
+            # params = self.loadcontract(cur, contractaddress)  #this will populate the params for a given instance of the contract
             if not params:
                 self.new_contract = True
                 self.contractparams = self.get_default_contract_params(
                     template, version)
-            con.close()    
+            # con.close()    
         else:   #either no contractaddress provided or new adddress not in db
             self.address = create_contract_address()
             self.contractparams=self.get_default_contract_params(template, version)
@@ -135,22 +135,29 @@ class ContractMaster():
             sc_state_proposal1_data)
 
         return [add_contract_proposal]
-    def loadcontract(self, cur, contractaddress):
+    def loadcontract(self, contractaddress):
         #this loads the contract from the state db
         #it should take as input contractaddress and output the contractparams as they are in the db as of the time of calling it
         #the output will populate self.contractparams to be used by other functions
-        contract_cursor = cur.execute('SELECT * FROM contracts WHERE address = :address', {
-                    'address': contractaddress})
-        contract_row = contract_cursor.fetchone()
-        if not contract_row:
-            self.new_contract = True
-            return False
+        if contractaddress in DB_CACHE['contract_params']:
+            self.contractparams = DB_CACHE['contract_params'][contractaddress]
+        else:
+            con = sqlite3.connect(NEWRL_DB)
+            cur = con.cursor()
+            contract_cursor = cur.execute('SELECT * FROM contracts WHERE address = :address', {
+                        'address': contractaddress})
+            contract_row = contract_cursor.fetchone()
+            con.close()
+            if not contract_row:
+                self.new_contract = True
+                return False
 
-        self.contractparams = {k[0]: v for k, v in list(zip(contract_cursor.description, contract_row))}
-        self.contractparams['contractspecs']=json.loads(self.contractparams['contractspecs'])
-        self.contractparams['legalparams']=json.loads(self.contractparams['legalparams'])
-        self.contractparams['signatories']=json.loads(self.contractparams['signatories'])
-        self.contractparams['oracleids'] = json.loads(self.contractparams['oracleids'])
+            self.contractparams = {k[0]: v for k, v in list(zip(contract_cursor.description, contract_row))}
+            DB_CACHE['contract_params'][contractaddress] = self.contractparams
+        self.contractparams['contractspecs']=json.loads(self.contractparams['contractspecs']) if isinstance(self.contractparams['contractspecs'], str) else self.contractparams['contractspecs']
+        self.contractparams['legalparams']=json.loads(self.contractparams['legalparams']) if isinstance(self.contractparams['legalparams'], str) else self.contractparams['legalparams']
+        self.contractparams['signatories']=json.loads(self.contractparams['signatories']) if isinstance(self.contractparams['signatories'], str) else self.contractparams['signatories']
+        self.contractparams['oracleids']=json.loads(self.contractparams['oracleids']) if isinstance(self.contractparams['oracleids'], str) else self.contractparams['oracleids']
         self.new_contract = False
         print("Loaded the contract with following data: \n",self.contractparams)
         return self.contractparams
