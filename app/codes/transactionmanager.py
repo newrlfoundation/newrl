@@ -639,10 +639,11 @@ def get_wallets_from_pid(personidinput, cur=None):
         cursor_opened = False
     wallet_cursor = cur.execute(
         'SELECT wallet_id FROM person_wallet WHERE person_id=?', (personidinput, )).fetchall()
+    if cursor_opened:
+        con.close()
     if wallet_cursor is None:
         return False
     wallets = [dict(wlt) for wlt in wallet_cursor]
-    con.close()
     return wallets
 
 
