@@ -81,11 +81,12 @@ def validate(transaction, propagate=False, validate_economics=True):
 
         if propagate and not IS_TEST:
             # Broadcast transaction to peers via HTTP
-            exclude_nodes = transaction['peers_already_broadcasted'] if 'peers_already_broadcasted' in transaction else None
-            propogate_transaction_to_peers(
-                transaction_manager.get_transaction_complete(),
-                exclude_nodes=exclude_nodes
-            )
+            if transaction['transaction']['timestamp'] > get_corrected_time_ms() - MEMPOOL_TRANSACTION_LIFETIME_SECONDS * 1000:
+                exclude_nodes = transaction['peers_already_broadcasted'] if 'peers_already_broadcasted' in transaction else None
+                propogate_transaction_to_peers(
+                    transaction_manager.get_transaction_complete(),
+                    exclude_nodes=exclude_nodes
+                )
 
             # Broadcaset transaction via transport server
             # try:
