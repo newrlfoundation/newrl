@@ -264,7 +264,7 @@ class Transactionmanager:
                     else:
                         self.validity = 0  # other custodian cannot sign someone's linked wallet address
                 else:   # this is a new wallet and person
-                    if is_wallet_valid(walletaddress) and not is_smart_contract(walletaddress):
+                    if is_wallet_valid(walletaddress) and not is_smart_contract(walletaddress, cur=cur):
                         print("Wallet with address",
                               walletaddress, " already exists.")
                         self.validity = 0
@@ -308,7 +308,7 @@ class Transactionmanager:
                 if 'tokencode' in self.transaction['specific_data']:
                     tcode = self.transaction['specific_data']['tokencode']
                     if tcode and tcode != "0" and tcode != "" and tcode != "string":
-                        if is_token_valid(self.transaction['specific_data']['tokencode']):
+                        if is_token_valid(self.transaction['specific_data']['tokencode'], cur=cur):
                             existing_custodian = get_custodian_from_token(
                                 self.transaction['specific_data']['tokencode'])
                             if custodian == existing_custodian:
@@ -329,16 +329,16 @@ class Transactionmanager:
         if self.transaction['type'] == TRANSACTION_SMART_CONTRACT:
             self.validity = 1
             for wallet in self.transaction['specific_data']['signers']:
-                if not is_wallet_valid(wallet):
+                if not is_wallet_valid(wallet, cur=cur):
                     self.validity = 0
             if 'participants' in self.transaction['specific_data']['params']:
                 for wallet in self.transaction['specific_data']['params']['participants']:
-                    if not is_wallet_valid(wallet):
+                    if not is_wallet_valid(wallet, cur=cur):
                         self.validity = 0
             if 'value' in self.transaction['specific_data']['params']:
                 for value in self.transaction['specific_data']['params']['value']:
                     print(value)
-                    if not is_token_valid(value['token_code']):
+                    if not is_token_valid(value['token_code'], cur=cur):
                         self.validity = 0
                         break
                     sender_balance = get_wallet_token_balance_tm(self.transaction['specific_data']['signers'][0], value['token_code'], cur)
@@ -379,8 +379,8 @@ class Transactionmanager:
 
             # address validity applies to both senders in ttype 4 and 5; since sender2 is still receiving tokens
 
-            sender1valid = is_wallet_valid(sender1)
-            sender2valid = is_wallet_valid(sender2) or (sender2 == Configuration.config("ZERO_ADDRESS") and ttype==5)
+            sender1valid = is_wallet_valid(sender1, cur=cur)
+            sender2valid = is_wallet_valid(sender2, cur=cur) or (sender2 == Configuration.config("ZERO_ADDRESS") and ttype==5)
             if not sender1valid:
                 print("Invalid sender1 wallet")
             #	self.transaction['valid']=0
@@ -397,8 +397,8 @@ class Transactionmanager:
             if ttype == 4:
                 # by keeping it here, we ensure that no code refers to token2valid for type5
                 token2valid = False
-            token1valid = is_token_valid(tokencode1)
-            token2valid = ttype == 4 and is_token_valid(tokencode2)
+            token1valid = is_token_valid(tokencode1, cur=cur)
+            token2valid = ttype == 4 and is_token_valid(tokencode2, cur=cur)
             if not token1valid:
                 print("Invalid asset1 code")
                 self.validity = 0
@@ -462,15 +462,15 @@ class Transactionmanager:
             wallet1valid = False
             wallet2valid = False
 
-            wallet1valid = is_wallet_valid(wallet1)
-            wallet2valid = is_wallet_valid(wallet2)
+            wallet1valid = is_wallet_valid(wallet1, cur=cur)
+            wallet2valid = is_wallet_valid(wallet2, cur=cur)
             if not wallet1valid or not wallet2valid:
                 print("One of the wallets is invalid")
                 self.validity = 0
             else:
                 #    if get_pid_from_wallet(wallet1) != personid1 or get_pid_from_wallet(wallet2) != personid2:
-                pid_1 = get_pid_from_wallet(wallet1)
-                pid_2 = get_pid_from_wallet(wallet2)
+                pid_1 = get_pid_from_wallet(wallet1, cur=cur)
+                pid_2 = get_pid_from_wallet(wallet2, cur=cur)
                 if not pid_1 or not pid_2:
                     print(
                         "One of the wallet addresses does not have a valid associated personids.")
@@ -546,13 +546,18 @@ class Transactionmanager:
 
 
 
-def get_public_key_from_address(address):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
+def get_public_key_from_address(address, cur=None):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
     wallet_cursor = cur.execute(
         'SELECT wallet_public FROM wallets WHERE wallet_address=?', (address, ))
     public_key = wallet_cursor.fetchone()
-    con.close()
+    if cursor_opened:
+        con.close()
     if public_key is None:
         return None
     return public_key[0]
@@ -577,7 +582,7 @@ def is_token_valid(token_code, cur=None):
 
 def is_wallet_valid(address, cur=None, check_sc=True):
     if check_sc:
-        if is_smart_contract(address):
+        if is_smart_contract(address, cur=cur):
             return True
     if cur is None:
         con = sqlite3.connect(NEWRL_DB)
@@ -597,7 +602,7 @@ def is_wallet_valid(address, cur=None, check_sc=True):
     return True
 
 
-def is_custodian_wallet(address):
+def is_custodian_wallet(address, cur=None):
     """
         If address in [initial foundation addresses], return True
         Check if address is in custodian DAO return True
@@ -609,20 +614,29 @@ def is_custodian_wallet(address):
 
     custodian_dao_pid = get_person_id_for_wallet_address(CUSTODIAN_DAO_ADDRESS)
     wallet_pid = get_person_id_for_wallet_address(address)
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
     pid_cursor = cur.execute(
         'SELECT count(*) FROM dao_membership WHERE dao_person_id=? and member_person_id=?', (custodian_dao_pid, wallet_pid))
     pid = pid_cursor.fetchone()
     is_valid_custodian = pid != None
-    con.close()
+    if cursor_opened:
+        con.close()
 
     return is_valid_custodian
 
 
-def get_wallets_from_pid(personidinput):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
+def get_wallets_from_pid(personidinput, cur=None):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
     wallet_cursor = cur.execute(
         'SELECT wallet_id FROM person_wallet WHERE person_id=?', (personidinput, )).fetchall()
     if wallet_cursor is None:
@@ -632,33 +646,47 @@ def get_wallets_from_pid(personidinput):
     return wallets
 
 
-def get_pid_from_wallet(walletaddinput):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
+def get_pid_from_wallet(walletaddinput, cur=None):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
     pid_cursor = cur.execute(
         'SELECT person_id FROM person_wallet WHERE wallet_id=?', (walletaddinput, ))
     pid = pid_cursor.fetchone()
-    con.close()
+    if cursor_opened:
+        con.close()
     if pid is None:
         return False
     return pid[0]
 
 
-def get_custodian_from_token(token_code):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
+def get_custodian_from_token(token_code, cur=None):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
     token_cursor = cur.execute(
         'SELECT custodian FROM tokens WHERE tokencode=?', (token_code, ))
     custodian = token_cursor.fetchone()
-    con.close()
+    if cursor_opened:
+        con.close()
     if custodian is None:
         return False
     return custodian[0]
 
 
-def get_miner_count_person_id(person_id):
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
+def get_miner_count_person_id(person_id, cur=None):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
     token_cursor = cur.execute(
         '''
         select count(*) from miners
@@ -667,13 +695,14 @@ def get_miner_count_person_id(person_id):
             where person_id = ?)
         ''', (person_id, ))
     result = token_cursor.fetchone()
-    con.close()
+    if cursor_opened:
+        con.close()
     if result is None:
         return 0
     return result[0]
 
 
-def get_sc_validadds(transaction):
+def get_sc_validadds(transaction, cur=None):
     validadds = []
     funct = transaction['specific_data']['function']
     address = transaction['specific_data']['address']
@@ -683,11 +712,16 @@ def get_sc_validadds(transaction):
     if not address:
         print("Invalid call to a function of a contract yet to be set up.")
         return [-1]
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
     signatories = cur.execute(
         'SELECT signatories FROM contracts WHERE address=?', (address, )).fetchone()
-    con.close()
+    if cursor_opened:
+        con.close()
     if signatories is None:
         print("Contract does not exist.")
         return [-1]
@@ -704,7 +738,7 @@ def get_sc_validadds(transaction):
         return [-1]
 
 
-def get_valid_addresses(transaction):
+def get_valid_addresses(transaction, cur=None):
     """Get valid signature addresses for a transaction"""
     transaction_type = transaction['type']
     valid_addresses = []
@@ -714,7 +748,7 @@ def get_valid_addresses(transaction):
     if transaction_type == TRANSACTION_TOKEN_CREATION:    # Custodian needs to sign
         valid_addresses.append(transaction['specific_data']['custodian'])
     if transaction_type == TRANSACTION_SMART_CONTRACT:
-        valid_addresses = get_sc_validadds(transaction)
+        valid_addresses = get_sc_validadds(transaction, cur=cur)
     if transaction_type == TRANSACTION_TWO_WAY_TRANSFER:  # Both senders need to sign
         if transaction['specific_data']['wallet1'] == transaction['specific_data']['wallet2']:
             raise Exception('Both senders cannot be same')
@@ -734,30 +768,35 @@ def get_wallet_token_balance_tm(wallet_address, token_code, cur=None):
     if cur is None:
         con = sqlite3.connect(NEWRL_DB)
         cur = con.cursor()
-        cur_opened = True
+        cursor_opened = True
     else:
-        cur_opened = False
+        cursor_opened = False
 
     balance = get_wallet_token_balance(cur, wallet_address, token_code)
     # balance_cursor = cur.execute('SELECT balance FROM balances WHERE wallet_address = :address AND tokencode = :tokencode', {
     #     'address': wallet_address, 'tokencode': token_code})
     # balance_row = balance_cursor.fetchone()
     # balance = balance_row[0] if balance_row is not None else 0
-    if cur_opened:
-        cur.close()
+    if cursor_opened:
+        con.close()
     return balance
 
 
-def is_smart_contract(address):
+def is_smart_contract(address, cur=None):
     if not address.startswith('ct'):
         return False
-    con = sqlite3.connect(NEWRL_DB)
-    cur = con.cursor()
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
 
     sc_cursor = cur.execute(
         'SELECT COUNT (*) FROM contracts WHERE address=?', (address, ))
     sc_id = sc_cursor.fetchone()
-    con.close()
+    if cursor_opened:
+        con.close()
     if sc_id is None:
         return False
     else:
