@@ -487,7 +487,7 @@ class Transactionmanager:
 
         if self.transaction['type'] == TRANSACTION_MINER_ADDITION:
             # No checks for fee in the beginning
-            if not is_wallet_valid(self.transaction['specific_data']['wallet_address'], cur=cur, skip_sc=True):
+            if not is_wallet_valid(self.transaction['specific_data']['wallet_address'], cur=cur, check_sc=False):
                 print("Miner wallet not in chain")
                 self.validity = 0
             else:
@@ -575,7 +575,7 @@ def is_token_valid(token_code, cur=None):
     return True
 
 
-def is_wallet_valid(address, cur=None, check_sc=False):
+def is_wallet_valid(address, cur=None, check_sc=True):
     if check_sc:
         if is_smart_contract(address):
             return True
