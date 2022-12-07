@@ -1,6 +1,6 @@
 import json
 import requests
-from app.codes.p2p.packager import compress_block_payload, decompress_block_payload
+from app.core.p2p.packager import compress_block_payload, decompress_block_payload
 
 
 def test_pack_unpack_block():

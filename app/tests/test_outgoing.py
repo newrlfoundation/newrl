@@ -1,7 +1,7 @@
 import unittest
 from fastapi.testclient import TestClient
 
-from app.codes.p2p.outgoing import get_excluded_node_list, get_excluded_peers_to_broadcast
+from app.core.p2p.outgoing import get_excluded_node_list, get_excluded_peers_to_broadcast
 
 from ..main import app
 

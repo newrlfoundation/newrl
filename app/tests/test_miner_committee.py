@@ -1,17 +1,18 @@
 import time
 import sqlite3
 
-from app.codes import updater, validator
-from app.codes.chainscanner import get_transaction
-from app.codes.p2p.sync_chain import receive_block
+from app.core.blockchain import validator
+from app.core.blockchain import updater
+from app.core.blockchain.chainscanner import get_transaction
+from app.core.p2p.sync_chain import receive_block
 
-from ..codes.blockchain import get_last_block
-from ..codes.utils import get_time_ms
-from ..codes.auth.auth import get_wallet
-from ..codes.minermanager import broadcast_miner_update, get_committee_for_current_block, get_eligible_miners, get_miner_for_current_block, get_my_miner_status, miner_addition_transaction
-from ..codes.db_updater import add_miner
+from ..core.blockchain.blockchain import get_last_block
+from ..core.helpers.utils import get_time_ms
+from ..core.auth.auth import get_wallet
+from ..core.consensus.minermanager import broadcast_miner_update, get_committee_for_current_block, get_eligible_miners, get_miner_for_current_block, get_my_miner_status, miner_addition_transaction
+from ..core.db.db_updater import add_miner
 from fastapi.testclient import TestClient
-from ..constants import NEWRL_DB, COMMITTEE_SIZE
+from app.config.constants import NEWRL_DB, COMMITTEE_SIZE
 
 from ..main import app
 

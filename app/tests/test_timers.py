@@ -2,13 +2,13 @@ import time
 
 from .test_p2p import _receive_block
 from .test_miner_committee import _add_test_miner
-from ..codes.updater import start_mining_clock
-from ..codes.minermanager import broadcast_miner_update
+from ..core.blockchain.updater import start_mining_clock
+from ..core.consensus.minermanager import broadcast_miner_update
 from fastapi.testclient import TestClient
-from ..constants import BLOCK_TIME_INTERVAL_SECONDS
+from app.config.constants import BLOCK_TIME_INTERVAL_SECONDS
 
 from ..main import app
-from app.codes import updater
+from app.core.blockchain import updater
 
 client = TestClient(app)
 

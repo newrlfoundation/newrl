@@ -1,9 +1,9 @@
 from fastapi.testclient import TestClient
 
-from ..codes.fs.temp_manager import get_blocks_for_index_from_storage
+from ..core.fs.temp_manager import get_blocks_for_index_from_storage
 from ..main import app
-from ..codes.validator import validate_block, validate_receipt_signature
-from ..codes.signmanager import sign_object
+from ..core.blockchain.validator import validate_block, validate_receipt_signature
+from ..core.crypto.signmanager import sign_object
 
 client = TestClient(app)
 

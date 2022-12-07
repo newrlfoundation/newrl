@@ -1,12 +1,12 @@
 from fastapi.testclient import TestClient
 import pytest
 
-from app.codes.crypto import sign_object
+from app.core.crypto.crypto import sign_object
 from .test_miner_committee import _add_test_miner, clear_miner_db
-from ..codes import updater
-from ..codes.auth.auth import get_wallet
+from ..core.blockchain.blockchain import updater
+from ..core.auth.auth import get_wallet
 from ..migrations.init import init_newrl
-from ..codes.minermanager import broadcast_miner_update
+from ..core.consensus.minermanager import broadcast_miner_update
 
 from ..main import app
 

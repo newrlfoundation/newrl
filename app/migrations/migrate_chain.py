@@ -2,7 +2,7 @@ import json
 import sqlite3
 import hashlib
 
-from ..constants import NEWRL_DB
+from app.config.constants import NEWRL_DB
 
 
 def migrate_chain(chain_file_path):

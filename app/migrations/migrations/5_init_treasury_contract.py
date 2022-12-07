@@ -2,9 +2,9 @@ import json
 import math
 import sqlite3
 
-from app.constants import NEWRL_DB
-from app.ntypes import NEWRL_TOKEN_DECIMAL
-from app.nvalues import  ASQI_WALLET, ASQI_TREASURY_ADDRESS, \
+from app.config.constants import NEWRL_DB
+from app.config.ntypes import NEWRL_TOKEN_DECIMAL
+from app.config.nvalues import  ASQI_WALLET, ASQI_TREASURY_ADDRESS, \
     FOUNDATION_TREASURY_ADDRESS, NETWORK_TREASURY_ADDRESS, FOUNDATION_DAO_ADDRESS, ASQI_DAO_ADDRESS
 
 

@@ -3,12 +3,12 @@ from random import random
 import token
 from fastapi.testclient import TestClient
 
-from ..codes import updater
+from ..core.blockchain.blockchain import updater
 from ..migrations.init import init_newrl
 import random
 
 from ..main import app
-from ..codes.contracts.nusd1 import nusd1
+from ..core.contracts.nusd1 import nusd1
 
 client = TestClient(app)
 

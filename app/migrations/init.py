@@ -1,5 +1,5 @@
 import os
-from ..constants import BLOCK_ARCHIVE_PATH, INCOMING_PATH, MEMPOOL_PATH, TMP_PATH, DATA_PATH, LOG_FILE_PATH
+from app.config.constants import BLOCK_ARCHIVE_PATH, INCOMING_PATH, MEMPOOL_PATH, TMP_PATH, DATA_PATH, LOG_FILE_PATH
 from ..migrations.init_db import init_db
 from ..migrations.migrate_db import run_migrations
 

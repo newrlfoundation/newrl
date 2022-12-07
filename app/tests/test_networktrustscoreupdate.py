@@ -1,12 +1,12 @@
 
 from fastapi.testclient import TestClient
-from app.codes.blockchain import Blockchain, get_last_block_index
+from app.core.blockchain.blockchain import Blockchain, get_last_block_index
 
-from app.codes.consensus.consensus import generate_block_receipt
-from app.codes.fs.temp_manager import get_all_receipts_from_storage, store_receipt_to_temp
-from app.codes.p2p.sync_chain import accept_block
+from app.core.consensus.consensus import generate_block_receipt
+from app.core.fs.temp_manager import get_all_receipts_from_storage, store_receipt_to_temp
+from app.core.p2p.sync_chain import accept_block
 # from app.codes.receiptmanager import store_receipt_to_db
-from app.codes.updater import mine, run_updater
+from app.core.blockchain.updater import mine, run_updater
 
 from ..migrations.init import init_newrl
 

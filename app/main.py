@@ -1,7 +1,7 @@
 import logging
 
-from app.Configuration import Configuration
-from .codes.log_config import logger_init
+from app.config.Configuration import Configuration
+from .core.helpers.log_config import logger_init
 logger_init()
 import argparse
 import os
@@ -13,14 +13,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi import Limiter, _rate_limit_exceeded_handler
 
-from .codes.p2p.sync_chain import sync_chain_from_peers
-from .constants import NEWRL_PORT, IS_TEST
-from .codes.p2p.peers import init_bootstrap_nodes, update_my_address, update_software
-from .codes.clock.global_time import sync_timer_clock_with_global
-from .codes.updater import am_i_sentinel_node, global_internal_clock, start_miner_broadcast_clock, start_mining_clock
+from .core.p2p.sync_chain import sync_chain_from_peers
+from .config.constants import NEWRL_PORT, IS_TEST
+from .core.p2p.peers import init_bootstrap_nodes, update_my_address, update_software
+from .core.clock.global_time import sync_timer_clock_with_global
+from .core.blockchain.updater import am_i_sentinel_node, global_internal_clock, start_miner_broadcast_clock, start_mining_clock
 
 from .routers import blockchain, system, p2p, transport
-from .limiter import limiter
+from .core.helpers.limiter import limiter
 
 
 logger = logging.getLogger(__name__)
