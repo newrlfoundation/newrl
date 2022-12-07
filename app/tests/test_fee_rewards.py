@@ -1,13 +1,13 @@
 import time
 import sqlite3
 
-from app.codes import updater
-from app.codes.auth.auth import get_wallet
-from ..Configuration import Configuration
-from ..codes.db_updater import update_wallet_token_balance
+from app.core.blockchain import updater
+from app.core.auth.auth import get_wallet
+from app.config.Configuration import Configuration
+from ..core.db.db_updater import update_wallet_token_balance
 from fastapi.testclient import TestClient
 from ..ntypes import NUSD_TOKEN_CODE
-from ..constants import NEWRL_DB, TIME_BETWEEN_BLOCKS_SECONDS
+from app.config.constants import NEWRL_DB, TIME_BETWEEN_BLOCKS_SECONDS
 from ..migrations.init import init_newrl
 
 from ..main import app

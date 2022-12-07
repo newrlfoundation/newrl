@@ -1,14 +1,14 @@
 import random
 import sqlite3
 from fastapi.testclient import TestClient
-from app.codes.blockchain import get_last_block_index
+from app.core.blockchain.blockchain import get_last_block_index
 
-from app.codes.consensus.consensus import generate_block_receipt
-from app.codes.fs.temp_manager import check_receipt_exists_in_temp, remove_receipt_from_temp, store_receipt_to_temp
-from app.codes.p2p.sync_chain import accept_block
-from app.codes.receiptmanager import check_receipt_exists_in_db, get_receipt_in_temp_not_in_chain, get_receipts_included_in_block_from_db, update_receipts_in_state
-from app.codes.updater import run_updater
-from app.constants import NEWRL_DB
+from app.core.consensus.consensus import generate_block_receipt
+from app.core.fs.temp_manager import check_receipt_exists_in_temp, remove_receipt_from_temp, store_receipt_to_temp
+from app.core.p2p.sync_chain import accept_block
+from app.core.consensus.receiptmanager import check_receipt_exists_in_db, get_receipt_in_temp_not_in_chain, get_receipts_included_in_block_from_db, update_receipts_in_state
+from app.core.blockchain.updater import run_updater
+from app.config.constants import NEWRL_DB
 
 from ..migrations.init import init_newrl
 

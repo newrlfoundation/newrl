@@ -1,6 +1,6 @@
 import sqlite3
 
-from ...constants import NEWRL_DB
+from app.config.constants import NEWRL_DB
 
 
 def migrate():

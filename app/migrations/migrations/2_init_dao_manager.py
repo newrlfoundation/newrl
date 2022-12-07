@@ -1,7 +1,7 @@
 import sqlite3
 
-from app.Configuration import Configuration
-from app.constants import NEWRL_DB
+from app.config.Configuration import Configuration
+from app.config.constants import NEWRL_DB
 
 
 

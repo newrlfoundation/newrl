@@ -1,8 +1,8 @@
 import os
 import importlib
 
-from app.Configuration import Configuration
-from ..constants import DB_MIGRATIONS_PATH, NEWRL_DB
+from app.config.Configuration import Configuration
+from app.config.constants import DB_MIGRATIONS_PATH, NEWRL_DB
 
 db_path = NEWRL_DB
 

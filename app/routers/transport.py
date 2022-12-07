@@ -1,9 +1,9 @@
 from fastapi import APIRouter
 from starlette.requests import Request
-from app.codes.p2p.packager import decompress_block_payload
-from app.codes.p2p.transport import receive
-from app.codes.p2p.sync_chain import receive_block
-from app.limiter import limiter
+from app.core.p2p.packager import decompress_block_payload
+from app.core.p2p.transport import receive
+from app.core.p2p.sync_chain import receive_block
+from app.core.helpers.limiter import limiter
 
 router = APIRouter()
 
