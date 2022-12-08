@@ -12,7 +12,7 @@ class crowd_funding(DaoMainTemplate):
     def __init__(self, contractaddress=None):
         self.template = "crowd_funding"
         self.version = ""
-        self.dao_type = 1
+        self.dao_type = 2
         super().__init__(contractaddress)
     
     def invest(self, callparamsip, repo: FetchRepository):
@@ -76,6 +76,7 @@ class crowd_funding(DaoMainTemplate):
 
         recipient_address = callparams['recipient_address']
 
+        # super.issue_token() 
         value = callparams['value']
         if value[0]["token_code"] != pledge_token_code:
             raise Exception("Invalid tokens sent as part of value")
