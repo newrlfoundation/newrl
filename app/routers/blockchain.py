@@ -489,3 +489,14 @@ def get_block_tree_api(start_index: int, end_index: int):
 @router.get("/find-forking-block", tags=[query_tag], include_in_schema=False)
 def get_fork_block(url: str):
     return find_forking_block(url)
+
+
+@router.post("/get-transactions", tags=[query_tag])
+def get_transaction_api(transaction_codes: List[str]):
+    """Get a transaction from the chain"""
+    transactions = []
+    for transaction_code in transaction_codes:
+        transaction = get_transaction(transaction_code)
+        transactions.append(transaction)
+    
+    return transactions
