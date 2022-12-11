@@ -6,12 +6,12 @@ from app.codes.helpers.FetchRespository import FetchRepository
 from app.codes.helpers.TransactionCreator import TransactionCreator
 
 
-class crowd_funding(DaoMainTemplate):
+class crowd_funding_dao(DaoMainTemplate):
     codehash = ""  # this is the hash of the entire document excluding this line, it is same for all instances of this class
 
     def __init__(self, contractaddress=None):
-        self.template = "crowd_funding"
-        self.version = ""
+        self.template = "crowd_funding_dao"
+        self.version = "1.0.0"
         self.dao_type = 2
         super().__init__(contractaddress)
     
