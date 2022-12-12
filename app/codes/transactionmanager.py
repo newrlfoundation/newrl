@@ -264,7 +264,7 @@ class Transactionmanager:
                     else:
                         self.validity = 0  # other custodian cannot sign someone's linked wallet address
                 else:   # this is a new wallet and person
-                    if is_wallet_valid(walletaddress) and not is_smart_contract(walletaddress, cur=cur):
+                    if is_wallet_valid(walletaddress, cur=cur) and not is_smart_contract(walletaddress, cur=cur):
                         print("Wallet with address",
                               walletaddress, " already exists.")
                         self.validity = 0
@@ -278,7 +278,7 @@ class Transactionmanager:
             fovalidity = False
             custvalidity = False
             if firstowner:
-                if is_wallet_valid(firstowner):
+                if is_wallet_valid(firstowner, cur=cur):
                     # print("Valid first owner")
                     fovalidity = True
                 else:
@@ -290,7 +290,7 @@ class Transactionmanager:
                     fovalidity = False  # amount cannot be non-zero if no first owner
                 else:
                     fovalidity = True
-            if is_wallet_valid(custodian):
+            if is_wallet_valid(custodian, cur=cur):
                 # print("Valid custodian")
                 custvalidity = True
             if not fovalidity:
