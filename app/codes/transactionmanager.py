@@ -450,11 +450,11 @@ class Transactionmanager:
                             self.validity = 1
             if ttype == 4:
                 token1_balance_validity = False
-                token1_balance_validity = False
+                token2_balance_validity = False
 
                 #token1 balance check
                 if tokencode1 == fee_token_code:
-                    if token1amt + fee <= startingbalance1:
+                    if token1amt + math.ceil(fee/2) <= startingbalance1:
                         print(
                             "Valid economics of transaction. Changing economic validity value to 1")
                         token1_balance_validity = True
@@ -462,7 +462,7 @@ class Transactionmanager:
                     #check for fee and token1 balances seperately
                     fee_token_balance = get_wallet_token_balance_tm(
                         sender1, fee_token_code, cur=cur)
-                    if fee <= fee_token_balance:
+                    if math.ceil(fee/2) <= fee_token_balance:
                         if token1amt <= startingbalance1:
                             print(
                                 "Valid economics of transaction. Changing economic validity value to 1")
@@ -470,16 +470,16 @@ class Transactionmanager:
 
                 #token2 balance check
                 if tokencode2 == fee_token_code:
-                    if token2amt + fee <= startingbalance2:
+                    if token2amt + math.ceil(fee/2) <= startingbalance2:
                         print(
                             "Valid economics of transaction. Changing economic validity value to 1")
                         token2_balance_validity = True
                 else:
                     #check for fee and token2 balances seperately
                     fee_token_balance = get_wallet_token_balance_tm(
-                        sender1, fee_token_code, cur=cur)
-                    if fee <= fee_token_balance:
-                        if token1amt <= startingbalance1:
+                        sender2, fee_token_code, cur=cur)
+                    if math.ceil(fee/2) <= fee_token_balance:
+                        if token2amt <= startingbalance2:
                             print(
                                 "Valid economics of transaction. Changing economic validity value to 1")
                             token2_balance_validity = True
