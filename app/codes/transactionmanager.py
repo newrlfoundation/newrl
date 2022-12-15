@@ -226,34 +226,13 @@ class Transactionmanager:
         # check if the sender has enough balance to spend
         self.validity = 0
         
-        fee_tokens = [NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE]
-        fee_token_code = self.transaction['currency']
-        if not fee_token_code in fee_tokens:
-            logger.info("Provided fee currency is not allowed")
+        if not validate_transaction_fee(self.transaction, cur=cur):
             return False
-
-        if 'fee' in self.transaction:
-            fee = self.transaction['fee']
-        else:
-            fee = 0
-
-        if 'is_child_txn' in self.transaction:
-            is_child_sc = self.transaction['is_child_txn']
-        else:
-            is_child_sc = False
-
-        if not (self.transaction['type'] in [TRANSACTION_MINER_ADDITION, TRANSACTION_SC_UPDATE] or is_child_sc) :
-            currency = self.transaction['currency']
-            if currency == NEWRL_TOKEN_CODE:
-                    if fee < NEWRL_TOKEN_MULTIPLIER:
-                        return False
-            else:
-                return False            
 
         if self.transaction['type'] == TRANSACTION_WALLET_CREATION:
             custodian = self.transaction['specific_data']['custodian_wallet']
             walletaddress = self.transaction['specific_data']['wallet_address']
-            if not is_custodian_wallet(custodian):
+            if not is_custodian_wallet(custodian, cur=cur):
                 logger.warn('Invalid custodian wallet')
                 self.validity = 0
             else:
@@ -840,3 +819,50 @@ def is_smart_contract(address, cur=None):
 
 def __str__(self):
     return str(self.get_transaction_complete())
+
+def validate_transaction_fee(transaction, cur):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
+
+    fee_tokens = [NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE]
+    fee_token_code = transaction['currency']
+    if not fee_token_code in fee_tokens:
+        logger.info("Provided fee currency is not allowed")
+        return False
+
+    if 'fee' in transaction:
+        fee = transaction['fee']
+    else:
+        fee = 0
+
+    if 'is_child_txn' in transaction:
+        is_child_sc = transaction['is_child_txn']
+        if is_child_sc:
+            return True
+
+    if transaction['type'] in [TRANSACTION_MINER_ADDITION, TRANSACTION_SC_UPDATE]:
+        return True
+    
+
+    if fee_token_code == NEWRL_TOKEN_CODE:
+        if fee < NEWRL_TOKEN_MULTIPLIER:
+            logger.info(f"Not enough fee provided: {fee}")
+        
+        payees = get_valid_addresses(transaction, cur=cur)
+        for payee in payees:
+            balance = get_wallet_token_balance(cur, payee, fee_token_code)
+            fee_to_charge = math.ceil(fee / len(payees))
+            if balance < fee_to_charge:
+                logger.info(f"Payee does not have enough balance. Required:{fee_to_charge} Available:{balance}")
+                return False
+    else:
+        logger.info(f"Fee payment currency not allowed")
+        return False
+    
+    if cursor_opened:
+        con.close()
+    return True
