@@ -335,7 +335,7 @@ def global_internal_clock():
                 logger.info('No blocks with me. Syncing with the network.')
                 sync_chain_from_peers()
         except Exception as e:
-            logger.info(f'Error in global clock {e}')
+            logger.exception('Error in global clock')
 
     timer = threading.Timer(GLOBAL_INTERNAL_CLOCK_SECONDS, global_internal_clock)
     timer.start()
