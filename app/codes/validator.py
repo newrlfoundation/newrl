@@ -4,6 +4,7 @@ import base64
 import datetime
 import json
 import logging
+import sqlite3
 
 import ecdsa
 import os
@@ -15,7 +16,7 @@ from app.codes.p2p.transport import send
 from app.ntypes import BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID, TRANSACTION_MINER_ADDITION
 from .utils import get_last_block_hash
 from .transactionmanager import Transactionmanager
-from ..constants import IS_TEST, MAX_TRANSACTION_SIZE, MEMPOOL_PATH, MEMPOOL_TRANSACTION_LIFETIME_SECONDS
+from ..constants import IS_TEST, MAX_TRANSACTION_SIZE, MEMPOOL_PATH, MEMPOOL_TRANSACTION_LIFETIME_SECONDS, NEWRL_DB
 from .p2p.outgoing import propogate_transaction_to_peers
 from .chainscanner import get_transaction
 
@@ -57,7 +58,10 @@ def validate(transaction, propagate=False, validate_economics=True):
         msg = "Transaction has invalid signatures"
     else:
         if validate_economics:
-            economics_valid = transaction_manager.econvalidator()
+            con = sqlite3.connect(NEWRL_DB)
+            cur = con.cursor()
+            economics_valid = transaction_manager.econvalidator(cur=cur)
+            con.close()
             if not economics_valid:
                 msg = "Transaction economic validation failed"
                 valid = False

@@ -20,7 +20,7 @@ from app.Configuration import Configuration
 from app.nvalues import CUSTODIAN_DAO_ADDRESS
 
 
-from ..ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_MULTIPLIER, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
+from ..ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_MULTIPLIER, NUSD_TOKEN_CODE, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
 
 from ..constants import CUSTODIAN_OWNER_TYPE, MEMPOOL_PATH, NEWRL_DB
 from .utils import get_person_id_for_wallet_address, get_time_ms
@@ -226,28 +226,13 @@ class Transactionmanager:
         # check if the sender has enough balance to spend
         self.validity = 0
         
-        if 'fee' in self.transaction:
-            fee = self.transaction['fee']
-        else:
-            fee = 0
-
-        if 'is_child_txn' in self.transaction:
-            is_child_sc = self.transaction['is_child_txn']
-        else:
-            is_child_sc = False
-
-        if not (self.transaction['type'] in [TRANSACTION_MINER_ADDITION, TRANSACTION_SC_UPDATE] or is_child_sc) :
-            currency = self.transaction['currency']
-            if currency == NEWRL_TOKEN_CODE:
-                    if fee < NEWRL_TOKEN_MULTIPLIER:
-                        return False
-            else:
-                return False            
+        if not validate_transaction_fee(self.transaction, cur=cur):
+            return False
 
         if self.transaction['type'] == TRANSACTION_WALLET_CREATION:
             custodian = self.transaction['specific_data']['custodian_wallet']
             walletaddress = self.transaction['specific_data']['wallet_address']
-            if not is_custodian_wallet(custodian):
+            if not is_custodian_wallet(custodian, cur=cur):
                 logger.warn('Invalid custodian wallet')
                 self.validity = 0
             else:
@@ -264,7 +249,7 @@ class Transactionmanager:
                     else:
                         self.validity = 0  # other custodian cannot sign someone's linked wallet address
                 else:   # this is a new wallet and person
-                    if is_wallet_valid(walletaddress) and not is_smart_contract(walletaddress, cur=cur):
+                    if is_wallet_valid(walletaddress, cur=cur) and not is_smart_contract(walletaddress, cur=cur):
                         print("Wallet with address",
                               walletaddress, " already exists.")
                         self.validity = 0
@@ -278,7 +263,7 @@ class Transactionmanager:
             fovalidity = False
             custvalidity = False
             if firstowner:
-                if is_wallet_valid(firstowner):
+                if is_wallet_valid(firstowner, cur=cur):
                     # print("Valid first owner")
                     fovalidity = True
                 else:
@@ -290,7 +275,7 @@ class Transactionmanager:
                     fovalidity = False  # amount cannot be non-zero if no first owner
                 else:
                     fovalidity = True
-            if is_wallet_valid(custodian):
+            if is_wallet_valid(custodian, cur=cur):
                 # print("Valid custodian")
                 custvalidity = True
             if not fovalidity:
@@ -426,32 +411,61 @@ class Transactionmanager:
                     sender2, tokencode2, cur)
 
 
-            # if token1amt  > startingbalance1:  # sender1 is trying to send more than she owns
-            #     print("sender1 is trying to send,", token1amt, "she owns,",
-            #           startingbalance1, " invalidating transaction")
-            # #	self.transaction['valid']=0;
-            #     self.validity = 0
-
-            # if ttype == 4:
-            #     if token2amt + (fee/2)> startingbalance2:  # sender2 is trying to send more than she owns
-            #         print(
-            #             "sender2 is trying to send more than she owns, invalidating transaction")
-            # #		self.transaction['valid']=0;
-            #         self.validity = 0
-
-            if ttype == 4:
-                # double checking
-                if token1amt + math.ceil(fee/2) <= startingbalance1 and token2amt + math.ceil(fee/2) <= startingbalance2:
-                    print(
-                        "Valid economics of transaction. Changing economic validity value to 1")
-                #	self.transaction['valid']=1;
-                    self.validity = 1
             if ttype == 5:
-                if token1amt + fee <= startingbalance1:
-                    print(
-                        "Valid economics of transaction. Changing economic validity value to 1")
-                #	self.transaction['valid']=1;
+                #if token being transfered and fee token is same, calculate together
+                if tokencode1 == fee_token_code:
+                    if token1amt + fee <= startingbalance1:
+                        print(
+                            "Valid economics of transaction. Changing economic validity value to 1")
+                        self.validity = 1
+                else:
+                    #check for fee and token1 balances seperately
+                    fee_token_balance = get_wallet_token_balance_tm(
+                        sender1, fee_token_code, cur=cur)
+                    if fee <= fee_token_balance:
+                        if token1amt <= startingbalance1:
+                            print(
+                                "Valid economics of transaction. Changing economic validity value to 1")
+                            self.validity = 1
+            if ttype == 4:
+                token1_balance_validity = False
+                token2_balance_validity = False
+
+                #token1 balance check
+                if tokencode1 == fee_token_code:
+                    if token1amt + math.ceil(fee/2) <= startingbalance1:
+                        print(
+                            "Valid economics of transaction. Changing economic validity value to 1")
+                        token1_balance_validity = True
+                else:
+                    #check for fee and token1 balances seperately
+                    fee_token_balance = get_wallet_token_balance_tm(
+                        sender1, fee_token_code, cur=cur)
+                    if math.ceil(fee/2) <= fee_token_balance:
+                        if token1amt <= startingbalance1:
+                            print(
+                                "Valid economics of transaction. Changing economic validity value to 1")
+                            token1_balance_validity = True
+
+                #token2 balance check
+                if tokencode2 == fee_token_code:
+                    if token2amt + math.ceil(fee/2) <= startingbalance2:
+                        print(
+                            "Valid economics of transaction. Changing economic validity value to 1")
+                        token2_balance_validity = True
+                else:
+                    #check for fee and token2 balances seperately
+                    fee_token_balance = get_wallet_token_balance_tm(
+                        sender2, fee_token_code, cur=cur)
+                    if math.ceil(fee/2) <= fee_token_balance:
+                        if token2amt <= startingbalance2:
+                            print(
+                                "Valid economics of transaction. Changing economic validity value to 1")
+                            token2_balance_validity = True
+
+                if token1_balance_validity and token2_balance_validity:
                     self.validity = 1
+
 
         if self.transaction['type'] == TRANSACTION_TRUST_SCORE_CHANGE:  # score change transaction
             ttype = self.transaction['type']
@@ -805,3 +819,50 @@ def is_smart_contract(address, cur=None):
 
 def __str__(self):
     return str(self.get_transaction_complete())
+
+def validate_transaction_fee(transaction, cur):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
+
+    fee_tokens = [NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE]
+    fee_token_code = transaction['currency']
+    if not fee_token_code in fee_tokens:
+        logger.info("Provided fee currency is not allowed")
+        return False
+
+    if 'fee' in transaction:
+        fee = transaction['fee']
+    else:
+        fee = 0
+
+    if 'is_child_txn' in transaction:
+        is_child_sc = transaction['is_child_txn']
+        if is_child_sc:
+            return True
+
+    if transaction['type'] in [TRANSACTION_MINER_ADDITION, TRANSACTION_SC_UPDATE]:
+        return True
+    
+
+    if fee_token_code == NEWRL_TOKEN_CODE:
+        if fee < NEWRL_TOKEN_MULTIPLIER:
+            logger.info(f"Not enough fee provided: {fee}")
+        
+        payees = get_valid_addresses(transaction, cur=cur)
+        for payee in payees:
+            balance = get_wallet_token_balance(cur, payee, fee_token_code)
+            fee_to_charge = math.ceil(fee / len(payees))
+            if balance < fee_to_charge:
+                logger.info(f"Payee does not have enough balance. Required:{fee_to_charge} Available:{balance}")
+                return False
+    else:
+        logger.info(f"Fee payment currency not allowed")
+        return False
+    
+    if cursor_opened:
+        con.close()
+    return True
