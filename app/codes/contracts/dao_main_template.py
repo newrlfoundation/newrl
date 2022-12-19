@@ -34,10 +34,10 @@ class DaoMainTemplate(ContractMaster):
         # create_proposal(cur, callparams)
         # dao_pid = get_pid_from_wallet(cur, self.address)
         dao_pid = self.__get_pid_from_wallet_using_repo(repo, self.address)
-        qparam = {"tokencode": cspecs['token_name']}
+        # qparam = {"tokencode": cspecs['token_name']} commented as token is not present with mem dao
 
         if self.dao_type==2:
-            qparam = {"tokencode": cspecs['token_name'],"wallet_address":self.address}
+            qparam = {"tokencode": cspecs['token_code'],"wallet_address":self.address}
 
             total_votes_curr = repo.select_sum("balance").add_table_name("balances").where_clause("tokencode",qparam["tokencode"],1).execute_query_single_result(qparam)
         else:
