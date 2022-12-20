@@ -27,11 +27,11 @@ elif NEWRL_ENV == 'test':
     DATA_PATH = 'data_test/'
     print('Using test constants')
 elif NEWRL_ENV == 'devnet':
-    BOOTSTRAP_NODES = ['devnet.newrl.net']
-    NETWORK_TRUSTED_ARCHIVE_NODES = ['devnetarchive1.newrl.net']
-    NEWRL_PORT = 8420
-    DATA_PATH = 'data_devnet/'
-    print('Using devnet constants')
+    BOOTSTRAP_NODES = ['bootstrap1-lakeshore.newrl.net']
+    NETWORK_TRUSTED_ARCHIVE_NODES = ['archive1-lakeshore.newrl.net']
+    NEWRL_PORT = 8424
+    DATA_PATH = 'data_testnet/'
+    print('Using devnet (lakeshore) constants')
 else:  # default ot devnet
     BOOTSTRAP_NODES = ['devnet.newrl.net']
     NETWORK_TRUSTED_ARCHIVE_NODES = ['devnetarchive1.newrl.net']
