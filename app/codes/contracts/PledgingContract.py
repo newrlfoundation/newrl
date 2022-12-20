@@ -24,12 +24,12 @@ class PledgingContract(ContractMaster):
         if method in ["pledge_tokens", "unpledge_tokens", "default_tokens"]:
             lender = callparams["lender"]
             wallet = repo.select_Query("wallet_address").add_table_name("wallets").where_clause("wallet_address", lender, 1).execute_query_multiple_result({"wallet_address": lender})
-            if wallet is None:
+            if len(wallet) == 0:
                 raise Exception("Lender wallet does not exist")
         if method in ["unpledge_tokens", "default_tokens"]:
             borrower_wallet = callparams["borrower_wallet"]
             wallet = repo.select_Query("wallet_address").add_table_name("wallets").where_clause("wallet_address", borrower_wallet, 1).execute_query_multiple_result({"wallet_address": borrower_wallet})
-            if wallet is None:
+            if len(wallet) == 0:
                 raise Exception("Borrower wallet does not exist")
             
 

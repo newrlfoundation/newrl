@@ -26,7 +26,7 @@ class AuthorizeContract(ContractMaster):
             recipient_address = callparams['recipient_address']
             
             wallet = repo.select_Query("wallet_address").add_table_name("wallets").where_clause("wallet_address", recipient_address, 1).execute_query_multiple_result({"wallet_address": recipient_address})
-            if wallet is None:
+            if len(wallet) == 0:
                 raise Exception("Receipt wallet does not exist")
 
 
