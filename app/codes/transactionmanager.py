@@ -228,6 +228,12 @@ class Transactionmanager:
         
         if not validate_transaction_fee(self.transaction, cur=cur):
             return False
+        
+        fee_token_code = self.transaction['currency']
+        if 'fee' in self.transaction:
+            fee = self.transaction['fee']
+        else:
+            fee = 0
 
         if self.transaction['type'] == TRANSACTION_WALLET_CREATION:
             custodian = self.transaction['specific_data']['custodian_wallet']
