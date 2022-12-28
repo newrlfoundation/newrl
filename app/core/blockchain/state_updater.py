@@ -339,7 +339,7 @@ def execute_sc(cur, transaction_main):
     else:
         contract = get_contract_from_address(cur, transaction_data['address'])
     module = importlib.import_module(
-        ".codes.contracts." + contract['name'], package="app")
+        ".core.contracts." + contract['name'], package="app")
     sc_class = getattr(module, contract['name'])
     sc_instance = sc_class(transaction_data['address'])
     funct = getattr(sc_instance, funct)
