@@ -533,7 +533,7 @@ class Transactionmanager:
 
         try:
             module = importlib.import_module(
-                ".codes.contracts." + contract['name'], package="app")
+                ".core.contracts." + contract['name'], package="app")
             sc_class = getattr(module, contract['name'])
             sc_instance = sc_class(specific_data['address'])
             funct = getattr(sc_instance, funct_name)
