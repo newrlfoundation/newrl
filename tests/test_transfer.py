@@ -14,6 +14,12 @@ def test_transfer_unilateral():
     to_wallet = add_wallet()
     token = add_token(from_wallet['address'])
     transfer_unilateral(from_wallet, to_wallet, token, 100)
+
+def test_transfer_nwrl():
+    from_wallet = add_wallet()
+    to_wallet = add_wallet()
+    token = add_token(from_wallet['address'])
+    transfer_unilateral(from_wallet, to_wallet, token, 100)
     
 
 def transfer_unilateral(from_wallet, to_wallet, token, amount):
@@ -32,6 +38,7 @@ def transfer_unilateral(from_wallet, to_wallet, token, amount):
 
     assert response.status_code == 200
     unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
     
     response = requests.post(NODE_URL + '/sign-transaction', json={
     "wallet_data": from_wallet,
