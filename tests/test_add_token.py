@@ -2,6 +2,7 @@ import random
 import string
 import time
 import requests
+import json
 
 from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
 
@@ -26,8 +27,8 @@ def add_token(wallet_to_credit=WALLET['address'], amount=100):
     }
 
     response = requests.post(NODE_URL + '/add-token', json=add_wallet_request)
-
     unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
 
     response = requests.post(NODE_URL + '/sign-transaction', json={
         "wallet_data": WALLET,

@@ -33,6 +33,7 @@ def create_wallet():
     print(response.text)
     assert response.status_code == 200
     unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
 
@@ -89,6 +90,7 @@ def create_token(wallet, owner , token_name,token_code, amount):
 
     assert response.status_code == 200
     unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
 
@@ -206,6 +208,7 @@ def test_create_dex(request):
     print(response.text)
     assert response.status_code == 200
     unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
 
@@ -295,6 +298,7 @@ def test_provide_initial_liquidity(request):
 
     assert response.status_code == 200
     unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
 
@@ -401,6 +405,7 @@ def test_swap(request):
 
     assert response.status_code == 200
     unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
 
@@ -490,6 +495,7 @@ def test_withdraw(request):
 
     assert response.status_code == 200
     unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
 
