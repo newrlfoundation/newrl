@@ -1,12 +1,8 @@
 import json
 import requests
 
-NODE_URL = 'http://testnet.newrl.net:8090'
-WALLET = {
-  "public": "pEeY8E9fdKiZ3nJizmagKXjqDSK8Fz6SAqqwctsIhv8KctDfkJlGnSS2LUj/Igk+LwAl91Y5pUHZTTafCosZiw==",
-  "private": "x1Hp0sJzfTumKDqBwPh3+oj/VhNncx1+DLYmcTKHvV0=",
-  "address": "0x6e206561a7018d84b593c5e4788c71861d716880"
-}
+NODE_URL = 'http://archive1-testnet1.newrl.net:8421'
+WALLET = { "public": "51017a461ecccdc082a49c3f6e17bb9a6259990f6c4d1c1dbb4e067878ddfa71cb4afbe6134bad588395edde20b92c6dd5abab4108d7e6aeb42a06229205cabb", "private": "92a365e63db963a76c0aa1389aee1ae4d25a4539311595820b295d3a77e07618", "address": "0x1342e0ae1664734cbbe522030c7399d6003a07a8" }
 
 transfer_type = input('Enter transfer type[4 for bilateral, 5 for unilateral]: ')
 wallet1 = input('Enter first wallet address[leave blank for custodian]: ')
@@ -41,7 +37,7 @@ print(add_transfer_request)
 response = requests.post(NODE_URL + '/add-transfer', json=add_transfer_request)
 
 unsigned_transaction = response.json()
-
+unsigned_transaction['transaction']['fee'] = 1000000
 response = requests.post(NODE_URL + '/sign-transaction', json={
     "wallet_data": WALLET,
     "transaction_data": unsigned_transaction
