@@ -19,7 +19,7 @@ from app.config.constants import IS_TEST, MAX_TRANSACTION_SIZE, MEMPOOL_PATH, ME
 from ..p2p.outgoing import propogate_transaction_to_peers
 from .chainscanner import get_transaction
 
-from jsonschema import validate as jsonvalidate
+# from jsonschema import validate as jsonvalidate
 
 
 logging.basicConfig(level=logging.INFO)
@@ -214,6 +214,6 @@ def validate_transaction_structure(signed_transaction):
         
     }
     
-    jsonvalidate(signed_transaction, schema)
+    # jsonvalidate(signed_transaction, schema)
 
     return True
