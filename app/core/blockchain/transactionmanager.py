@@ -20,12 +20,13 @@ from app.config.Configuration import Configuration
 from app.config.nvalues import CUSTODIAN_DAO_ADDRESS
 
 
-from app.config.ntypes import NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE, NEWRL_TOKEN_MULTIPLIER, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
+from app.config.nvalues import NEWRL_TOKEN_CODE, NEWRL_TOKEN_MULTIPLIER, NUSD_TOKEN_CODE, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
 
 from app.config.constants import CUSTODIAN_OWNER_TYPE, MEMPOOL_PATH, NEWRL_DB
-from ..helpers.utils import get_person_id_for_wallet_address, get_time_ms
+from app.core.helpers.utils import get_person_id_for_wallet_address, get_time_ms
 
 logger = logging.getLogger(__name__)
+
 
 class Transactionmanager:
     def __init__(self):
@@ -114,7 +115,8 @@ class Transactionmanager:
     def sign_transaction(self, private_key_bytes, address):
         """this takes keybytes and not binary string and not base64 string"""
         msg = json.dumps(self.transaction).encode()
-        signing_key = ecdsa.SigningKey.from_string(private_key_bytes, curve=ecdsa.SECP256k1)
+        signing_key = ecdsa.SigningKey.from_string(
+            private_key_bytes, curve=ecdsa.SECP256k1)
         msgsignbytes = signing_key.sign(msg)
         msgsign = msgsignbytes.hex()
         self.signatures.append({'wallet_address': address, 'msgsign': msgsign})
@@ -124,7 +126,8 @@ class Transactionmanager:
         """The pubkey above is in bytes form"""
         # sign_trans_bytes = base64.decodebytes(sign_trans.encode('utf-8'))
         sign_trans_bytes = bytes.fromhex(sign_trans)
-        verifying_key = ecdsa.VerifyingKey.from_string(public_key_bytes, curve=ecdsa.SECP256k1)
+        verifying_key = ecdsa.VerifyingKey.from_string(
+            public_key_bytes, curve=ecdsa.SECP256k1)
         message = json.dumps(self.transaction).encode()
         return verifying_key.verify(sign_trans_bytes, message)
 
@@ -243,7 +246,7 @@ class Transactionmanager:
                 self.validity = 0
             else:
                 # print("Valid custodian address")
-#                if self.transaction['specific_data']['specific_data']['linked_wallet']:  #linked wallet
+                #                if self.transaction['specific_data']['specific_data']['linked_wallet']:  #linked wallet
                 if 'linked_wallet' in self.transaction['specific_data']['specific_data']:
                     linkedwalletstatus = self.transaction['specific_data']['specific_data']['linked_wallet']
                 else:
@@ -263,7 +266,8 @@ class Transactionmanager:
                         self.validity = 1
 
     #	self.validity=0
-        if self.transaction['type'] == TRANSACTION_TOKEN_CREATION:  # token addition transaction
+        # token addition transaction
+        if self.transaction['type'] == TRANSACTION_TOKEN_CREATION:
             firstowner = self.transaction['specific_data']['first_owner']
             custodian = self.transaction['specific_data']['custodian']
             fovalidity = False
@@ -293,8 +297,8 @@ class Transactionmanager:
                 self.validity = 0
             if fovalidity and custvalidity:
                 # print("Valid first owner and custodian")
-            #	self.transaction['valid']=1
-            #   now checking for instances where more tokens are added for an existing tokencode
+                #	self.transaction['valid']=1
+                #   now checking for instances where more tokens are added for an existing tokencode
                 self.validity = 1
                 if 'tokencode' in self.transaction['specific_data']:
                     tcode = self.transaction['specific_data']['tokencode']
@@ -332,7 +336,8 @@ class Transactionmanager:
                     if not is_token_valid(value['token_code'], cur=cur):
                         self.validity = 0
                         break
-                    sender_balance = get_wallet_token_balance_tm(self.transaction['specific_data']['signers'][0], value['token_code'], cur)
+                    sender_balance = get_wallet_token_balance_tm(
+                        self.transaction['specific_data']['signers'][0], value['token_code'], cur)
                     if value['amount'] > sender_balance:
                         self.validity = 0
                         break
@@ -354,7 +359,7 @@ class Transactionmanager:
             if (
                 self.transaction['specific_data']['asset1_number'] < 0
                 or self.transaction['specific_data']['asset2_number'] < 0
-                ):
+            ):
                 logger.warn('Token quantity cannot be negative')
                 self.validity = 0
                 return False
@@ -371,7 +376,8 @@ class Transactionmanager:
             # address validity applies to both senders in ttype 4 and 5; since sender2 is still receiving tokens
 
             sender1valid = is_wallet_valid(sender1, cur=cur)
-            sender2valid = is_wallet_valid(sender2, cur=cur) or (sender2 == Configuration.config("ZERO_ADDRESS") and ttype==5)
+            sender2valid = is_wallet_valid(sender2, cur=cur) or (
+                sender2 == Configuration.config("ZERO_ADDRESS") and ttype == 5)
             if not sender1valid:
                 print("Invalid sender1 wallet")
             #	self.transaction['valid']=0
@@ -411,11 +417,11 @@ class Transactionmanager:
             # resetting to check the balances being sufficient, in futures, make different functions
             self.validity = 0
 
-            startingbalance1 = get_wallet_token_balance_tm(sender1, tokencode1, cur)
+            startingbalance1 = get_wallet_token_balance_tm(
+                sender1, tokencode1, cur)
             if ttype == 4:
                 startingbalance2 = get_wallet_token_balance_tm(
                     sender2, tokencode2, cur)
-
 
             if ttype == 5:
                 #if token being transfered and fee token is same, calculate together
@@ -472,8 +478,8 @@ class Transactionmanager:
                 if token1_balance_validity and token2_balance_validity:
                     self.validity = 1
 
-
-        if self.transaction['type'] == TRANSACTION_TRUST_SCORE_CHANGE:  # score change transaction
+        # score change transaction
+        if self.transaction['type'] == TRANSACTION_TRUST_SCORE_CHANGE:
             ttype = self.transaction['type']
         #    personid1 = self.transaction['specific_data']['personid1']
         #    personid2 = self.transaction['specific_data']['personid2']
@@ -533,7 +539,7 @@ class Transactionmanager:
 
         try:
             module = importlib.import_module(
-                ".core.contracts." + contract['name'], package="app")
+                ".codes.contracts." + contract['name'], package="app")
             sc_class = getattr(module, contract['name'])
             sc_instance = sc_class(specific_data['address'])
             funct = getattr(sc_instance, funct_name)
@@ -562,8 +568,6 @@ class Transactionmanager:
         return True
 #	def legalvalidator(self):
         # check the token restrictions on ownertype and check the type of the recipient
-
-
 
 
 def get_public_key_from_address(address, cur=None):
@@ -628,7 +632,8 @@ def is_custodian_wallet(address, cur=None):
         Check if address is in custodian DAO return True
         Return false otherwise
     """
-    custodian_wallet_list = json.loads(Configuration.config('CUSTODIAN_WALLET_LIST'))
+    custodian_wallet_list = json.loads(
+        Configuration.config('CUSTODIAN_WALLET_LIST'))
     if address in custodian_wallet_list:
         return True
 
@@ -823,6 +828,7 @@ def is_smart_contract(address, cur=None):
     else:
         return True
 
+
 def __str__(self):
     return str(self.get_transaction_complete())
 
@@ -852,12 +858,10 @@ def validate_transaction_fee(transaction, cur):
 
     if transaction['type'] in [TRANSACTION_MINER_ADDITION, TRANSACTION_SC_UPDATE]:
         return True
-    
 
     if fee_token_code == NEWRL_TOKEN_CODE:
         if fee < NEWRL_TOKEN_MULTIPLIER:
             logger.info(f"Not enough fee provided: {fee}")
-        
         payees = get_valid_addresses(transaction, cur=cur)
         for payee in payees:
             balance = get_wallet_token_balance(cur, payee, fee_token_code)
