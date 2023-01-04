@@ -1,7 +1,7 @@
 """Global constants in this file"""
 import os
 
-from .ntypes import NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE
+from app.config.ntypes import NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE
 
 SOFTWARE_VERSION = "1.4.2"
 
@@ -68,7 +68,8 @@ NO_BLOCK_TIMEOUT = 10  # No block received timeout in seconds
 NO_RECEIPT_COMMITTEE_TIMEOUT = 10  # Timeout in seconds
 NETWORK_BLOCK_TIMEOUT = 25
 MAX_BROADCAST_NODES = 13
-MEMPOOL_TRANSACTION_LIFETIME_SECONDS = 3600  # Mempool transactions will be removed after 1 hour
+# Mempool transactions will be removed after 1 hour
+MEMPOOL_TRANSACTION_LIFETIME_SECONDS = 3600
 MAX_TRANSACTION_BATCH_SIZE = 50
 MAX_TRANSACTION_SIZE = 4096
 MIN_SYNC_INTERVAL_MS = 60000
