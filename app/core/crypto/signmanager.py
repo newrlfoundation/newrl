@@ -12,6 +12,9 @@ def check_signing_address(transaction, address):
     if address in allowed_signing_addresses:
         print(f"{address} is authorised to sign this transaction.")
         return True
+    if 'fee_payer' in transaction and transaction['fee_payer'] == address:
+        print(f"{address} is the fee payer for this transaction.")
+        return True
     print(f"{address} is NOT authorised to sign this transaction.")
     return False
 
