@@ -34,10 +34,10 @@ class DaoMainTemplate(ContractMaster):
         # create_proposal(cur, callparams)
         # dao_pid = get_pid_from_wallet(cur, self.address)
         dao_pid = self.__get_pid_from_wallet_using_repo(repo, self.address)
-        qparam = {"tokencode": cspecs['token_name']}
+        # qparam = {"tokencode": cspecs['token_name']} commented as token is not present with mem dao
 
         if self.dao_type==2:
-            qparam = {"tokencode": cspecs['token_name'],"wallet_address":self.address}
+            qparam = {"tokencode": cspecs['token_code'],"wallet_address":self.address}
 
             total_votes_curr = repo.select_sum("balance").add_table_name("balances").where_clause("tokencode",qparam["tokencode"],1).execute_query_single_result(qparam)
         else:
@@ -155,7 +155,8 @@ class DaoMainTemplate(ContractMaster):
                 'current_yes_votes': yes_votes,
                 'current_no_votes': no_votes,
                 'total_votes': total_votes,
-                'cspecs' : cspecs
+                'cspecs' : cspecs,
+                'sender': callparams['function_caller'][0]['wallet_address']
             }
 
             funct = getattr(Utils, voting_scheme_selected)
@@ -311,16 +312,30 @@ class DaoMainTemplate(ContractMaster):
         # dao_data=cur.execute(f'''Select dao_name as dao_name from dao_main where dao_sc_address=?''',[self.address])
         # dao_data=dao_data.fetchone()
         cspecs = input_to_dict(self.contractparams['contractspecs'])
-        token_code = cspecs['token_name']  # TODO fetch dao name
+        token_name = cspecs['token_name'] 
+        token_code = cspecs['token_code']
+        exchange_token_code = cspecs['exchange_token_code']
+        exchange_rate = cspecs['exchange_rate']
+        value = callparams['value']
+
+        required_value = {
+            "token_code": exchange_token_code,
+            "amount": value[0]["amount"]
+        }
+
+        if not required_value in value:
+            raise Exception("Value sent is invalid. Provide correct tokens")
+
+        amount_to_issue = math.floor(value[0]['amount'] / exchange_rate)
         tokendata = {
-            "tokenname": token_code,
+            "tokenname": token_name,
             "tokencode": token_code,
             "tokentype": '1',
             "tokenattributes": {},
             "first_owner": recipient_address,
             "custodian": self.address,
             "legaldochash": '',
-            "amount_created": amount,
+            "amount_created": amount_to_issue,
             "value_created": '',
             "disallowed": {},
             "sc_flag": False
@@ -370,18 +385,17 @@ class DaoMainTemplate(ContractMaster):
         callparams = input_to_dict(callparamsip)
         dao_id = self.address
         person_id = callparams['person_id']
-        amount = callparams['amount']
-        # proposal_id=callparams['proposal_id']
-        proposal_id = None
-        # Transfering Tokens from User To DAO
-        # dao_data=cur.execute(f'''Select dao_name as dao_name from dao_main where dao_sc_address=?''',[self.address])
-        # dao_data=dao_data.fetchone()
-        token_code = cspecs['token_name']  # TODO fetch dao name
-        # ToDo: Value change
-        # transfer_tokens_and_update_balances(
-        #     cur, callparams['wallet_address'], self.address, token_code, amount)
-        # lock_data = cur.execute(f'''Select dao_id as dao_id ,person_id as person_id, amount_locked as amount_locked from DAO_TOKEN_LOCK where person_id=? and dao_id=?''',
-        #                         [person_id, dao_id]).fetchone()
+        value = callparams['value']
+        token_code = cspecs['token_code']        
+        amount = value[0]['amount']
+        required_value = {
+            "token_code": token_code,
+            "amount": amount
+        }
+
+        if not required_value in value:
+            raise Exception("Value sent is invalid. Can only lock dao specific tokens")
+
         lock_data = repo.select_Query("dao_id,person_id,amount_locked").add_table_name("DAO_TOKEN_LOCK").where_clause(
             "person_id", person_id, 1).and_clause("dao_id", dao_id, 1).execute_query_single_result(
             {"person_id": person_id, "dao_id": dao_id})
