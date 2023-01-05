@@ -10,20 +10,21 @@ from test_add_token import add_token
 
 
 def test_transfer_unilateral():
-    from_wallet = add_wallet()
+    from_wallet = WALLET
     to_wallet = add_wallet()
+    transfer_unilateral(WALLET, to_wallet, 'NWRL', 5000000)
     token = add_token(from_wallet['address'])
-    transfer_unilateral(from_wallet, to_wallet, token, 100)
+    transfer_unilateral(from_wallet, to_wallet, token['tokencode'], 100)
 
 def test_transfer_nwrl():
-    from_wallet = add_wallet()
+    from_wallet = WALLET
     to_wallet = add_wallet()
-    token = add_token(from_wallet['address'])
-    transfer_unilateral(from_wallet, to_wallet, token, 100)
+    # token = add_token(from_wallet['address'])
+    transfer_unilateral(from_wallet, to_wallet, 'NWRL', 100)
     
 
-def transfer_unilateral(from_wallet, to_wallet, token, amount):
-    token_code = token['tokencode']
+def transfer_unilateral(from_wallet, to_wallet, token_code, amount):
+    # token_code = token['tokencode']
     req ={
         "transfer_type": 5,
         "asset1_code": token_code,
@@ -62,10 +63,6 @@ def transfer_unilateral(from_wallet, to_wallet, token, amount):
     print('Test passed.')
 
 def test_transfer_bilateral():
-    
+    # TODO
+    assert False
     print('Test passed.')
-
-
-if __name__ == '__main__':
-    test_transfer_unilateral()
-    test_transfer_bilateral()

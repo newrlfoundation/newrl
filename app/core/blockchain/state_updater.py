@@ -426,7 +426,10 @@ def pay_fee_for_transaction(cur, transaction, creator):
     else:
         return False
 
-    payers = get_valid_addresses(transaction, cur=cur)
+    if 'fee_payer' in transaction:
+        payers = [transaction['fee_payer']]
+    else:
+        payers = get_valid_addresses(transaction, cur=cur)
 
     for payee in payers:
         balance = get_wallet_token_balance(cur, payee, currency)
