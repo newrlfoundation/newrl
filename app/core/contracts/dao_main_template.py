@@ -4,13 +4,13 @@ import json
 from . import Utils
 from .contract_master import ContractMaster
 from .dao_main_template_validator import create_proposal, vote_on_proposal
-from ..db.db_updater import *
+from ..db_updater import *
 from abc import ABCMeta, abstractmethod
 
 import importlib
 
 from ..helpers.FetchRespository import FetchRepository
-from app.core.blockchain.TransactionCreator import TransactionCreator
+from ..helpers.TransactionCreator import TransactionCreator
 
 
 class DaoMainTemplate(ContractMaster):
@@ -20,7 +20,8 @@ class DaoMainTemplate(ContractMaster):
     # this class
 
     def __init__(self, contractaddress):
-        ContractMaster.__init__(self, self.template, self.version, contractaddress)
+        ContractMaster.__init__(self, self.template,
+                                self.version, contractaddress)
 
     @abstractmethod
     def update_and_deploy(self):
@@ -34,21 +35,24 @@ class DaoMainTemplate(ContractMaster):
         # create_proposal(cur, callparams)
         # dao_pid = get_pid_from_wallet(cur, self.address)
         dao_pid = self.__get_pid_from_wallet_using_repo(repo, self.address)
-        qparam = {"tokencode": cspecs['token_name']}
+        # qparam = {"tokencode": cspecs['token_name']} commented as token is not present with mem dao
 
-        if self.dao_type==2:
-            qparam = {"tokencode": cspecs['token_name'],"wallet_address":self.address}
+        if self.dao_type == 2:
+            qparam = {"tokencode": cspecs['token_code'],
+                      "wallet_address": self.address}
 
-            total_votes_curr = repo.select_sum("balance").add_table_name("balances").where_clause("tokencode",qparam["tokencode"],1).execute_query_single_result(qparam)
+            total_votes_curr = repo.select_sum("balance").add_table_name("balances").where_clause(
+                "tokencode", qparam["tokencode"], 1).execute_query_single_result(qparam)
         else:
             qparam = {"dao_person_id": dao_pid}
-            total_votes_curr=repo.select_count().add_table_name("dao_membership").where_clause("dao_person_id",qparam["dao_person_id"],1).execute_query_single_result(qparam)
+            total_votes_curr = repo.select_count().add_table_name("dao_membership").where_clause(
+                "dao_person_id", qparam["dao_person_id"], 1).execute_query_single_result(qparam)
         if total_votes_curr is None:
-            total_votes_curr=0
+            total_votes_curr = 0
             logger.info("Zero Member for DAO "+self.address)
             return []
         else:
-            total_votes_curr=total_votes_curr[0]
+            total_votes_curr = total_votes_curr[0]
 
         # TODO max votes for now is hard coded
         sc_state_proposal1_data = {
@@ -56,7 +60,7 @@ class DaoMainTemplate(ContractMaster):
             "table_name": "PROPOSAL_DATA",
             "sc_address": self.address,
             "data": {
-                "address":self.address,
+                "address": self.address,
                 "dao_person_id": dao_pid,
                 "function_called": callparams['function_called'],
                 "params": json.dumps(callparams['params']),
@@ -72,10 +76,9 @@ class DaoMainTemplate(ContractMaster):
         #     dao_pid, callparams['function_called'], json.dumps(callparams['params']), callparams['voting_start_ts'],
         #     callparams['voting_end_ts'], 10, 0))
         transaction_creator = TransactionCreator()
-        txtype1 = transaction_creator.transaction_type_8(sc_state_proposal1_data)
+        txtype1 = transaction_creator.transaction_type_8(
+            sc_state_proposal1_data)
         return [txtype1]
-
-
 
     def vote_on_proposal(self, callparamsip, repo: FetchRepository):
         trxn = []
@@ -86,7 +89,8 @@ class DaoMainTemplate(ContractMaster):
         # vote_on_proposal(cur, callparams)
         if self.dao_type == 2 or self.valid_member(repo, callparams):
 
-            member_pid = self.__get_pid_from_wallet_using_repo(repo, callparams['function_caller'][0]['wallet_address'])
+            member_pid = self.__get_pid_from_wallet_using_repo(
+                repo, callparams['function_caller'][0]['wallet_address'])
             proposal_id = callparams['proposal_id']
             qparam = {"proposal_id": proposal_id}
             voter_db_data = repo.select_Query(
@@ -97,7 +101,8 @@ class DaoMainTemplate(ContractMaster):
 
             # Initializing  the voter_db_data variable
             if (voter_db_data[0] is None):
-                voter_db_data = ['{}', 0, 0, 0, voter_db_data[4], voter_db_data[5]]
+                voter_db_data = ['{}', 0, 0, 0,
+                                 voter_db_data[4], voter_db_data[5]]
             voter_data = input_to_dict(json.loads(voter_db_data[0]))
             yes_votes = voter_db_data[1]
             no_votes = voter_db_data[2]
@@ -109,7 +114,8 @@ class DaoMainTemplate(ContractMaster):
                 paramtopass = {}
                 paramtopass['dao_id'] = self.address
                 paramtopass['person_id'] = member_pid
-                weight = self.get_token_lock_amount(json.dumps(callparamsip), repo)
+                weight = self.get_token_lock_amount(
+                    json.dumps(callparamsip), repo)
             if (self.duplicate_check(voter_db_data[0], member_pid)):
 
                 if (callparams['vote'] == -1):
@@ -119,7 +125,8 @@ class DaoMainTemplate(ContractMaster):
                 else:
                     abstain_votes = abstain_votes + weight
 
-                voter_data[member_pid] = {"vote": callparams['vote'], "weight": weight}
+                voter_data[member_pid] = {
+                    "vote": callparams['vote'], "weight": weight}
                 sc_state_proposal1_data = {
                     "operation": "update",
                     "table_name": "proposal_data",
@@ -134,7 +141,8 @@ class DaoMainTemplate(ContractMaster):
                     "unique_column": "proposal_id",
                     "unique_value": proposal_id
                 }
-                trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
+                trxn.append(transaction_creator.transaction_type_8(
+                    sc_state_proposal1_data))
                 # cur.execute(f'''update proposal_data set voter_data=?,yes_votes=?,no_votes=?,abstain_votes=?  where proposal_id = ?''',(json.dumps(voter_data),yes_votes,no_votes,abstain_votes,proposal_id))
             else:
                 return []
@@ -155,7 +163,8 @@ class DaoMainTemplate(ContractMaster):
                 'current_yes_votes': yes_votes,
                 'current_no_votes': no_votes,
                 'total_votes': total_votes,
-                'cspecs' : cspecs
+                'cspecs': cspecs,
+                'sender': callparams['function_caller'][0]['wallet_address']
             }
 
             funct = getattr(Utils, voting_scheme_selected)
@@ -177,8 +186,9 @@ class DaoMainTemplate(ContractMaster):
                     "unique_value": proposal_id
                 }
                 # cur.execute('''update proposal_data set status = ? where proposal_id= ?''',("accepted",callparamsip['proposal_id']))
-                trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
-                trxn.extend(self.execute(callparamsip,repo))
+                trxn.append(transaction_creator.transaction_type_8(
+                    sc_state_proposal1_data))
+                trxn.extend(self.execute(callparamsip, repo))
             if (voting_result == -1):
                 sc_state_proposal1_data = {
                     "operation": "update",
@@ -190,7 +200,8 @@ class DaoMainTemplate(ContractMaster):
                     "unique_column": "proposal_id",
                     "unique_value": proposal_id
                 }
-                trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
+                trxn.append(transaction_creator.transaction_type_8(
+                    sc_state_proposal1_data))
                 return trxn
                 # cur.execute('''update proposal_data set status = ? where proposal_id= ?''',("rejected",callparamsip['proposal_id']))
 
@@ -203,21 +214,22 @@ class DaoMainTemplate(ContractMaster):
         # proposal = cur.execute('''select function_called,params from proposal_data where  proposal_id=?''',
         #                        ("".join(str(callparams['proposal_id'])),))
         proposal = repo.select_Query("function_called,params").add_table_name("proposal_data").where_clause(
-            "proposal_id", callparams['proposal_id'],1).execute_query_single_result(
+            "proposal_id", callparams['proposal_id'], 1).execute_query_single_result(
             {"proposal_id": callparams['proposal_id']})
         # proposal=proposal.fetchone()
         if (proposal is None):
             return False
-        if self.check_status(callparamsip,repo):
+        if self.check_status(callparamsip, repo):
             funct = getattr(self, proposal[0])
-            return funct(proposal[1],repo)
+            return funct(proposal[1], repo)
         else:
             return []
 
     def add_member(self, callparamsip, repo: FetchRepository):
         callparams = input_to_dict(callparamsip)
         dao_pid = self.__get_pid_from_wallet_using_repo(repo, self.address)
-        qparam = {"dao_person_id": dao_pid, "member_person_id": callparams['member_person_id']}
+        qparam = {"dao_person_id": dao_pid,
+                  "member_person_id": callparams['member_person_id']}
         is_dao_exist = repo.select_count().add_table_name("dao_membership").where_clause("dao_person_id",
                                                                                          qparam['dao_person_id'],
                                                                                          4).and_clause(
@@ -235,7 +247,7 @@ class DaoMainTemplate(ContractMaster):
                     "address": self.address,
                     "dao_person_id": dao_pid,
                     "member_person_id": callparams['member_person_id'],
-                    "role":callparams.get("role",0)
+                    "role": callparams.get("role", 0)
                 }
             }
             transaction_creator = TransactionCreator()
@@ -267,7 +279,8 @@ class DaoMainTemplate(ContractMaster):
 
     def valid_member(self, repo: FetchRepository, callparamsip):
         callparams = input_to_dict(callparamsip)
-        member_pid = self.__get_pid_from_wallet_using_repo(repo, callparams['function_caller'][0]['wallet_address'])
+        member_pid = self.__get_pid_from_wallet_using_repo(
+            repo, callparams['function_caller'][0]['wallet_address'])
         # member_pid="".join(get_pid_from_wallet(cur,callparams['function_caller'][0]['wallet_address']))
         # proposal = cur.execute('''Select count(*) from dao_membership where member_person_id like ?''', [member_pid])
         qparam = {"member_person_id": member_pid}
@@ -311,16 +324,30 @@ class DaoMainTemplate(ContractMaster):
         # dao_data=cur.execute(f'''Select dao_name as dao_name from dao_main where dao_sc_address=?''',[self.address])
         # dao_data=dao_data.fetchone()
         cspecs = input_to_dict(self.contractparams['contractspecs'])
-        token_code = cspecs['token_name']  # TODO fetch dao name
+        token_name = cspecs['token_name']
+        token_code = cspecs['token_code']
+        exchange_token_code = cspecs['exchange_token_code']
+        exchange_rate = cspecs['exchange_rate']
+        value = callparams['value']
+
+        required_value = {
+            "token_code": exchange_token_code,
+            "amount": value[0]["amount"]
+        }
+
+        if not required_value in value:
+            raise Exception("Value sent is invalid. Provide correct tokens")
+
+        amount_to_issue = math.floor(value[0]['amount'] / exchange_rate)
         tokendata = {
-            "tokenname": token_code,
+            "tokenname": token_name,
             "tokencode": token_code,
             "tokentype": '1',
             "tokenattributes": {},
             "first_owner": recipient_address,
             "custodian": self.address,
             "legaldochash": '',
-            "amount_created": amount,
+            "amount_created": amount_to_issue,
             "value_created": '',
             "disallowed": {},
             "sc_flag": False
@@ -345,7 +372,8 @@ class DaoMainTemplate(ContractMaster):
 
         callparams = input_to_dict(callparamsip)
         dao_id = callparams['address']
-        person_id = self.__get_pid_from_wallet_using_repo(repo, callparams['function_caller'][0]['wallet_address'])
+        person_id = self.__get_pid_from_wallet_using_repo(
+            repo, callparams['function_caller'][0]['wallet_address'])
         lock_data = repo.select_Query("amount_locked").add_table_name("DAO_TOKEN_LOCK").where_clause("person_id",
                                                                                                      person_id,
                                                                                                      1).and_clause(
@@ -370,18 +398,18 @@ class DaoMainTemplate(ContractMaster):
         callparams = input_to_dict(callparamsip)
         dao_id = self.address
         person_id = callparams['person_id']
-        amount = callparams['amount']
-        # proposal_id=callparams['proposal_id']
-        proposal_id = None
-        # Transfering Tokens from User To DAO
-        # dao_data=cur.execute(f'''Select dao_name as dao_name from dao_main where dao_sc_address=?''',[self.address])
-        # dao_data=dao_data.fetchone()
-        token_code = cspecs['token_name']  # TODO fetch dao name
-        # ToDo: Value change
-        # transfer_tokens_and_update_balances(
-        #     cur, callparams['wallet_address'], self.address, token_code, amount)
-        # lock_data = cur.execute(f'''Select dao_id as dao_id ,person_id as person_id, amount_locked as amount_locked from DAO_TOKEN_LOCK where person_id=? and dao_id=?''',
-        #                         [person_id, dao_id]).fetchone()
+        value = callparams['value']
+        token_code = cspecs['token_code']
+        amount = value[0]['amount']
+        required_value = {
+            "token_code": token_code,
+            "amount": amount
+        }
+
+        if not required_value in value:
+            raise Exception(
+                "Value sent is invalid. Can only lock dao specific tokens")
+
         lock_data = repo.select_Query("dao_id,person_id,amount_locked").add_table_name("DAO_TOKEN_LOCK").where_clause(
             "person_id", person_id, 1).and_clause("dao_id", dao_id, 1).execute_query_single_result(
             {"person_id": person_id, "dao_id": dao_id})
@@ -391,14 +419,15 @@ class DaoMainTemplate(ContractMaster):
                 "table_name": "DAO_TOKEN_LOCK",
                 "sc_address": self.address,
                 "data": {
-                    "address":self.address,
+                    "address": self.address,
                     "dao_id": dao_id,
                     "person_id": person_id,
                     "amount_locked": amount,
                     "wallet_address": callparams['function_caller'][0]['wallet_address']
                 }
             }
-            trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
+            trxn.append(transaction_creator.transaction_type_8(
+                sc_state_proposal1_data))
             # cur.execute(
             #     f'''Insert into DAO_TOKEN_LOCK (dao_id,person_id,amount_locked,wallet_address) values (?,?,?,?)''',
             #     (dao_id,person_id,amount,callparams['wallet_address']))
@@ -414,16 +443,18 @@ class DaoMainTemplate(ContractMaster):
                 "unique_column": "person_id",
                 "unique_value": person_id
             }
-            trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
+            trxn.append(transaction_creator.transaction_type_8(
+                sc_state_proposal1_data))
         return trxn
 
     def initialize_membership(self, callparamsip, repo: FetchRepository):
-        trxn=[]
-        dao_params=repo.select_Query('founder_personid').add_table_name('dao_main').where_clause('dao_sc_address',self.address,1).execute_query_single_result({'dao_sc_address':self.address})
+        trxn = []
+        dao_params = repo.select_Query('founder_personid').add_table_name('dao_main').where_clause(
+            'dao_sc_address', self.address, 1).execute_query_single_result({'dao_sc_address': self.address})
         if dao_params is None:
             return []
         for i in json.loads(dao_params[0]):
-            pid = self.__get_pid_from_wallet_using_repo(repo,i)
+            pid = self.__get_pid_from_wallet_using_repo(repo, i)
             callparams = input_to_dict(callparamsip)
             dao_pid = self.__get_pid_from_wallet_using_repo(repo, self.address)
             qparam = {"dao_person_id": dao_pid, "member_person_id": pid}
@@ -441,13 +472,14 @@ class DaoMainTemplate(ContractMaster):
                     "table_name": "dao_membership",
                     "sc_address": self.address,
                     "data": {
-                        "address":self.address,
+                        "address": self.address,
                         "dao_person_id": dao_pid,
                         "member_person_id": pid,
                     }
                 }
                 transaction_creator = TransactionCreator()
-                trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
+                trxn.append(transaction_creator.transaction_type_8(
+                    sc_state_proposal1_data))
             else:
                 return trxn
         return trxn
