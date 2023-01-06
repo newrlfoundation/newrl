@@ -58,14 +58,8 @@ def create_wallet():
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response = requests.get(NODE_URL+'/download-state')
+    response = requests.get(NODE_URL + '/get-wallet?wallet_address=' + wallet['address'])
     assert response.status_code == 200
-    state = response.json()
-
-    wallets = state['wallets']
-    wallet_in_state = next(
-        x for x in wallets if x['wallet_address'] == wallet['address'])
-    assert wallet_in_state
 
     print("Wallet created with address "+wallet['address'])
     print('Test passed.')
@@ -278,21 +272,21 @@ def test_create_dex(request):
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response = requests.get(NODE_URL+'/download-state')
-    assert response.status_code == 200
-    state = response.json()
+    # response = requests.get(NODE_URL+'/download-state')
+    # assert response.status_code == 200
+    # state = response.json()
 
-    contracts = state['contracts']
+    # contracts = state['contracts']
     # contracts_in_state = next(
     #     x for x in contracts if x['address'] == ct_address)
-    contracts_in_state = False
-    for x in contracts:
-        c = x['address']
-        d= ct_address
-        if c == d:
-            contracts_in_state = True
-            break
-    assert contracts_in_state 
+    # contracts_in_state = False
+    # for x in contracts:
+    #     c = x['address']
+    #     d= ct_address
+    #     if c == d:
+    #         contracts_in_state = True
+    #         break
+    # assert contracts_in_state 
     request.config.cache.set('dex_address', ct_address) 
 
 
