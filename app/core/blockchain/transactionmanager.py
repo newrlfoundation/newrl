@@ -229,7 +229,7 @@ class Transactionmanager:
         # check if the sender has enough balance to spend
         self.validity = 0
 
-        if not validate_transaction_fee(self.transaction, cur=cur):
+        if not validate_transaction_fee(self.transaction, self.signatures, cur=cur):
             return False
 
         fee_token_code = self.transaction['currency']
@@ -833,7 +833,7 @@ def __str__(self):
     return str(self.get_transaction_complete())
 
 
-def validate_transaction_fee(transaction, cur):
+def validate_transaction_fee(transaction, signatures, cur):
     if cur is None:
         con = sqlite3.connect(NEWRL_DB)
         cur = con.cursor()
@@ -864,13 +864,24 @@ def validate_transaction_fee(transaction, cur):
         if fee < NEWRL_TOKEN_MULTIPLIER:
             logger.info(f"Not enough fee provided: {fee}")
 
-        payees = get_valid_addresses(transaction, cur=cur)
+        if 'fee_payer' in transaction:
+            found_fee_payer = False
+            for sign in signatures:
+                if sign['wallet_address'] == transaction['fee_payer']:
+                    found_fee_payer = True
+                    break
+            if not found_fee_payer:
+                logger.info(f"Transaction includes fee_payer but not signed by fee_payer")
+                return False
+            payees = [transaction['fee_payer']]
+        else:
+            payees = get_valid_addresses(transaction, cur=cur)
         for payee in payees:
             balance = get_wallet_token_balance(cur, payee, fee_token_code)
             fee_to_charge = math.ceil(fee / len(payees))
             if balance < fee_to_charge:
                 logger.info(
-                    f"Payee does not have enough balance. Required:{fee_to_charge} Available:{balance}")
+                    f"Payee {payee} does not have enough balance. Required:{fee_to_charge} Available:{balance}")
                 return False
     else:
         logger.info(f"Fee payment currency not allowed")
