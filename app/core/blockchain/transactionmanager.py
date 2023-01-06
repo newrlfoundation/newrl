@@ -230,6 +230,7 @@ class Transactionmanager:
         self.validity = 0
 
         if not validate_transaction_fee(self.transaction, self.signatures, cur=cur):
+            logger.error("Fee validation failed")
             return False
         
         fee_token_code = self.transaction['currency']

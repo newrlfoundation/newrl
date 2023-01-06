@@ -37,8 +37,9 @@ class DaoMainTemplate(ContractMaster):
         dao_pid = self.__get_pid_from_wallet_using_repo(repo, self.address)
         # qparam = {"tokencode": cspecs['token_name']} commented as token is not present with mem dao
 
+        token_code = cspecs.get('token_code', cspecs["token_name"])
         if self.dao_type == 2:
-            qparam = {"tokencode": cspecs['token_code'],
+            qparam = {"tokencode": token_code,
                       "wallet_address": self.address}
 
             total_votes_curr = repo.select_sum("balance").add_table_name("balances").where_clause(
@@ -325,7 +326,7 @@ class DaoMainTemplate(ContractMaster):
         # dao_data=dao_data.fetchone()
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         token_name = cspecs['token_name']
-        token_code = cspecs['token_code']
+        token_code = cspecs.get('token_code', cspecs["token_name"])
         exchange_token_code = cspecs['exchange_token_code']
         exchange_rate = cspecs['exchange_rate']
         value = callparams['value']
@@ -399,7 +400,7 @@ class DaoMainTemplate(ContractMaster):
         dao_id = self.address
         person_id = callparams['person_id']
         value = callparams['value']
-        token_code = cspecs['token_code']
+        token_code = cspecs.get('token_code', cspecs["token_name"])
         amount = value[0]['amount']
         required_value = {
             "token_code": token_code,
