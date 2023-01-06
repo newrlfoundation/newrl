@@ -232,7 +232,6 @@ class Transactionmanager:
         if not validate_transaction_fee(self.transaction, self.signatures, cur=cur):
             logger.error("Fee validation failed")
             return False
-        
         fee_token_code = self.transaction['currency']
         if 'fee' in self.transaction:
             fee = self.transaction['fee']
@@ -887,7 +886,6 @@ def validate_transaction_fee(transaction, signatures, cur):
     else:
         logger.info(f"Fee payment currency not allowed")
         return False
-    
     if cursor_opened:
         con.close()
     return True

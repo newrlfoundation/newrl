@@ -16,8 +16,9 @@ class AuthorizeContract(ContractMaster):
     def __init__(self, contractaddress=None):
         self.template = "AuthorizeContract"
         self.version = ""
-        ContractMaster.__init__(self, self.template, self.version, contractaddress)
-    
+        ContractMaster.__init__(self, self.template,
+                                self.version, contractaddress)
+
     def validate(self, txn_data, repo: FetchRepository):
         method = txn_data["function"]
         callparams = txn_data["params"]
