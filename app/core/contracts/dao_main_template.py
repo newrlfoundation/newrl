@@ -2,15 +2,15 @@
 import json
 
 from . import Utils
-from .contract_master import ContractMaster
-from .dao_main_template_validator import create_proposal, vote_on_proposal
-from ..db_updater import *
+from app.core.contracts.contract_master import ContractMaster
+from app.core.contracts.dao_main_template_validator import create_proposal, vote_on_proposal
+from app.core.db.db_updater import *
 from abc import ABCMeta, abstractmethod
 
 import importlib
 
-from ..helpers.FetchRespository import FetchRepository
-from ..helpers.TransactionCreator import TransactionCreator
+from app.core.helpers.FetchRespository import FetchRepository
+from app.core.blockchain.TransactionCreator import TransactionCreator
 
 
 class DaoMainTemplate(ContractMaster):
