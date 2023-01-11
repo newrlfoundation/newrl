@@ -13,28 +13,28 @@ from starlette.responses import FileResponse
 from starlette.requests import Request
 import traceback
 
-from app.limiter import limiter
-from app.codes.helpers.FetchRespository import FetchRepository
-from app.codes.p2p.sync_chain import find_forking_block, get_block_hashes, get_blocks
-from app.codes.scoremanager import get_incoming_trust_scores, get_outgoing_trust_scores, get_trust_score, get_trust_score_for_wallets
+from app.core.helpers.limiter import limiter
+from app.core.helpers.FetchRespository import FetchRepository
+from app.core.p2p.sync_chain import find_forking_block, get_block_hashes, get_blocks
+from app.core.trustnet.scoremanager import get_incoming_trust_scores, get_outgoing_trust_scores, get_trust_score, get_trust_score_for_wallets
 
-from app.codes.transactionmanager import Transactionmanager
-from app.constants import NEWRL_DB
-from app.nvalues import NETWORK_TRUST_MANAGER_PID
+from app.core.blockchain.transactionmanager import Transactionmanager
+from app.config.constants import NEWRL_DB
+from app.config.nvalues import NETWORK_TRUST_MANAGER_PID
 
 from .request_models import AddWalletRequest, BalanceRequest, BalanceType, CallSC, CreateTokenRequest, CreateWalletRequest, GetTokenRequest, RunSmartContractRequest, TransferRequest, CreateSCRequest, TrustScoreUpdateRequest
-from app.codes.chainscanner import Chainscanner, download_chain, download_state, get_block, get_contract, get_token, get_transaction, get_wallet
-from app.codes.kycwallet import add_wallet, generate_wallet_address, get_address_from_public_key, get_digest, generate_wallet
-from app.codes.tokenmanager import create_token_transaction
-from app.codes.transfermanager import Transfermanager
-from app.codes.utils import get_last_block_hash, save_file_and_get_path
-from app.codes import validator
-from app.codes import signmanager
-from app.codes import updater
-from app.codes.aggregator import process_transaction_batch
-from app.codes.contracts.contract_master import create_contract_address
-from ..Configuration import Configuration
-from app.codes.timers import SYNC_STATUS
+from app.core.blockchain.chainscanner import Chainscanner, download_chain, download_state, get_block, get_contract, get_token, get_transaction, get_wallet
+from app.core.trustnet.kycwallet import add_wallet, generate_wallet_address, get_address_from_public_key, get_digest, generate_wallet
+from app.core.transactions.tokenmanager import create_token_transaction
+from app.core.blockchain.transfermanager import Transfermanager
+from app.core.helpers.utils import get_last_block_hash, save_file_and_get_path
+from app.core.blockchain import validator
+from app.core.crypto import signmanager
+from app.core.blockchain import updater
+from app.core.blockchain.aggregator import process_transaction_batch
+from app.core.contracts.contract_master import create_contract_address
+from app.config.Configuration import Configuration
+from app.core.clock.timers import SYNC_STATUS
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)

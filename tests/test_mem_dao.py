@@ -36,10 +36,12 @@ def create_wallet():
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
 
-    response = requests.post(NODE_URL+'/sign-transaction', json={
+    unsigned_transaction['transaction']['fee'] = 1000000
+    data = {
         "wallet_data": WALLET,
         "transaction_data": unsigned_transaction
-    })
+    }
+    response = requests.post(NODE_URL+'/sign-transaction', json= data)
 
     assert response.status_code == 200
     signed_transaction = response.json()
@@ -70,6 +72,46 @@ def create_wallet():
     print("Wallet created with address "+wallet['address'])
     print('Test passed.')
     return wallet
+
+
+def transfer_unilateral(from_wallet, to_wallet, token, amount):
+    token_code = token['tokencode']
+    req = {
+        "transfer_type": 5,
+        "asset1_code": token_code,
+        "asset2_code": "",
+        "wallet1_address": from_wallet['address'],
+        "wallet2_address": to_wallet['address'],
+        "asset1_qty": amount,
+        "description": "",
+        "additional_data": {}
+    }
+    response = requests.post(NODE_URL + '/add-transfer', json=req)
+
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    response = requests.post(NODE_URL + '/sign-transaction', json={
+        "wallet_data": from_wallet,
+        "transaction_data": unsigned_transaction
+    })
+    signed_transaction = response.json()
+    response = requests.post(
+        NODE_URL + '/validate-transaction', json=signed_transaction)
+
+    if TEST_ENV == 'local':
+        response = requests.post(
+            NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+    else:
+        print('Waiting to mine block')
+        time.sleep(BLOCK_WAIT_TIME)
+
+    response = requests.get(
+        NODE_URL + f"/get-balances?balance_type=TOKEN_IN_WALLET&token_code={token_code}&wallet_address={to_wallet['address']}")
+    assert response.status_code == 200
+    balance = response.json()['balance']
+    assert balance == amount
 
 def get_pid(wallet):
     response = requests.get(
@@ -104,7 +146,7 @@ def create_token(wallet, owner, token_name, token_code, amount):
         "transaction_data": unsigned_transaction
     })
 
-    print("adding token")
+    print("adding wallet")
     assert response.status_code == 200
     signed_transaction = response.json()
     print("signing tx")
@@ -133,8 +175,19 @@ def get_dao_details():
     wallet_dao = create_wallet()
     dao_token_name = "dao_token".join(random.choices(
         string.ascii_uppercase + string.digits, k=10))
-    dao_manager_address = "ct9dc895fe5905dc73a2273e70be077bf3e94ea3b7"
+    dao_manager_address = "ct9000000000000000000000000000000000000da0"
     dao_name = "dao_mem_"+str(random.randrange(111111, 999999, 5))
+
+    transfer_unilateral(WALLET, wallet_founder1, {"tokencode": "NWRL"}, 10000000)
+    transfer_unilateral(WALLET, wallet_founder2, {
+                        "tokencode": "NWRL"}, 10000000)
+
+    transfer_unilateral(WALLET, wallet_founder2,  {
+                        "tokencode": "NWRL"}, 10000000)
+
+    transfer_unilateral(WALLET, wallet_founder3,  {
+                        "tokencode": "NWRL"}, 10000000)
+
     dao_details = {
         'wallet_founder1': wallet_founder1,
         'wallet_founder2': wallet_founder2,
@@ -252,6 +305,7 @@ def test_create_mem_dao(request):
     unsigned_transaction = response.json()
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
 
     response = requests.post(NODE_URL+'/sign-transaction', json={
         "wallet_data": wallet_founder1,
@@ -313,6 +367,7 @@ def test_initialize_dao(request):
     unsigned_transaction = response.json()
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
 
     response = requests.post(NODE_URL+'/sign-transaction', json={
         "wallet_data": wallet_founder1,
@@ -406,6 +461,7 @@ def test_proposal_add_member(request):
     unsigned_transaction = response.json()
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
 
     response = requests.post(NODE_URL+'/sign-transaction', json={
         "wallet_data": wallet_founder1,
@@ -484,6 +540,7 @@ def test_vote_proposal_add_memeber(request):
     unsigned_transaction = response.json()
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
 
     response = requests.post(NODE_URL+'/sign-transaction', json={
         "wallet_data": wallet_founder2,
@@ -540,6 +597,7 @@ def test_vote_proposal_add_memeber(request):
     unsigned_transaction = response.json()
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
 
     response = requests.post(NODE_URL+'/sign-transaction', json={
         "wallet_data": wallet_founder3,

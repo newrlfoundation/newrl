@@ -1,16 +1,18 @@
 import time
 import requests
 
-from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
+from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV, MIN_NEWRL_FEE
 from test_add_wallet import add_wallet
 from test_add_token import add_token
-
+from test_transfer import transfer_unilateral
 
 def test_conflicting_transactions_in_block():
     from_wallet = add_wallet()
     to_wallet = add_wallet()
     amount = 110
     token = add_token(from_wallet['address'], amount)
+
+    transfer_unilateral(WALLET, from_wallet, 'NWRL', 2 * MIN_NEWRL_FEE)
 
     token_code = token['tokencode']
     req ={
@@ -25,6 +27,7 @@ def test_conflicting_transactions_in_block():
     }
     response = requests.post(NODE_URL + '/add-transfer', json=req)
     unsigned_transaction = response.json()    
+    unsigned_transaction['transaction']['fee'] = MIN_NEWRL_FEE
     response = requests.post(NODE_URL + '/sign-transaction', json={
         "wallet_data": from_wallet,
         "transaction_data": unsigned_transaction
@@ -45,6 +48,7 @@ def test_conflicting_transactions_in_block():
     }
     response = requests.post(NODE_URL + '/add-transfer', json=req)
     unsigned_transaction = response.json()    
+    unsigned_transaction['transaction']['fee'] = MIN_NEWRL_FEE
     response = requests.post(NODE_URL + '/sign-transaction', json={
         "wallet_data": from_wallet,
         "transaction_data": unsigned_transaction

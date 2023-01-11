@@ -1,9 +1,9 @@
 import json
 import sqlite3
 
-from app.codes.utils import get_person_id_for_wallet_address
-from app.constants import NEWRL_DB
-from app.nvalues import *
+from app.core.helpers.utils import get_person_id_for_wallet_address
+from app.config.constants import NEWRL_DB
+from app.config.nvalues import *
 
 
 def migrate():

@@ -1,0 +1,1367 @@
+diff --git a/app/codes/contracts/AuthorizeContract.py b/app/codes/contracts/AuthorizeContract.py
+index 5a5795a..b001581 100644
+--- a/app/codes/contracts/AuthorizeContract.py
++++ b/app/codes/contracts/AuthorizeContract.py
+@@ -17,6 +17,18 @@ class AuthorizeContract(ContractMaster):
+         self.template = "AuthorizeContract"
+         self.version = ""
+         ContractMaster.__init__(self, self.template, self.version, contractaddress)
++    
++    def validate(self, txn_data, repo: FetchRepository):
++        method = txn_data["function"]
++        callparams = txn_data["params"]
++
++        if (method == "createTokens"):
++            recipient_address = callparams['recipient_address']
++            
++            wallet = repo.select_Query("wallet_address").add_table_name("wallets").where_clause("wallet_address", recipient_address, 1).execute_query_multiple_result({"wallet_address": recipient_address})
++            if len(wallet) == 0:
++                raise Exception("Receipt wallet does not exist")
++
+ 
+     def validateCustodian(self, transaction, custodian_address, custodian_wallet, transaction_manager):
+         valid = False
+diff --git a/app/codes/contracts/PledgingContract.py b/app/codes/contracts/PledgingContract.py
+index f6f43a4..ec7242c 100644
+--- a/app/codes/contracts/PledgingContract.py
++++ b/app/codes/contracts/PledgingContract.py
+@@ -17,6 +17,23 @@ class PledgingContract(ContractMaster):
+     logging.basicConfig(level=logging.INFO)
+     logger = logging.getLogger(__name__)
+ 
++    def validate(self, txn_data, repo: FetchRepository):
++        method = txn_data["function"]
++        callparams = txn_data["params"]
++
++        if method in ["pledge_tokens", "unpledge_tokens", "default_tokens"]:
++            lender = callparams["lender"]
++            wallet = repo.select_Query("wallet_address").add_table_name("wallets").where_clause("wallet_address", lender, 1).execute_query_multiple_result({"wallet_address": lender})
++            if len(wallet) == 0:
++                raise Exception("Lender wallet does not exist")
++        if method in ["unpledge_tokens", "default_tokens"]:
++            borrower_wallet = callparams["borrower_wallet"]
++            wallet = repo.select_Query("wallet_address").add_table_name("wallets").where_clause("wallet_address", borrower_wallet, 1).execute_query_multiple_result({"wallet_address": borrower_wallet})
++            if len(wallet) == 0:
++                raise Exception("Borrower wallet does not exist")
++            
++
++
+     def __init__(self, contractaddress=None):
+         self.template = "PledgingContract"
+         self.version = ""
+diff --git a/app/codes/transactionmanager.py b/app/codes/transactionmanager.py
+index d33ec31..1ed0a68 100644
+--- a/app/codes/transactionmanager.py
++++ b/app/codes/transactionmanager.py
+@@ -20,7 +20,7 @@ from app.Configuration import Configuration
+ from app.nvalues import CUSTODIAN_DAO_ADDRESS
+ 
+ 
+-from ..ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_MULTIPLIER, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
++from ..ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_MULTIPLIER, NUSD_TOKEN_CODE, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
+ 
+ from ..constants import CUSTODIAN_OWNER_TYPE, MEMPOOL_PATH, NEWRL_DB
+ from .utils import get_person_id_for_wallet_address, get_time_ms
+@@ -226,28 +226,19 @@ class Transactionmanager:
+         # check if the sender has enough balance to spend
+         self.validity = 0
+         
++        if not validate_transaction_fee(self.transaction, cur=cur):
++            return False
++        
++        fee_token_code = self.transaction['currency']
+         if 'fee' in self.transaction:
+             fee = self.transaction['fee']
+         else:
+             fee = 0
+ 
+-        if 'is_child_txn' in self.transaction:
+-            is_child_sc = self.transaction['is_child_txn']
+-        else:
+-            is_child_sc = False
+-
+-        if not (self.transaction['type'] in [TRANSACTION_MINER_ADDITION, TRANSACTION_SC_UPDATE] or is_child_sc) :
+-            currency = self.transaction['currency']
+-            if currency == NEWRL_TOKEN_CODE:
+-                    if fee < NEWRL_TOKEN_MULTIPLIER:
+-                        return False
+-            else:
+-                return False            
+-
+         if self.transaction['type'] == TRANSACTION_WALLET_CREATION:
+             custodian = self.transaction['specific_data']['custodian_wallet']
+             walletaddress = self.transaction['specific_data']['wallet_address']
+-            if not is_custodian_wallet(custodian):
++            if not is_custodian_wallet(custodian, cur=cur):
+                 logger.warn('Invalid custodian wallet')
+                 self.validity = 0
+             else:
+@@ -264,7 +255,7 @@ class Transactionmanager:
+                     else:
+                         self.validity = 0  # other custodian cannot sign someone's linked wallet address
+                 else:   # this is a new wallet and person
+-                    if is_wallet_valid(walletaddress) and not is_smart_contract(walletaddress, cur=cur):
++                    if is_wallet_valid(walletaddress, cur=cur) and not is_smart_contract(walletaddress, cur=cur):
+                         print("Wallet with address",
+                               walletaddress, " already exists.")
+                         self.validity = 0
+@@ -278,7 +269,7 @@ class Transactionmanager:
+             fovalidity = False
+             custvalidity = False
+             if firstowner:
+-                if is_wallet_valid(firstowner):
++                if is_wallet_valid(firstowner, cur=cur):
+                     # print("Valid first owner")
+                     fovalidity = True
+                 else:
+@@ -290,7 +281,7 @@ class Transactionmanager:
+                     fovalidity = False  # amount cannot be non-zero if no first owner
+                 else:
+                     fovalidity = True
+-            if is_wallet_valid(custodian):
++            if is_wallet_valid(custodian, cur=cur):
+                 # print("Valid custodian")
+                 custvalidity = True
+             if not fovalidity:
+@@ -426,33 +417,62 @@ class Transactionmanager:
+                     sender2, tokencode2, cur)
+ 
+ 
+-            # if token1amt  > startingbalance1:  # sender1 is trying to send more than she owns
+-            #     print("sender1 is trying to send,", token1amt, "she owns,",
+-            #           startingbalance1, " invalidating transaction")
+-            # #	self.transaction['valid']=0;
+-            #     self.validity = 0
+-
+-            # if ttype == 4:
+-            #     if token2amt + (fee/2)> startingbalance2:  # sender2 is trying to send more than she owns
+-            #         print(
+-            #             "sender2 is trying to send more than she owns, invalidating transaction")
+-            # #		self.transaction['valid']=0;
+-            #         self.validity = 0
+-
+-            if ttype == 4:
+-                # double checking
+-                if token1amt + math.ceil(fee/2) <= startingbalance1 and token2amt + math.ceil(fee/2) <= startingbalance2:
+-                    print(
+-                        "Valid economics of transaction. Changing economic validity value to 1")
+-                #	self.transaction['valid']=1;
+-                    self.validity = 1
+             if ttype == 5:
+-                if token1amt + fee <= startingbalance1:
+-                    print(
+-                        "Valid economics of transaction. Changing economic validity value to 1")
+-                #	self.transaction['valid']=1;
++                #if token being transfered and fee token is same, calculate together
++                if tokencode1 == fee_token_code:
++                    if token1amt + fee <= startingbalance1:
++                        print(
++                            "Valid economics of transaction. Changing economic validity value to 1")
++                        self.validity = 1
++                else:
++                    #check for fee and token1 balances seperately
++                    fee_token_balance = get_wallet_token_balance_tm(
++                        sender1, fee_token_code, cur=cur)
++                    if fee <= fee_token_balance:
++                        if token1amt <= startingbalance1:
++                            print(
++                                "Valid economics of transaction. Changing economic validity value to 1")
++                            self.validity = 1
++            if ttype == 4:
++                token1_balance_validity = False
++                token2_balance_validity = False
++
++                #token1 balance check
++                if tokencode1 == fee_token_code:
++                    if token1amt + math.ceil(fee/2) <= startingbalance1:
++                        print(
++                            "Valid economics of transaction. Changing economic validity value to 1")
++                        token1_balance_validity = True
++                else:
++                    #check for fee and token1 balances seperately
++                    fee_token_balance = get_wallet_token_balance_tm(
++                        sender1, fee_token_code, cur=cur)
++                    if math.ceil(fee/2) <= fee_token_balance:
++                        if token1amt <= startingbalance1:
++                            print(
++                                "Valid economics of transaction. Changing economic validity value to 1")
++                            token1_balance_validity = True
++
++                #token2 balance check
++                if tokencode2 == fee_token_code:
++                    if token2amt + math.ceil(fee/2) <= startingbalance2:
++                        print(
++                            "Valid economics of transaction. Changing economic validity value to 1")
++                        token2_balance_validity = True
++                else:
++                    #check for fee and token2 balances seperately
++                    fee_token_balance = get_wallet_token_balance_tm(
++                        sender2, fee_token_code, cur=cur)
++                    if math.ceil(fee/2) <= fee_token_balance:
++                        if token2amt <= startingbalance2:
++                            print(
++                                "Valid economics of transaction. Changing economic validity value to 1")
++                            token2_balance_validity = True
++
++                if token1_balance_validity and token2_balance_validity:
+                     self.validity = 1
+ 
++
+         if self.transaction['type'] == TRANSACTION_TRUST_SCORE_CHANGE:  # score change transaction
+             ttype = self.transaction['type']
+         #    personid1 = self.transaction['specific_data']['personid1']
+@@ -805,3 +825,50 @@ def is_smart_contract(address, cur=None):
+ 
+ def __str__(self):
+     return str(self.get_transaction_complete())
++
++def validate_transaction_fee(transaction, cur):
++    if cur is None:
++        con = sqlite3.connect(NEWRL_DB)
++        cur = con.cursor()
++        cursor_opened = True
++    else:
++        cursor_opened = False
++
++    fee_tokens = [NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE]
++    fee_token_code = transaction['currency']
++    if not fee_token_code in fee_tokens:
++        logger.info("Provided fee currency is not allowed")
++        return False
++
++    if 'fee' in transaction:
++        fee = transaction['fee']
++    else:
++        fee = 0
++
++    if 'is_child_txn' in transaction:
++        is_child_sc = transaction['is_child_txn']
++        if is_child_sc:
++            return True
++
++    if transaction['type'] in [TRANSACTION_MINER_ADDITION, TRANSACTION_SC_UPDATE]:
++        return True
++    
++
++    if fee_token_code == NEWRL_TOKEN_CODE:
++        if fee < NEWRL_TOKEN_MULTIPLIER:
++            logger.info(f"Not enough fee provided: {fee}")
++        
++        payees = get_valid_addresses(transaction, cur=cur)
++        for payee in payees:
++            balance = get_wallet_token_balance(cur, payee, fee_token_code)
++            fee_to_charge = math.ceil(fee / len(payees))
++            if balance < fee_to_charge:
++                logger.info(f"Payee does not have enough balance. Required:{fee_to_charge} Available:{balance}")
++                return False
++    else:
++        logger.info(f"Fee payment currency not allowed")
++        return False
++    
++    if cursor_opened:
++        con.close()
++    return True
+\ No newline at end of file
+diff --git a/app/codes/validator.py b/app/codes/validator.py
+index 035e5ba..b085e2e 100644
+--- a/app/codes/validator.py
++++ b/app/codes/validator.py
+@@ -4,6 +4,7 @@ import base64
+ import datetime
+ import json
+ import logging
++import sqlite3
+ 
+ import ecdsa
+ import os
+@@ -15,7 +16,7 @@ from app.codes.p2p.transport import send
+ from app.ntypes import BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID, TRANSACTION_MINER_ADDITION
+ from .utils import get_last_block_hash
+ from .transactionmanager import Transactionmanager
+-from ..constants import IS_TEST, MAX_TRANSACTION_SIZE, MEMPOOL_PATH, MEMPOOL_TRANSACTION_LIFETIME_SECONDS
++from ..constants import IS_TEST, MAX_TRANSACTION_SIZE, MEMPOOL_PATH, MEMPOOL_TRANSACTION_LIFETIME_SECONDS, NEWRL_DB
+ from .p2p.outgoing import propogate_transaction_to_peers
+ from .chainscanner import get_transaction
+ 
+@@ -57,7 +58,10 @@ def validate(transaction, propagate=False, validate_economics=True):
+         msg = "Transaction has invalid signatures"
+     else:
+         if validate_economics:
+-            economics_valid = transaction_manager.econvalidator()
++            con = sqlite3.connect(NEWRL_DB)
++            cur = con.cursor()
++            economics_valid = transaction_manager.econvalidator(cur=cur)
++            con.close()
+             if not economics_valid:
+                 msg = "Transaction economic validation failed"
+                 valid = False
+diff --git a/app/constants.py b/app/constants.py
+index 9461b73..b6efd88 100644
+--- a/app/constants.py
++++ b/app/constants.py
+@@ -27,11 +27,11 @@ elif NEWRL_ENV == 'test':
+     DATA_PATH = 'data_test/'
+     print('Using test constants')
+ elif NEWRL_ENV == 'devnet':
+-    BOOTSTRAP_NODES = ['devnet.newrl.net']
+-    NETWORK_TRUSTED_ARCHIVE_NODES = ['devnetarchive1.newrl.net']
+-    NEWRL_PORT = 8420
+-    DATA_PATH = 'data_devnet/'
+-    print('Using devnet constants')
++    BOOTSTRAP_NODES = ['bootstrap1-lakeshore.newrl.net']
++    NETWORK_TRUSTED_ARCHIVE_NODES = ['archive1-lakeshore.newrl.net']
++    NEWRL_PORT = 8424
++    DATA_PATH = 'data_testnet/'
++    print('Using devnet (lakeshore) constants')
+ else:  # default ot devnet
+     BOOTSTRAP_NODES = ['devnet.newrl.net']
+     NETWORK_TRUSTED_ARCHIVE_NODES = ['devnetarchive1.newrl.net']
+diff --git a/cloudwatch-logs-config b/cloudwatch-logs-config
+new file mode 100644
+index 0000000..ff5f55c
+--- /dev/null
++++ b/cloudwatch-logs-config
+@@ -0,0 +1,52 @@
++sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/home/ubuntu/cloudwatch-config.conf
++{
++        "agent": {
++            "metrics_collection_interval": 10,
++            "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
++        },
++        "metrics": {
++            "namespace": "MainnetArchiveNodeLogs",
++            "force_flush_interval": 30,
++            "metrics_collected": {
++                "cpu": {
++                    "resources": [
++                        "*"
++                    ],
++                    "measurement": [
++                        {
++                            "name": "cpu_usage_idle",
++                            "rename": "CPU_USAGE_IDLE",
++                            "unit": "Percent"
++                        },
++                        {
++                            "name": "cpu_usage_nice",
++                            "unit": "Percent"
++                        },
++                        "cpu_usage_guest"
++                    ],
++                    "totalcpu": false,
++                    "metrics_collection_interval": 10,
++                    "append_dimensions": {
++                        "customized_dimension_key_1": "customized_dimension_value_1",
++                        "customized_dimension_key_2": "customized_dimension_value_2"
++                    }
++                }
++            }
++        },
++        "logs": {
++            "logs_collected": {
++                "files": {
++                    "collect_list": [
++                        {
++                            "file_path": "/home/ubuntu/newrl/logs/newrl-node-log",
++                            "log_group_name": "NewrlMainnet",
++                            "log_stream_name": "newrl-mainnet-archive",
++                            "timezone": "UTC"
++                        }
++                    ]
++                }
++            },
++            "log_stream_name": "newrl_mainnet_archive",
++            "force_flush_interval": 15
++        }
++    }
+\ No newline at end of file
+diff --git a/scripts/add_all_network_node_wallets.py b/scripts/add_all_network_node_wallets.py
+deleted file mode 100644
+index 8ec05f3..0000000
+--- a/scripts/add_all_network_node_wallets.py
++++ /dev/null
+@@ -1,51 +0,0 @@
+-import requests
+-
+-NODE_URL = 'http://testnet.newrl.net:8182'
+-# NODE_URL = 'http://localhost:8182'
+-WALLET = {"public": "PizgnsfVWBzJxJ6RteOQ1ZyeOdc9n5KT+GrQpKz7IXLQIiVmSlvZ5EHw83GZL7wqZYQiGrHH+lKU7xE5KxmeKg==","private": "zhZpfvpmT3R7mUZa67ui1/G3I9vxRFEBrXNXToVctH0=","address": "0x20513a419d5b11cd510ae518dc04ac1690afbed6"}
+-
+-# NODE_URL = 'http://testnet.newrl.net:8090'
+-# WALLET = {"address": "0xc29193dbab0fe018d878e258c93064f01210ec1a","public": "sB8/+o32Q7tRTjB2XcG65QS94XOj9nP+mI7S6RIHuXzKLRlbpnu95Zw0MxJ2VGacF4TY5rdrIB8VNweKzEqGzg==","private": "xXqOItcwz9JnjCt3WmQpOSnpCYLMcxTKOvBZyj9IDIY="}
+-
+-
+-# NODE_URL = 'http://testnet.newrl.net:8090'
+-# WALLET = {
+-#   "public": "pEeY8E9fdKiZ3nJizmagKXjqDSK8Fz6SAqqwctsIhv8KctDfkJlGnSS2LUj/Igk+LwAl91Y5pUHZTTafCosZiw==",
+-#   "private": "x1Hp0sJzfTumKDqBwPh3+oj/VhNncx1+DLYmcTKHvV0=",
+-#   "address": "0x6e206561a7018d84b593c5e4788c71861d716880"
+-# }
+-
+-def add_wallet(public_key):
+-  add_wallet_request = {
+-    "custodian_address": WALLET['address'],
+-    "ownertype": "1",
+-    "jurisdiction": "910",
+-    "kyc_docs": [
+-  {
+-    "type": 1,
+-    "hash": "686f72957d4da564e405923d5ce8311b6567cedca434d252888cb566a5b4c401"
+-  }
+-    ],
+-    "specific_data": {},
+-    "public_key": public_key
+-  }
+-
+-  response = requests.post(NODE_URL + '/add-wallet', json=add_wallet_request)
+-
+-  unsigned_transaction = response.json()
+-
+-  response = requests.post(NODE_URL + '/sign-transaction', json={
+-  "wallet_data": WALLET,
+-  "transaction_data": unsigned_transaction
+-  })
+-
+-  signed_transaction = response.json()
+-
+-  # print('signed_transaction', signed_transaction)
+-  print('Sending wallet add transaction to chain')
+-  response = requests.post(NODE_URL + '/validate-transaction', json=signed_transaction)
+-  print('Got response from chain\n', response.text)
+-  assert response.status_code == 200
+-
+-for public_key in ['PizgnsfVWBzJxJ6RteOQ1ZyeOdc9n5KT+GrQpKz7IXLQIiVmSlvZ5EHw83GZL7wqZYQiGrHH+lKU7xE5KxmeKg==', 'FbSwBu4b9aD3JoAaI1IzzWPtEvWiGSn6dIB1cm8h8NZlF4cQrGyESEdVGxS5tebWcalnyFSGjasnEPlyS45SAg==', 'bNSqzHBCK4tnf7rB780eF+Exph0ZCY1Vu2jnBPHq1zw2AIun4aar+vgHmUj8AY4oLF7iWfpBgkkVuHe6L1jepA==', 'KFYSB5fh0dASPz1lSys9DdkMl3Ouukydn6qpo32syTVoYkA5WYhSVCkp9kibr+Lgnw8DkOkAq5CCfP0CopiGHw==', 'Q0sw+ELDy7xWPbi3/1P0KaaYqeLkc97GEsoLumDuAAbAf1i2kNl2pYROY5sFVtmIUAtL4wUP6xoWZhIrcw4LrA==', 'ROSUDqyRFB6ZaHqQFsv5uUfx6GKUNZvpqsFNV/Gvv6Mjw1i+DTpUeFnj7qkKrMwjKZCJVdbRY+5e+Va0i2UGJw==', 'beUpeaiKW4CxBaGSYKCFYEG/f+PvFiS3H3l53OTqFoBpC7Bh1oEJz4QZ0Z1VkIBpXUw8ZcBwdBVLtr04GS/ltg==', 'Z5o1TBi438TSLd/PH1Qv7zIh8Dsx7f/siJXsnQcrEjCI8Pd70FvcMA4nPwQzreusQ6WBhvL1bmgtwx7VEZH5rA==', '4CscAOY/km2vv+5gkr8bVDb+1Po9oCWGHx3PkxBKNzadrDgPpYOJ/IaP65jgi48PQb46njNTbXhbc7ivKnt6lA==', 'KSnHvsppFRdKlQe0YbImp2Ipl3+SO1h7nlGunIB52OlydliOGggcNDtM8ZF0tDk8Fq/NxlhCTZuvVUrGwtRdkw==', 'gBqrxVsPlP/NSZFTHrozyGnp0wucGhJHOlDfefF3Q9WaGqkZWZr5RKPCOjmmKdEs3ohra39LYsGhexXjhZS7lw==', 'PizgnsfVWBzJxJ6RteOQ1ZyeOdc9n5KT+GrQpKz7IXLQIiVmSlvZ5EHw83GZL7wqZYQiGrHH+lKU7xE5KxmeKg==']:
+-  add_wallet(public_key)
+diff --git a/scripts/add_token.py b/scripts/add_token.py
+index 9ab4b5c..cd571b5 100644
+--- a/scripts/add_token.py
++++ b/scripts/add_token.py
+@@ -1,16 +1,8 @@
+ import requests
+ 
+-# NODE_URL = 'http://testnet.newrl.net:8090'
+-# WALLET = {
+-#   "public": "pEeY8E9fdKiZ3nJizmagKXjqDSK8Fz6SAqqwctsIhv8KctDfkJlGnSS2LUj/Igk+LwAl91Y5pUHZTTafCosZiw==",
+-#   "private": "x1Hp0sJzfTumKDqBwPh3+oj/VhNncx1+DLYmcTKHvV0=",
+-#   "address": "0x6e206561a7018d84b593c5e4788c71861d716880"
+-# }
+-
+-# NODE_URL = 'http://localhost:8182'
+-NODE_URL = 'http://testnet.newrl.net:8182'
+-WALLET = {"public": "PizgnsfVWBzJxJ6RteOQ1ZyeOdc9n5KT+GrQpKz7IXLQIiVmSlvZ5EHw83GZL7wqZYQiGrHH+lKU7xE5KxmeKg==","private": "zhZpfvpmT3R7mUZa67ui1/G3I9vxRFEBrXNXToVctH0=","address": "0x20513a419d5b11cd510ae518dc04ac1690afbed6"}
+ 
++NODE_URL = 'http://archive1-testnet1.newrl.net:8421'
++WALLET = { "public": "51017a461ecccdc082a49c3f6e17bb9a6259990f6c4d1c1dbb4e067878ddfa71cb4afbe6134bad588395edde20b92c6dd5abab4108d7e6aeb42a06229205cabb", "private": "92a365e63db963a76c0aa1389aee1ae4d25a4539311595820b295d3a77e07618", "address": "0x1342e0ae1664734cbbe522030c7399d6003a07a8" }
+ 
+ token_code = input('Enter token code: ')
+ amount = input('Issue amount: ')
+@@ -37,6 +29,9 @@ response = requests.post(NODE_URL + '/add-token', json=add_wallet_request)
+ 
+ unsigned_transaction = response.json()
+ 
++unsigned_transaction['transaction']['trans_code'] = unsigned_transaction['transaction']['trans_code'] + '1'
++unsigned_transaction['transaction']['fee'] = 1000000
++
+ response = requests.post(NODE_URL + '/sign-transaction', json={
+     "wallet_data": WALLET,
+     "transaction_data": unsigned_transaction
+diff --git a/scripts/add_token_many.py b/scripts/add_token_many.py
+deleted file mode 100644
+index 22dff75..0000000
+--- a/scripts/add_token_many.py
++++ /dev/null
+@@ -1,57 +0,0 @@
+-import threading
+-import requests
+-
+-# NODE_URL = 'http://testnet.newrl.net:8090'
+-# WALLET = {
+-#   "public": "pEeY8E9fdKiZ3nJizmagKXjqDSK8Fz6SAqqwctsIhv8KctDfkJlGnSS2LUj/Igk+LwAl91Y5pUHZTTafCosZiw==",
+-#   "private": "x1Hp0sJzfTumKDqBwPh3+oj/VhNncx1+DLYmcTKHvV0=",
+-#   "address": "0x6e206561a7018d84b593c5e4788c71861d716880"
+-# }
+-
+-NODE_URL = 'http://testnet.newrl.net:8182'
+-WALLET = {"public": "PizgnsfVWBzJxJ6RteOQ1ZyeOdc9n5KT+GrQpKz7IXLQIiVmSlvZ5EHw83GZL7wqZYQiGrHH+lKU7xE5KxmeKg==","private": "zhZpfvpmT3R7mUZa67ui1/G3I9vxRFEBrXNXToVctH0=","address": "0x20513a419d5b11cd510ae518dc04ac1690afbed6"}
+-
+-
+-token_code = input('Enter token code: ')
+-amount = input('Issue amount: ')
+-first_owner = input('First owner[leave blank for custodian]: ')
+-
+-if first_owner == '':
+-  first_owner = WALLET['address']
+-
+-def add_token(tk):
+-  add_wallet_request = {
+-    "token_name": 'TPSTKA'+str(tk),
+-    "token_code": 'TPSTKA'+str(tk),
+-    "token_type": "1",
+-    "first_owner": first_owner,
+-    "custodian": WALLET['address'],
+-    "legal_doc": "686f72957d4da564e405923d5ce8311b6567cedca434d252888cb566a5b4c401",
+-    "amount_created": tk,
+-    "tokendecimal": 0,
+-    "disallowed_regions": [],
+-    "is_smart_contract_token": False,
+-    "token_attributes": {}
+-  }
+-
+-  response = requests.post(NODE_URL + '/add-token', json=add_wallet_request)
+-
+-  unsigned_transaction = response.json()
+-
+-  response = requests.post(NODE_URL + '/sign-transaction', json={
+-      "wallet_data": WALLET,
+-      "transaction_data": unsigned_transaction
+-  })
+-
+-  signed_transaction = response.json()
+-
+-  print('signed_transaction', signed_transaction)
+-  response = requests.post(NODE_URL + '/validate-transaction', json=signed_transaction)
+-  print(response.text)
+-  print(response.status_code)
+-  assert response.status_code == 200
+-
+-for tk in range(1, 10000):
+-  add_token(tk)
+-  timer = threading.Timer(1, add_token, (tk,))
+-  timer.start()
+\ No newline at end of file
+diff --git a/scripts/add_token_urllib.py b/scripts/add_token_urllib.py
+deleted file mode 100644
+index 7a5b5c7..0000000
+--- a/scripts/add_token_urllib.py
++++ /dev/null
+@@ -1,49 +0,0 @@
+-import json
+-import urllib3
+-
+-# NODE_URL = 'http://testnet.newrl.net:8182'
+-NODE_URL = 'http://testnet.newrl.net:8090'
+-# NODE_URL = 'http://newrl.net:8090'
+-# WALLET = {    "public": "PizgnsfVWBzJxJ6RteOQ1ZyeOdc9n5KT+GrQpKz7IXLQIiVmSlvZ5EHw83GZL7wqZYQiGrHH+lKU7xE5KxmeKg==",    "private": "zhZpfvpmT3R7mUZa67ui1/G3I9vxRFEBrXNXToVctH0=",    "address": "0x20513a419d5b11cd510ae518dc04ac1690afbed6"}
+-WALLET = {        "address": "0xc29193dbab0fe018d878e258c93064f01210ec1a",        "public": "sB8/+o32Q7tRTjB2XcG65QS94XOj9nP+mI7S6RIHuXzKLRlbpnu95Zw0MxJ2VGacF4TY5rdrIB8VNweKzEqGzg==",        "private": "xXqOItcwz9JnjCt3WmQpOSnpCYLMcxTKOvBZyj9IDIY="    }
+-
+-http = urllib3.PoolManager()
+-
+-token_code = input('Enter token code: ')
+-amount = input('Issue amount: ')
+-first_owner = input('First owner[c for custodian]: ')
+-
+-if first_owner == 'c':
+-  first_owner = WALLET['address']
+-
+-add_token_request = {
+-  "token_name": token_code,
+-  "token_code": token_code,
+-  "token_type": "1",
+-  "first_owner": first_owner,
+-  "custodian": WALLET['address'],
+-  "legal_doc": "686f72957d4da564e405923d5ce8311b6567cedca434d252888cb566a5b4c401",
+-  "amount_created": amount,
+-  "tokendecimal": 0,
+-  "disallowed_regions": [],
+-  "is_smart_contract_token": False,
+-  "token_attributes": {}
+-}
+-
+-response = http.request('POST', NODE_URL + '/add-token', body=json.dumps(add_token_request), headers={'Content-Type': 'application/json'})
+-
+-unsigned_transaction = json.loads(response.data)
+-
+-payload = {
+-    "wallet_data": WALLET,
+-    "transaction_data": unsigned_transaction
+-}
+-response = http.request('POST', NODE_URL + '/sign-transaction', body=json.dumps(payload), headers={'Content-Type': 'application/json'})
+-
+-signed_transaction = json.loads(response.data)
+-
+-print('signed_transaction', signed_transaction)
+-print('Sending wallet add transaction to chain')
+-response = http.request('POST', NODE_URL + '/validate-transaction', body=json.dumps(signed_transaction), headers={'Content-Type': 'application/json'})
+-print('Got response from chain\n', response.data)
+-assert response.status == 200
+\ No newline at end of file
+diff --git a/scripts/add_transfer.py b/scripts/add_transfer.py
+index ab7cae4..abc0e4b 100644
+--- a/scripts/add_transfer.py
++++ b/scripts/add_transfer.py
+@@ -1,12 +1,8 @@
+ import json
+ import requests
+ 
+-NODE_URL = 'http://testnet.newrl.net:8090'
+-WALLET = {
+-  "public": "pEeY8E9fdKiZ3nJizmagKXjqDSK8Fz6SAqqwctsIhv8KctDfkJlGnSS2LUj/Igk+LwAl91Y5pUHZTTafCosZiw==",
+-  "private": "x1Hp0sJzfTumKDqBwPh3+oj/VhNncx1+DLYmcTKHvV0=",
+-  "address": "0x6e206561a7018d84b593c5e4788c71861d716880"
+-}
++NODE_URL = 'http://archive1-testnet1.newrl.net:8421'
++WALLET = { "public": "51017a461ecccdc082a49c3f6e17bb9a6259990f6c4d1c1dbb4e067878ddfa71cb4afbe6134bad588395edde20b92c6dd5abab4108d7e6aeb42a06229205cabb", "private": "92a365e63db963a76c0aa1389aee1ae4d25a4539311595820b295d3a77e07618", "address": "0x1342e0ae1664734cbbe522030c7399d6003a07a8" }
+ 
+ transfer_type = input('Enter transfer type[4 for bilateral, 5 for unilateral]: ')
+ wallet1 = input('Enter first wallet address[leave blank for custodian]: ')
+@@ -41,7 +37,7 @@ print(add_transfer_request)
+ response = requests.post(NODE_URL + '/add-transfer', json=add_transfer_request)
+ 
+ unsigned_transaction = response.json()
+-
++unsigned_transaction['transaction']['fee'] = 1000000
+ response = requests.post(NODE_URL + '/sign-transaction', json={
+     "wallet_data": WALLET,
+     "transaction_data": unsigned_transaction
+diff --git a/scripts/add_wallet.py b/scripts/add_wallet.py
+index e7ae23b..04c82f6 100644
+--- a/scripts/add_wallet.py
++++ b/scripts/add_wallet.py
+@@ -1,29 +1,20 @@
+ import requests
+ 
+-NODE_URL = 'http://testnet.newrl.net:8182'
+-WALLET = {"public": "PizgnsfVWBzJxJ6RteOQ1ZyeOdc9n5KT+GrQpKz7IXLQIiVmSlvZ5EHw83GZL7wqZYQiGrHH+lKU7xE5KxmeKg==","private": "zhZpfvpmT3R7mUZa67ui1/G3I9vxRFEBrXNXToVctH0=","address": "0x20513a419d5b11cd510ae518dc04ac1690afbed6"}
+ 
+-# NODE_URL = 'http://testnet.newrl.net:8090'
+-# WALLET = {"address": "0xc29193dbab0fe018d878e258c93064f01210ec1a","public": "sB8/+o32Q7tRTjB2XcG65QS94XOj9nP+mI7S6RIHuXzKLRlbpnu95Zw0MxJ2VGacF4TY5rdrIB8VNweKzEqGzg==","private": "xXqOItcwz9JnjCt3WmQpOSnpCYLMcxTKOvBZyj9IDIY="}
++NODE_URL = 'http://archive1-testnet1.newrl.net:8421'
++CUSTODIAN_WALLET = { "public": "51017a461ecccdc082a49c3f6e17bb9a6259990f6c4d1c1dbb4e067878ddfa71cb4afbe6134bad588395edde20b92c6dd5abab4108d7e6aeb42a06229205cabb", "private": "92a365e63db963a76c0aa1389aee1ae4d25a4539311595820b295d3a77e07618", "address": "0x1342e0ae1664734cbbe522030c7399d6003a07a8" }
+ 
+ 
+-# NODE_URL = 'http://testnet.newrl.net:8090'
+-# WALLET = {
+-#   "public": "pEeY8E9fdKiZ3nJizmagKXjqDSK8Fz6SAqqwctsIhv8KctDfkJlGnSS2LUj/Igk+LwAl91Y5pUHZTTafCosZiw==",
+-#   "private": "x1Hp0sJzfTumKDqBwPh3+oj/VhNncx1+DLYmcTKHvV0=",
+-#   "address": "0x6e206561a7018d84b593c5e4788c71861d716880"
+-# }
+-
+ def add_wallet(public_key):
+   add_wallet_request = {
+-    "custodian_address": WALLET['address'],
++    "custodian_address": CUSTODIAN_WALLET['address'],
+     "ownertype": "1",
+     "jurisdiction": "910",
+     "kyc_docs": [
+-  {
+-    "type": 1,
+-    "hash": "686f72957d4da564e405923d5ce8311b6567cedca434d252888cb566a5b4c401"
+-  }
++      {
++        "type": 1,
++        "hash": ""
++      }
+     ],
+     "specific_data": {},
+     "public_key": public_key
+@@ -32,9 +23,10 @@ def add_wallet(public_key):
+   response = requests.post(NODE_URL + '/add-wallet', json=add_wallet_request)
+ 
+   unsigned_transaction = response.json()
++  unsigned_transaction['transaction']['fee'] = 1000000
+ 
+   response = requests.post(NODE_URL + '/sign-transaction', json={
+-  "wallet_data": WALLET,
++  "wallet_data": CUSTODIAN_WALLET,
+   "transaction_data": unsigned_transaction
+   })
+ 
+@@ -55,6 +47,3 @@ if public_key == '':
+   public_key = wallet['public']
+ 
+ add_wallet(public_key)
+-
+-# for public_key in ['PizgnsfVWBzJxJ6RteOQ1ZyeOdc9n5KT+GrQpKz7IXLQIiVmSlvZ5EHw83GZL7wqZYQiGrHH+lKU7xE5KxmeKg==', '6YCLRYLmn7xLEZoBnvFVAhqMs0RSLHh6qx4+FMFaMhc2vSDh9pxpdLQdjUSPb/JgFsA25Wpkh5r9myC0HbkaOQ==', 'BZdhXCER0+foqtVOjzfXVi6bE33oS+F7QybRgAKKNG955iIZymjEYZE8RDSKwHI1Ww0iMkaZ6a63ZVR6Q2ZOsw==', 'F4JyBkTigIviJ2ZXBDED38bwi3nKiq8NEyxFlYtmcPB0siRSIBRBpMSzdAU9hdmXodSapJcoO/lhhwlZP413CA==', 'FVatd42BznwblvNFBET9neGXHazylhevWEZX3R0OAKjpaJciUDz0AVHta6BcZrSMcelYrI/wE0HP9tLGbAgwnQ==', 'NLvTGkixKssh3NQB5Jht4pQIiYxJBw/8WYLQ7uwH7EWdO1UlPHSewrIRvPTeEmmrlpa/AmdRvh/6hkbfhZRmYg==', 'K7RISj43N9umd+rP/zarVPmUsH/4MQjukYaZeG81nIt8q2RvJaoTOPNVJRmfMHEvpzMWnD4kil7D4zN84cHloA==', 'qyMa3ncG6xzoOulTfWp1Dbf06yKGo728yqYZctWNCR21NxuCVEoUDCPR99CxEvHBhE7SbUTiLe289jpF52qh7g==', 'hKpfJMvMoOMWvONGJOV9ncQmtupushRNKgYkNLxfnU+1ZnX/XYDZT5ly6oaSypn6fQxtgJFLaHeSSvkZKq0RfA==', 'J8Xy8uUw5AlFGkB9zlLhElVXPstVsbo9V70hqVes6tPJSOspAC+v+2p9HZNESnVQaiXznXkP24rHkz/IoamCmw==', '74ZxEE/N6SUh6PW6erTWkBI4insFRli8XURit0EnTUYU1B36RoQRAFU4egQkJr/WgcJd1SZErqtPpxLn2FzSfA==', 'qcFAa8JxDAubyEjHz2xlkE22GhhPE2HIOxwlna1DfNvtCxPc+D0eK3DHXyvcAuqGgpGhi8baftOkw7He2SqyHw==', 'SG8cb1OTYpbqi230dLn8QN5CLNFnE+ZsjJKhHBGZjHExsnJ3RJ44IhUzU3/+RnGThLd/i4IkRaB0Eic0YSIiXw==', '8nkFblwk1Jq4frQURGvW36/1qHw5MhGv2A1RHnjhtdddAavfLEtO6Dq64MwXqWAy1XN+Wx4wWfztgNv9pdkh4A==', 'pzg0Ms3/R+13KIB/gIrUsISmc5jC/OqhJIJrfy0h4ggodEpiHZsWSRsEF0hZl1HCBOVLUq01jKIZFVZZ9uV8aw==', '+1pc+A8bYWfkiOuPv3XMXzJ3xs2TR6lVwHIfkzJfBYiGxKnNhT2IyRxbjlZshlSgmQEhxB+k7PraaBPdN5d7Wg==', 'JSDoAwJQqmFNVls09fVzcqtAROhh29tLDEXmLqs4ndpCmVdv0kHslX/DhFFq8BFuSv8nfb9uaWfZ9crpFNsDhg==', 'Vhl+eXpXDoc2bgO0IG+wQ+DfOSIQPerEIdXA1N7mDzuUccLHvQEmeho0uk0ormbuwAcHR/nYgK7I3LoCPuNOmA==', 'lrjRgzFVALEP2W52LeflWA2zV5hOxPiKgkJiXSD9IC1PxJShwpQbF8oz0Y6SzowBILH3MXOusiFIl4+EUMsm8Q==', 'Bw6baJzl+Z6yJATcWgd+xVzv2UrfkvMP6STN+TgYevg0gYJGDKjLi4Vr+Gf6Ps3FACcVk26dEjSAuFtHHnodFg==', 'zZuUGV7BMXRVRwo+S1mPWxLuyaSLUCYpEhiTxoX0jR+lNBcC4BSivjkRbeJj6f7/c3iRAy4B9BSTGhI2azMuZA==', '0FKo0JWB+TZa9BN/WoBkK5hqjiDvgnlgF6ONr9m5+ebG9aY1Uz+wVyucbJTdHwyq0xYVjYIoZeL6TEw4lvNYlw==', '3kRKKSz6RxRAYTGdV6s7kMLBSYKuS2+prImkx3g1XBc0xtYQB/VW7cEgVf1DR7Fdn2P1AclESpokmGJK2OENWA==', 'yN4Iuk/sWqwkFn8+wtJuyCHKLWWIIOjwBjua7NFE4AKKIGqXLR2nOvhfkZCZ7DRyGLfAqzphcSYaoH2VNvLpUg==', 'PizgnsfVWBzJxJ6RteOQ1ZyeOdc9n5KT+GrQpKz7IXLQIiVmSlvZ5EHw83GZL7wqZYQiGrHH+lKU7xE5KxmeKg==']:
+-#   add_wallet(public_key)
+diff --git a/scripts/add_wallet_urllib.py b/scripts/add_wallet_urllib.py
+deleted file mode 100644
+index d9a4b95..0000000
+--- a/scripts/add_wallet_urllib.py
++++ /dev/null
+@@ -1,51 +0,0 @@
+-import json
+-import urllib3
+-
+-# NODE_URL = 'http://testnet.newrl.net:8182'
+-NODE_URL = 'http://testnet.newrl.net:8090'
+-# NODE_URL = 'http://newrl.net:8090'
+-# WALLET = {"public": "PizgnsfVWBzJxJ6RteOQ1ZyeOdc9n5KT+GrQpKz7IXLQIiVmSlvZ5EHw83GZL7wqZYQiGrHH+lKU7xE5KxmeKg==","private": "zhZpfvpmT3R7mUZa67ui1/G3I9vxRFEBrXNXToVctH0=","address": "0x20513a419d5b11cd510ae518dc04ac1690afbed6"}
+-WALLET = {"address": "0xc29193dbab0fe018d878e258c93064f01210ec1a","public": "sB8/+o32Q7tRTjB2XcG65QS94XOj9nP+mI7S6RIHuXzKLRlbpnu95Zw0MxJ2VGacF4TY5rdrIB8VNweKzEqGzg==","private": "xXqOItcwz9JnjCt3WmQpOSnpCYLMcxTKOvBZyj9IDIY="}
+-
+-http = urllib3.PoolManager()
+-
+-public_key = input('Enter public key: ')
+-
+-if public_key == '0':
+-  response = http.request('GET', NODE_URL + '/generate-wallet-address')
+-  wallet = json.loads(response.data)
+-  print('New wallet\n', wallet, '\n')
+-  public_key = wallet['public']
+-
+-
+-add_wallet_request = {
+-  "custodian_address": WALLET['address'],
+-  "ownertype": "1",
+-  "jurisdiction": "910",
+-  "kyc_docs": [
+-{
+-  "type": 1,
+-  "hash": "686f72957d4da564e405923d5ce8311b6567cedca434d252888cb566a5b4c401"
+-}
+-  ],
+-  "specific_data": {},
+-  "public_key": public_key
+-}
+-
+-response = http.request('POST', NODE_URL + '/add-wallet', body=json.dumps(add_wallet_request), headers={'Content-Type': 'application/json'})
+-
+-unsigned_transaction = json.loads(response.data)
+-
+-payload = {
+-    "wallet_data": WALLET,
+-    "transaction_data": unsigned_transaction
+-}
+-response = http.request('POST', NODE_URL + '/sign-transaction', body=json.dumps(payload), headers={'Content-Type': 'application/json'})
+-
+-signed_transaction = json.loads(response.data)
+-
+-print('signed_transaction', signed_transaction)
+-print('Sending wallet add transaction to chain')
+-response = http.request('POST', NODE_URL + '/validate-transaction', body=json.dumps(signed_transaction), headers={'Content-Type': 'application/json'})
+-print('Got response from chain\n', response.data)
+-assert response.status == 200
+diff --git a/scripts/analytics_get_token_balance_all_nodes.py b/scripts/analytics_get_token_balance_all_nodes.py
+deleted file mode 100644
+index 46398aa..0000000
+--- a/scripts/analytics_get_token_balance_all_nodes.py
++++ /dev/null
+@@ -1,28 +0,0 @@
+-import requests
+-
+-NODE_URL = 'http://18.208.160.119:8182'
+-# NODE_URL = 'http://44.203.127.164:8182'
+-
+-
+-def process(node_addr):
+-  url = 'http://' + node_addr + ':8182/get-token?token_code=TS343'
+-  response = requests.get(url, timeout=1).json()
+-  print(node_addr, response['amount_created'])
+-    # print(f'{node_addr} - Invalid')
+-    # print(f'{node_addr} - Reverting')
+-    # requests.post('http://' + node_addr + ':8182/revert-chain', 
+-    #   json={
+-    #     "block_index": 0
+-    #   }, timeout=1).json()
+-    # requests.post('http://' + node_addr + ':8182/sync-chain-from-peers', 
+-    #   json={
+-    #     "block_index": 0
+-    #   }, timeout=1).json()
+-
+-
+-for node in ['100.27.31.95', '13.127.196.33', '18.205.152.148', '18.205.189.2', '18.206.94.76', '18.207.216.103', '18.208.182.177', '18.212.66.84', '184.72.208.65', '3.80.209.8', '3.83.50.130', '3.84.50.209', '3.84.77.114', '3.86.220.174', '3.86.95.36', '3.87.215.96', '3.87.239.9', '3.87.59.246', '3.89.74.97', '3.89.88.60', '3.91.148.23', '3.91.240.161', '3.94.187.48', '34.230.43.253', '34.238.254.65', '35.171.16.241', '35.175.149.140', '44.201.104.135', '44.201.195.243', '44.202.100.22', '44.202.112.192', '44.202.36.179', '44.202.6.221', '44.203.125.108', '44.203.155.59', '44.204.232.32', '44.204.33.70', '52.203.35.134', '52.207.247.190', '52.23.232.237', '52.87.240.182', '52.90.193.227', '52.91.186.245', '52.91.72.62', '52.91.72.92', '54.158.53.69', '54.164.113.49', '54.164.15.194', '54.165.186.46', '54.173.64.147', '54.175.45.195', '54.197.74.80', '54.209.119.94', '54.209.184.138', '54.209.95.85', '54.210.130.74', '54.224.29.208', '54.237.250.151', '54.84.93.34', '54.85.121.224', 'testnet.newrl.net']:
+-  try:
+-    process(node)
+-  except:
+-    pass
+-    # print(f'{node} - Unreachable')
+diff --git a/scripts/kill_server.sh b/scripts/kill_server.sh
+index 6d6a614..755d238 100755
+--- a/scripts/kill_server.sh
++++ b/scripts/kill_server.sh
+@@ -1,2 +1,3 @@
+-lsof -P | grep 8090 | awk '{print $2}' | xargs kill -9
+-fuser -k 8182/tcp
+\ No newline at end of file
++# lsof -P | grep 8090 | awk '{print $2}' | xargs kill -9
++# fuser -k 8182/tcp
++pkill -9 python
+\ No newline at end of file
+diff --git a/scripts/node_chain_verify.py b/scripts/node_chain_verify.py
+deleted file mode 100644
+index 9c85b2e..0000000
+--- a/scripts/node_chain_verify.py
++++ /dev/null
+@@ -1,47 +0,0 @@
+-import requests
+-
+-NODE_URL = 'http://18.208.160.119:8182'
+-# NODE_URL = 'http://44.203.127.164:8182'
+-
+-
+-def verify_node(node_address):
+-  node_address = 'http://' + node_address + ':8182'
+-  last_block_url = node_address + '/get-last-block-index'
+-  print(last_block_url)
+-  last_block = requests.get(node_address + '/get-last-block-index', timeout=1).text
+-  last_block = int(last_block)
+-
+-  blocks = requests.post(node_address + '/get-blocks', json={
+-    "block_indexes": list(range(1, last_block + 1))
+-  }, timeout=10).json()
+-
+-  previous_hash = "0"
+-
+-  for block in blocks:
+-    print(block['block_index'])
+-    if block['previous_hash'] != previous_hash:
+-      print('Chain invalid from index', block['block_index'])
+-    previous_hash = block['hash']
+-
+-  print(f'{node_address} - chain is valid')
+-
+-
+-def check_block_exist(node_addr):
+-  url = 'http://' + node_addr + ':8182/get-block?block_index=1'
+-  block = requests.get(url, timeout=1).json()
+-  if 'block_index' not in block:
+-    # print(f'{node_addr} - Invalid')
+-    print(f'{node_addr} - Reverting')
+-    requests.post('http://' + node_addr + ':8182/revert-chain?block_index=0&propogate=false', timeout=1).json()
+-    requests.post('http://' + node_addr + ':8182/sync-chain-from-peers', 
+-      json={
+-        "block_index": 0
+-      }, timeout=1).json()
+-
+-
+-for node in ['100.27.31.95', '13.127.196.33', '18.205.152.148', '18.205.189.2', '18.206.94.76', '18.207.216.103', '18.208.182.177', '18.212.66.84', '184.72.208.65', '3.80.209.8', '3.83.50.130', '3.84.50.209', '3.84.77.114', '3.86.220.174', '3.86.95.36', '3.87.215.96', '3.87.239.9', '3.87.59.246', '3.89.74.97', '3.89.88.60', '3.91.148.23', '3.91.240.161', '3.94.187.48', '34.230.43.253', '34.238.254.65', '35.171.16.241', '35.175.149.140', '44.201.104.135', '44.201.195.243', '44.202.100.22', '44.202.112.192', '44.202.36.179', '44.202.6.221', '44.203.125.108', '44.203.155.59', '44.204.232.32', '44.204.33.70', '52.203.35.134', '52.207.247.190', '52.23.232.237', '52.87.240.182', '52.90.193.227', '52.91.186.245', '52.91.72.62', '52.91.72.92', '54.158.53.69', '54.164.113.49', '54.164.15.194', '54.165.186.46', '54.173.64.147', '54.175.45.195', '54.197.74.80', '54.209.119.94', '54.209.184.138', '54.209.95.85', '54.210.130.74', '54.224.29.208', '54.237.250.151', '54.84.93.34', '54.85.121.224', 'testnet.newrl.net']:
+-  try:
+-    check_block_exist(node)
+-  except:
+-    pass
+-    # print(f'{node} - Unreachable')
+diff --git a/scripts/nodes.http b/scripts/nodes.http
+deleted file mode 100644
+index ee8a91b..0000000
+--- a/scripts/nodes.http
++++ /dev/null
+@@ -1,61 +0,0 @@
+-
+-GET http://testnet.newrl.net:8182/get-last-block-index
+-GET http://testnet.newrl.net:8182/get-node-wallet-address
+-GET http://testnet.newrl.net:8182/get-miners
+-GET http://testnet.newrl.net:8182/get-peers
+-GET http://testnet.newrl.net:8182/download-chain
+-GET http://testnet.newrl.net:8182/download-state
+-POST http://testnet.newrl.net:8182/run-updater
+-POST http://testnet.newrl.net:8182/revert-chain?block_index=1&propogate=false
+-
+-GET http://makemyfund.in:8182/get-last-block-index
+-GET http://makemyfund.in:8182/get-node-wallet-address
+-GET http://makemyfund.in:8182/get-miners
+-GET http://makemyfund.in:8182/get-peers
+-POST http://makemyfund.in:8182/run-updater
+-POST http://makemyfund.in:8182/revert-chain?block_index=1&propogate=false
+-
+-GET http://asqisys.com:8182/get-last-block-index
+-GET http://asqisys.com:8182/get-node-wallet-address
+-GET http://asqisys.com:8182/get-miners
+-GET http://asqisys.com:8182/get-peers
+-POST http://asqisys.com:8182/run-updater
+-GET http://asqisys.com:8182/download-chain
+-POST http://asqisys.com:8182/revert-chain?block_index=1&propogate=false
+-
+-GET http://localhost:8182/get-last-block-index
+-GET http://localhost:8182/get-node-wallet-address
+-GET http://localhost:8182/get-miners
+-GET http://localhost:8182/get-peers
+-POST http://localhost:8182/sync-chain-from-peers
+-POST http://localhost:8182/run-updater
+-GET http://localhost:8182/download-chain
+-POST http://localhost:8182/remove-dead-peers
+-POST http://localhost:8182/revert-chain?block_index=0&propogate=false
+-POST http://localhost:8182/receive-transaction
+-
+-{"transaction": {"timestamp": 1648185985420, "trans_code": "8d9817b183d61710c82323c082e9652727931ede", "type": 7, "currency": "NWRL", "fee": 0.0, "descr": "Miner addition", "valid": 1, "specific_data": {"wallet_address": "0x76d5ac405f6885c90c407202c474faff93389605", "network_address": "3.6.169.47", "broadcast_timestamp": 1648185985420}}, "signatures": [{"wallet_address": "0x76d5ac405f6885c90c407202c474faff93389605", "msgsign": "peAZ3HOcQDKDS7EVPEmjMqKMkWJcKLKbK3T1wuphelv7vjQvsYHWUEXOu2quk9O7TJKK/kK+yt6/bYbEAW733g=="}]}
+-
+-GET http://159.223.163.198:8182/get-last-block-index
+-GET http://159.223.163.198:8182/get-node-wallet-address
+-GET http://159.223.163.198:8182/get-miners
+-GET http://159.223.163.198:8182/get-peers
+-POST http://159.223.163.198:8182/run-updater
+-POST http://159.223.163.198:8182/revert-chain?block_index=10&propogate=false
+-POST http://159.223.163.198:8182/run-updater
+-
+-POST http://testnet.newrl.net:8182/update-software?propogate=true
+-POST http://159.223.163.198:8182/update-software?propogate=true
+-POST http://asqisys.com:8182/update-software?propogate=true
+-POST http://makemyfund.in:8182/update-software?propogate=false
+-POST http://localhost:8182/update-software?propogate=true
+-
+-POST http://159.223.163.198:8182/sync-chain-from-peers
+-
+-POST http://testnet.newrl.net:8182/revert-chain?block_index=1&propogate=false
+-POST http://159.223.163.198:8182/revert-chain?block_index=1&propogate=false
+-POST http://asqisys.com:8182/revert-chain?block_index=1&propogate=false
+-POST http://makemyfund.in:8182/revert-chain?block_index=1&propogate=false
+-POST http://localhost:8182/revert-chain?block_index=2230&propogate=false
+-
+-POST http://testnet.newrl.net:8182/run-updater?add_to_chain_before_consensus=true
+\ No newline at end of file
+diff --git a/scripts/restart.sh b/scripts/restart.sh
+new file mode 100755
+index 0000000..7538a6d
+--- /dev/null
++++ b/scripts/restart.sh
+@@ -0,0 +1,11 @@
++git pull
++python3 -m venv venv
++source venv/bin/activate
++pip install --upgrade pip
++pip install -r requirements.txt
++export NEWRL_ENV=$1
++python3 -m app.migrations.init
++# python -m app.migrations.migrate_db
++# python3 -m app.codes.auth.make_auth --createnewwallet
++pkill -9 python
++python3 -m app.main $2 $3 $4 $5 $6
+\ No newline at end of file
+diff --git a/scripts/set_trustscore.py b/scripts/set_trustscore.py
+new file mode 100644
+index 0000000..77aba1e
+--- /dev/null
++++ b/scripts/set_trustscore.py
+@@ -0,0 +1,35 @@
++import requests
++
++
++NODE_URL = 'http://archive1-testnet1.newrl.net:8421'
++WALLET = { "wallet_here" }
++
++TRUST_SCORE_DECIMAL = 10000
++
++destination_wallet_address = input('Enter destination wallet address: ')
++source_wallet_address = WALLET['address']
++score = input('Enter score[-100 to 100]: ')
++score = int(score)
++
++trust_score_update_request = {
++      "source_address": source_wallet_address,
++      "destination_address": destination_wallet_address,
++      "tscore": score * TRUST_SCORE_DECIMAL
++  }
++response = requests.post(NODE_URL + '/update-trustscore', json=trust_score_update_request)
++unsigned_transaction = response.json()
++unsigned_transaction['transaction']['fee'] = 1000000
++
++# In production use Newrl sdk to sign offline
++response = requests.post(NODE_URL + '/sign-transaction', json={
++    "wallet_data": WALLET,
++    "transaction_data": unsigned_transaction
++})
++
++signed_transaction = response.json()
++
++print('signed_transaction', signed_transaction)
++response = requests.post(NODE_URL + '/validate-transaction', json=signed_transaction)
++print(response.text)
++print(response.status_code)
++assert response.status_code == 200
+diff --git a/scripts/test.sh b/scripts/test.sh
+index 69b0a93..3db362e 100755
+--- a/scripts/test.sh
++++ b/scripts/test.sh
+@@ -6,7 +6,7 @@
+ # cp data_test/template/newrl.db data_test/newrl.db
+ # cp data_test/template/newrl_p2p.db data_test/newrl_p2p.db
+ # source venv/bin/activate
+-export NEWRL_TEST='1' && coverage run -m pytest app/tests/test_transfer.py
++export NEWRL_TEST='Y' && coverage run -m pytest app/tests/test_transfer.py
+ unset NEWRL_TEST
+ # rm data_test/mempool/*.json
+ # rm data_test/tmp/*.json
+\ No newline at end of file
+diff --git a/scripts/wallet_b64_to_dex.py b/scripts/wallet_b64_to_dex.py
+new file mode 100644
+index 0000000..384318c
+--- /dev/null
++++ b/scripts/wallet_b64_to_dex.py
+@@ -0,0 +1,45 @@
++import base64
++import ecdsa
++from Crypto.Hash import keccak
++import hashlib
++import json
++
++
++def get_address_from_public_key(public_key):
++    public_key_bytes = bytes.fromhex(public_key)
++
++    wallet_hash = keccak.new(digest_bits=256)
++    wallet_hash.update(public_key_bytes)
++    keccak_digest = wallet_hash.hexdigest()
++
++    address = '0x' + keccak_digest[-40:]
++    return address
++
++def get_person_id_for_wallet_address(wallet_address):
++    hs = hashlib.blake2b(digest_size=20)
++    hs.update(wallet_address.encode())
++    person_id = 'pi' + hs.hexdigest()
++    return person_id
++  
++def b64_to_hex(b64_private):
++  private_key_bytes = base64.b64decode(b64_private)
++  wallet = {'public': None, 'private': None, 'address': None}
++  key = ecdsa.SigningKey.from_string(
++      private_key_bytes, curve=ecdsa.SECP256k1).verifying_key
++  key_bytes = key.to_string()
++
++  private_key_hex = private_key_bytes.hex()
++  public_key_hex = key_bytes.hex()
++  wallet['address'] = get_address_from_public_key(public_key_hex)
++  wallet['private'] = private_key_hex
++  wallet['public'] = public_key_hex
++  person_id = get_person_id_for_wallet_address(wallet['address'])
++  auth_data = {
++            'person_id': person_id,
++            'wallet': wallet
++        }
++  return auth_data
++
++
++private_key_b64 = input('Enter private key in b64: ')
++print(json.dumps(b64_to_hex(private_key_b64)))
+\ No newline at end of file
+diff --git a/tests/setup.py b/tests/setup.py
+index 79c7562..7bdadc4 100644
+--- a/tests/setup.py
++++ b/tests/setup.py
+@@ -2,7 +2,8 @@ import random
+ import string
+ import os
+ 
+-WALLET = {"public": "09c191748cc60b43839b273083cc565811c26f5ce54b17ed4b4a17c61e7ad6b880fc7ac3081b9c0cf28756ea21ce501789b59e8f9103f3668ccf2c86108628ee", "private": "d63e7ca37bcd6b43a6bdf281b2f9b4de7e64f027c0f741ffe12a105bf3955ec7", "address": "0x667663f36ac08e78bbf259f1361f02dc7dad593b"}
++WALLET = CUSTODIAN_WALLET = { "public": "51017a461ecccdc082a49c3f6e17bb9a6259990f6c4d1c1dbb4e067878ddfa71cb4afbe6134bad588395edde20b92c6dd5abab4108d7e6aeb42a06229205cabb", "private": "92a365e63db963a76c0aa1389aee1ae4d25a4539311595820b295d3a77e07618", "address": "0x1342e0ae1664734cbbe522030c7399d6003a07a8"}
++# WALLET = {"public": "1efe5519bc0f207bb295e897160e41648c0150366b0202003ef9fdf0be3e1ac5afd185c8843ac3bf1ea4c0c8592c931e34fa6c7744ed34ab6726d6db33799e69", "private": "dc2fc8d7cd6a780c4cc6f5eca2784e183e3dc69d5fe5e08fe5bd088103aba5d6", "address": "0xf84a44f998227c0e70f21509a22b879a9d7cbb3d"}
+ BLOCK_WAIT_TIME = 15
+ 
+ 
+@@ -14,4 +15,6 @@ TEST_ENV = os.environ.get('TEST_ENV')
+ if TEST_ENV == 'local':
+     NODE_URL = 'http://localhost:4018'
+ else:
+-    NODE_URL = 'http://devnet.newrl.net:8420'
++    # NODE_URL = 'https://devnetapi.newrl.net'
++    # NODE_URL = 'https://devnetapi.newrl.net'
++    NODE_URL = 'http://13.126.206.94:8424'
+diff --git a/tests/test_add_token.py b/tests/test_add_token.py
+index ac3a0dc..37843eb 100644
+--- a/tests/test_add_token.py
++++ b/tests/test_add_token.py
+@@ -2,6 +2,7 @@ import random
+ import string
+ import time
+ import requests
++import json
+ 
+ from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
+ 
+@@ -26,8 +27,8 @@ def add_token(wallet_to_credit=WALLET['address'], amount=100):
+     }
+ 
+     response = requests.post(NODE_URL + '/add-token', json=add_wallet_request)
+-
+     unsigned_transaction = response.json()
++    unsigned_transaction['transaction']['fee'] = 1000000
+ 
+     response = requests.post(NODE_URL + '/sign-transaction', json={
+         "wallet_data": WALLET,
+diff --git a/tests/test_add_wallet.py b/tests/test_add_wallet.py
+index 93a7390..e748bae 100644
+--- a/tests/test_add_wallet.py
++++ b/tests/test_add_wallet.py
+@@ -3,6 +3,64 @@ import requests
+ 
+ from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
+ 
++def test_add_linked_wallet():
++    response = requests.get(NODE_URL + '/generate-wallet-address')
++    wallet = response.json()
++    print('New wallet\n', wallet, '\n')
++    public_key = wallet['public']
++    wallet_address = wallet['address']
++
++
++    add_wallet_request = {
++        "custodian_address": WALLET['address'],
++        "ownertype": "1",
++        "jurisdiction": "910",
++        "kyc_docs": [
++    {
++        "type": 1,
++        "hash": "686f72957d4da564e405923d5ce8311b6567cedca434d252888cb566a5b4c401"
++    }
++        ],
++        "specific_data": {
++            "linked_wallet": True,
++            "parentaddress": WALLET['address']
++        },
++        "public_key": public_key
++    }
++
++    response = requests.post(NODE_URL + '/add-wallet', json=add_wallet_request)
++
++    unsigned_transaction = response.json()
++    unsigned_transaction['transaction']['fee'] = 1000000
++
++    response = requests.post(NODE_URL + '/sign-transaction', json={
++    "wallet_data": WALLET,
++    "transaction_data": unsigned_transaction
++    })
++
++    signed_transaction = response.json()
++
++    print('signed_transaction', signed_transaction)
++    print('Sending wallet add transaction to chain')
++    response = requests.post(NODE_URL + '/validate-transaction', json=signed_transaction)
++    print('Got response from chain\n', response.text)
++    assert response.status_code == 200
++
++    if TEST_ENV == 'local':
++        response = requests.post(NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
++    else:
++        print('Waiting to mine block')
++        time.sleep(BLOCK_WAIT_TIME)
++
++    response = requests.get(NODE_URL + '/get-wallet?wallet_address=' + wallet_address)
++    assert response.status_code == 200
++    _wallet = response.json()
++    
++    response = requests.get(NODE_URL + '/get-wallet?wallet_address=' + WALLET['address'])
++    assert response.status_code == 200
++    custodian_wallet = response.json()
++    assert _wallet['person_id'] == custodian_wallet['person_id']
++
+ def test_add_wallet():
+     add_wallet()
+ 
+@@ -31,6 +89,7 @@ def add_wallet():
+     response = requests.post(NODE_URL + '/add-wallet', json=add_wallet_request)
+ 
+     unsigned_transaction = response.json()
++    unsigned_transaction['transaction']['fee'] = 1000000
+ 
+     response = requests.post(NODE_URL + '/sign-transaction', json={
+     "wallet_data": WALLET,
+diff --git a/tests/test_dex.py b/tests/test_dex.py
+index 4212a28..3e311ea 100644
+--- a/tests/test_dex.py
++++ b/tests/test_dex.py
+@@ -33,6 +33,7 @@ def create_wallet():
+     print(response.text)
+     assert response.status_code == 200
+     unsigned_transaction = response.json()
++    unsigned_transaction['transaction']['fee'] = 1000000
+     assert unsigned_transaction['transaction']
+     assert len(unsigned_transaction['signatures']) == 0
+ 
+@@ -89,6 +90,7 @@ def create_token(wallet, owner , token_name,token_code, amount):
+ 
+     assert response.status_code == 200
+     unsigned_transaction = response.json()
++    unsigned_transaction['transaction']['fee'] = 1000000
+     assert unsigned_transaction['transaction']
+     assert len(unsigned_transaction['signatures']) == 0
+ 
+@@ -206,6 +208,7 @@ def test_create_dex(request):
+     print(response.text)
+     assert response.status_code == 200
+     unsigned_transaction = response.json()
++    unsigned_transaction['transaction']['fee'] = 1000000
+     assert unsigned_transaction['transaction']
+     assert len(unsigned_transaction['signatures']) == 0
+ 
+@@ -295,6 +298,7 @@ def test_provide_initial_liquidity(request):
+ 
+     assert response.status_code == 200
+     unsigned_transaction = response.json()
++    unsigned_transaction['transaction']['fee'] = 1000000
+     assert unsigned_transaction['transaction']
+     assert len(unsigned_transaction['signatures']) == 0
+ 
+@@ -401,6 +405,7 @@ def test_swap(request):
+ 
+     assert response.status_code == 200
+     unsigned_transaction = response.json()
++    unsigned_transaction['transaction']['fee'] = 1000000
+     assert unsigned_transaction['transaction']
+     assert len(unsigned_transaction['signatures']) == 0
+ 
+@@ -490,6 +495,7 @@ def test_withdraw(request):
+ 
+     assert response.status_code == 200
+     unsigned_transaction = response.json()
++    unsigned_transaction['transaction']['fee'] = 1000000
+     assert unsigned_transaction['transaction']
+     assert len(unsigned_transaction['signatures']) == 0
+ 
+diff --git a/tests/test_fee_payer.py b/tests/test_fee_payer.py
+new file mode 100644
+index 0000000..e1b4571
+--- /dev/null
++++ b/tests/test_fee_payer.py
+@@ -0,0 +1,62 @@
++import time
++import requests
++
++from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
++
++def test_fee_payer():
++    w1 = add_wallet()
++    
++
++def add_wallet():
++    response = requests.get(NODE_URL + '/generate-wallet-address')
++    wallet = response.json()
++    print('New wallet\n', wallet, '\n')
++    public_key = wallet['public']
++    wallet_address = wallet['address']
++
++
++    add_wallet_request = {
++        "custodian_address": WALLET['address'],
++        "ownertype": "1",
++        "jurisdiction": "910",
++        "kyc_docs": [
++    {
++        "type": 1,
++        "hash": "686f72957d4da564e405923d5ce8311b6567cedca434d252888cb566a5b4c401"
++    }
++        ],
++        "specific_data": {},
++        "public_key": public_key
++    }
++
++    response = requests.post(NODE_URL + '/add-wallet', json=add_wallet_request)
++
++    unsigned_transaction = response.json()
++    unsigned_transaction['transaction']['fee'] = 1000000
++
++    response = requests.post(NODE_URL + '/sign-transaction', json={
++    "wallet_data": WALLET,
++    "transaction_data": unsigned_transaction
++    })
++
++    signed_transaction = response.json()
++
++    print('signed_transaction', signed_transaction)
++    print('Sending wallet add transaction to chain')
++    response = requests.post(NODE_URL + '/validate-transaction', json=signed_transaction)
++    print('Got response from chain\n', response.text)
++    assert response.status_code == 200
++
++    if TEST_ENV == 'local':
++        response = requests.post(NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
++    else:
++        print('Waiting to mine block')
++        time.sleep(BLOCK_WAIT_TIME)
++
++    response = requests.get(NODE_URL + '/get-wallet?wallet_address=' + wallet_address)
++    assert response.status_code == 200
++    _wallet = response.json()
++    assert _wallet['wallet_address'] == wallet_address
++    assert _wallet['wallet_public'] == public_key
++
++    return wallet
+diff --git a/tests/test_hex_sign.py b/tests/test_hex_sign.py
+new file mode 100644
+index 0000000..c9dbc6d
+--- /dev/null
++++ b/tests/test_hex_sign.py
+@@ -0,0 +1,43 @@
++
++import json
++import base64
++import ecdsa
++
++
++def sign_object(private_key, data):
++    pvtkeybytes = bytes.fromhex(private_key)
++    msg = json.dumps(data).encode()
++    sk = ecdsa.SigningKey.from_string(pvtkeybytes, curve=ecdsa.SECP256k1)
++    msgsignbytes = sk.sign(msg)
++    msgsign = msgsignbytes.hex()
++    return msgsign
++
++def verify_sign(data, public_key,signature):
++    public_key_bytes = bytes.fromhex(public_key)
++    sign_trans_bytes = bytes.fromhex(signature)
++    vk = ecdsa.VerifyingKey.from_string(
++        public_key_bytes, curve=ecdsa.SECP256k1)
++    message = json.dumps(data).encode()
++    try:
++        return vk.verify(sign_trans_bytes, message)
++    except:
++        return False
++
++
++if __name__ == '__main__':
++    WALLET = {
++        "public": "dc0ac6d0a60d6d9f2c945b009472742e78f4a56be98a53fb9a72810a18a68727c64a58245f0ba5ad463ab86426c62222f8eef36cb9885823deb7d08d9dcbcee3",
++        "private": "5e272e268e0fe09392b05007510f19670a5cffac797b4e081c53be37d0d558cb",
++        "address": "0x57d6d216e5f6e0c837b23b5016ed363fe308e4cd"
++    }
++    WALLET = {"public": "09c191748cc60b43839b273083cc565811c26f5ce54b17ed4b4a17c61e7ad6b880fc7ac3081b9c0cf28756ea21ce501789b59e8f9103f3668ccf2c86108628ee", "private": "d63e7ca37bcd6b43a6bdf281b2f9b4de7e64f027c0f741ffe12a105bf3955ec7", "address": "0x667663f36ac08e78bbf259f1361f02dc7dad593b"}
++    data = {
++                "block_index": 1,
++                "block_hash": "8b99a6b9f9ffbf1439a3fbca036c5b7eb5fb16d813a448f2ea9b058da272f7a7",
++                "vote": 9,
++                "timestamp": 1663675898000,
++                "wallet_address": "0x667663f36ac08e78bbf259f1361f02dc7dad593b"
++            }
++    msg = sign_object(WALLET['private'], data)
++    msg = '165f0a0e2f79687a3093b9f3ed85177b4274413807babba6d12002b9ab54a46eece07decacd9a4e474b43d2cdda62e812519d8b8171419c1f714df850bd29309'
++    print(verify_sign(data, WALLET['public'], msg))
+\ No newline at end of file
+diff --git a/tests/test_transfer.py b/tests/test_transfer.py
+index ff07986..7d36322 100644
+--- a/tests/test_transfer.py
++++ b/tests/test_transfer.py
+@@ -14,6 +14,12 @@ def test_transfer_unilateral():
+     to_wallet = add_wallet()
+     token = add_token(from_wallet['address'])
+     transfer_unilateral(from_wallet, to_wallet, token, 100)
++
++def test_transfer_nwrl():
++    from_wallet = add_wallet()
++    to_wallet = add_wallet()
++    token = add_token(from_wallet['address'])
++    transfer_unilateral(from_wallet, to_wallet, token, 100)
+     
+ 
+ def transfer_unilateral(from_wallet, to_wallet, token, amount):
+@@ -32,6 +38,7 @@ def transfer_unilateral(from_wallet, to_wallet, token, amount):
+ 
+     assert response.status_code == 200
+     unsigned_transaction = response.json()
++    unsigned_transaction['transaction']['fee'] = 1000000
+     
+     response = requests.post(NODE_URL + '/sign-transaction', json={
+     "wallet_data": from_wallet,
+diff --git a/tests/test_trustscore_update.py b/tests/test_trustscore_update.py
+index dc1de11..c705e51 100644
+--- a/tests/test_trustscore_update.py
++++ b/tests/test_trustscore_update.py
+@@ -5,11 +5,12 @@ import requests
+ 
+ from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME
+ from utils import sign_and_wait_mine
++from test_add_wallet import add_wallet
+ 
+ 
+ def test_trustscore_update():
+     source_wallet_address = WALLET['address']
+-    destination_wallet_address = '0xb06c59eebda6ba6e2c06661308fa8eebf3b827a1'
++    destination_wallet_address = add_wallet()['address']
+     response = requests.get(NODE_URL + f'/get-trustscore-wallets?dst_wallet_address={destination_wallet_address}&src_wallet_address={source_wallet_address}')
+     print(response.json())
+     if response.status_code == 200:
+@@ -24,6 +25,8 @@ def test_trustscore_update():
+ 
+     response = requests.post(NODE_URL + '/update-trustscore', json=trust_score_update_request)
+     unsigned_transaction = response.json()
++    unsigned_transaction['transaction']['fee'] = 1000000
++
+     sign_and_wait_mine(unsigned_transaction)
+     
+     response = requests.get(NODE_URL + f'/get-trustscore-wallets?dst_wallet_address={destination_wallet_address}&src_wallet_address={source_wallet_address}')

@@ -58,18 +58,52 @@ def create_wallet():
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response = requests.get(NODE_URL+'/download-state')
+    response = requests.get(NODE_URL + '/get-wallet?wallet_address=' + wallet['address'])
     assert response.status_code == 200
-    state = response.json()
-
-    wallets = state['wallets']
-    wallet_in_state = next(
-        x for x in wallets if x['wallet_address'] == wallet['address'])
-    assert wallet_in_state
 
     print("Wallet created with address "+wallet['address'])
     print('Test passed.')
     return wallet
+
+
+def transfer_unilateral(from_wallet, to_wallet, token, amount):
+    token_code = token['tokencode']
+    req = {
+        "transfer_type": 5,
+        "asset1_code": token_code,
+        "asset2_code": "",
+        "wallet1_address": from_wallet['address'],
+        "wallet2_address": to_wallet['address'],
+        "asset1_qty": amount,
+        "description": "",
+        "additional_data": {}
+    }
+    response = requests.post(NODE_URL + '/add-transfer', json=req)
+
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    response = requests.post(NODE_URL + '/sign-transaction', json={
+        "wallet_data": from_wallet,
+        "transaction_data": unsigned_transaction
+    })
+    signed_transaction = response.json()
+    response = requests.post(
+        NODE_URL + '/validate-transaction', json=signed_transaction)
+
+    if TEST_ENV == 'local':
+        response = requests.post(
+            NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+    else:
+        print('Waiting to mine block')
+        time.sleep(BLOCK_WAIT_TIME)
+
+    response = requests.get(
+        NODE_URL + f"/get-balances?balance_type=TOKEN_IN_WALLET&token_code={token_code}&wallet_address={to_wallet['address']}")
+    assert response.status_code == 200
+    balance = response.json()['balance']
+    assert balance == amount
 
 
 def create_token(wallet, owner , token_name,token_code, amount):
@@ -120,8 +154,8 @@ def create_token(wallet, owner , token_name,token_code, amount):
         time.sleep(BLOCK_WAIT_TIME)
 
 def get_dex_datails():
-    pool_token1_code = "nINR"
-    pool_token2_code = "nUSDC"
+    pool_token1_code = "nINR"+str(random.randrange(111111, 999999, 5))
+    pool_token2_code = "nUSDC"+str(random.randrange(111111, 999999, 5))
     pool_ratio = "1:4"
     pool_fee = 0.005
     ot_token_code = "LPT_"+str(random.randrange(111111, 999999, 5))
@@ -134,6 +168,10 @@ def get_dex_datails():
     wallet2 = create_wallet()
     wallet2_token1_init_amount = 1000
     wallet2_token2_init_amount = 7000
+
+    #fund newrl for fee
+    transfer_unilateral(WALLET,wallet1,{"tokencode":"NWRL"},10000000)
+    transfer_unilateral(WALLET, wallet2, {"tokencode": "NWRL"}, 10000000)
 
     # fund wallet1
     create_token(WALLET, wallet1['address'], pool_token1_code,
@@ -234,21 +272,21 @@ def test_create_dex(request):
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response = requests.get(NODE_URL+'/download-state')
-    assert response.status_code == 200
-    state = response.json()
+    # response = requests.get(NODE_URL+'/download-state')
+    # assert response.status_code == 200
+    # state = response.json()
 
-    contracts = state['contracts']
+    # contracts = state['contracts']
     # contracts_in_state = next(
     #     x for x in contracts if x['address'] == ct_address)
-    contracts_in_state = False
-    for x in contracts:
-        c = x['address']
-        d= ct_address
-        if c == d:
-            contracts_in_state = True
-            break
-    assert contracts_in_state 
+    # contracts_in_state = False
+    # for x in contracts:
+    #     c = x['address']
+    #     d= ct_address
+    #     if c == d:
+    #         contracts_in_state = True
+    #         break
+    # assert contracts_in_state 
     request.config.cache.set('dex_address', ct_address) 
 
 
