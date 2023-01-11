@@ -1,9 +1,9 @@
 import json
 import sqlite3
 
-from app.codes.utils import get_person_id_for_wallet_address
-from app.constants import NEWRL_DB
-from app.nvalues import CUSTODIAN_DAO_ADDRESS, CUSTODIAN_WALLET_LIST, DAO_MANAGER, ASQI_WALLET, FOUNDATION_WALLET, ASQI_DAO_ADDRESS, \
+from app.core.helpers.utils import get_person_id_for_wallet_address
+from app.config.constants import NEWRL_DB
+from app.config.nvalues import CUSTODIAN_DAO_ADDRESS, CUSTODIAN_WALLET_LIST, DAO_MANAGER, ASQI_WALLET, FOUNDATION_WALLET, ASQI_DAO_ADDRESS, \
     ASQI_WALLET_DAO, FOUNDATION_WALLET_DAO, FOUNDATION_DAO_ADDRESS, MEMBER_WALLET_LIST
 
 
