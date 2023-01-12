@@ -6,12 +6,11 @@ import json
 
 from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
 
-token_code = 'TSTTK' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
-
 def test_add_token():
     add_token()
 
 def add_token(wallet_to_credit=WALLET['address'], amount=100, custodian_wallet=WALLET):
+    token_code = 'TSTTK' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
     add_wallet_request = {
     "token_name": token_code,
     "token_code": token_code,
