@@ -138,6 +138,7 @@ class Transactionmanager:
             if validadds == False:
                 return False
         except Exception as e:
+            logger.error(e)
             return False
         addvaliditydict = {}
         for valadd in validadds:
@@ -346,8 +347,9 @@ class Transactionmanager:
             ttype = self.transaction['type']
             startingbalance1 = 0
             startingbalance2 = 0
+            wallet2 = self.transaction['specific_data']['wallet2']
             sender1 = self.transaction['specific_data']['wallet1']
-            sender2 = self.transaction['specific_data']['wallet2']
+            sender2 =  wallet2 if wallet2 else self.get_sender2()
             tokencode1 = self.transaction['specific_data']['asset1_code']
             # token1mp = self.mempoolpayment(sender1, tokencode1)
             # token1amt = max(
@@ -376,8 +378,9 @@ class Transactionmanager:
             # address validity applies to both senders in ttype 4 and 5; since sender2 is still receiving tokens
 
             sender1valid = is_wallet_valid(sender1, cur=cur)
+            #TODO attach 2 sigs present validation with sender2 == None
             sender2valid = is_wallet_valid(sender2, cur=cur) or (
-                sender2 == Configuration.config("ZERO_ADDRESS") and ttype == 5)
+                sender2 == Configuration.config("ZERO_ADDRESS") and ttype == 5) 
             if not sender1valid:
                 print("Invalid sender1 wallet")
             #	self.transaction['valid']=0
@@ -569,6 +572,17 @@ class Transactionmanager:
 #	def legalvalidator(self):
         # check the token restrictions on ownertype and check the type of the recipient
 
+    def get_sender2(self):
+        transaction_data = self.transaction["specific_data"]
+        transaction_signer = self.signatures
+        sender1 = transaction_data["wallet1"]
+        if transaction_data['wallet2'] is not None:
+            return transaction_data['wallet2']
+        else:
+            if transaction_signer[0]["wallet_address"] == sender1:
+                return transaction_signer[1]["wallet_address"]
+            else:
+                return transaction_signer[0]["wallet_address"]
 
 def get_public_key_from_address(address, cur=None):
     if cur is None:
@@ -764,7 +778,7 @@ def get_sc_validadds(transaction, cur=None):
         return [-1]
 
 
-def get_valid_addresses(transaction, cur=None):
+def get_valid_addresses(transaction, address = None, cur=None):
     """Get valid signature addresses for a transaction"""
     transaction_type = transaction['type']
     valid_addresses = []
@@ -779,7 +793,12 @@ def get_valid_addresses(transaction, cur=None):
         if transaction['specific_data']['wallet1'] == transaction['specific_data']['wallet2']:
             raise Exception('Both senders cannot be same')
         valid_addresses.append(transaction['specific_data']['wallet1'])
-        valid_addresses.append(transaction['specific_data']['wallet2'])
+        
+        if transaction['specific_data']['wallet2'] is not None:
+            valid_addresses.append(transaction['specific_data']['wallet2'])
+        elif address is not None:
+            valid_addresses.append(address)
+            
     if transaction_type == TRANSACTION_ONE_WAY_TRANSFER:  # Only sender1 is needed to sign
         valid_addresses.append(transaction['specific_data']['wallet1'])
     if transaction_type == TRANSACTION_TRUST_SCORE_CHANGE:
