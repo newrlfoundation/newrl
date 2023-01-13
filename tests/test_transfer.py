@@ -7,6 +7,7 @@ from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
 from setup import generate_random_token_code
 from test_add_wallet import add_wallet
 from test_add_token import add_token
+from test_fee_payer import add_token as add_token_fee_payer
 
 
 def test_transfer_unilateral():
@@ -63,7 +64,7 @@ def transfer_unilateral(from_wallet, to_wallet, token_code, amount):
     print('Test passed.')
 
 
-def transfer_bilateral(wallet1, wallet2, token_code1, token_code2, amount1, amount2, skip_wallet2=False):
+def transfer_bilateral(wallet1, wallet2, token_code1, token_code2, amount1, amount2, skip_wallet2=False, fee_payer_wallet=None):
     # token_code = token['tokencode']
     req ={
         "transfer_type": 4,
@@ -81,6 +82,8 @@ def transfer_bilateral(wallet1, wallet2, token_code1, token_code2, amount1, amou
     assert response.status_code == 200
     unsigned_transaction = response.json()
     unsigned_transaction['transaction']['fee'] = 1000000
+    if fee_payer_wallet is not None:
+        unsigned_transaction['transaction']['fee_payer'] = fee_payer_wallet['address']
     
     response = requests.post(NODE_URL + '/sign-transaction', json={
     "wallet_data": wallet1,
@@ -92,6 +95,12 @@ def transfer_bilateral(wallet1, wallet2, token_code1, token_code2, amount1, amou
     "transaction_data": signed_transaction
     })
     signed_transaction = response.json()
+    if fee_payer_wallet is not None:
+        response = requests.post(NODE_URL + '/sign-transaction', json={
+        "wallet_data": WALLET,
+        "transaction_data": signed_transaction
+        })
+        signed_transaction = response.json()
     response = requests.post(NODE_URL + '/validate-transaction', json=signed_transaction)
 
     if TEST_ENV == 'local':
@@ -209,6 +218,58 @@ def test_transfer_bilateral_single_wallet_in_txn():
     assert balance == 10
 
     response = requests.get(NODE_URL + f"/get-balances?balance_type=TOKEN_IN_WALLET&token_code={token2['tokencode']}&wallet_address={wallet2['address']}")
+    assert response.status_code == 200
+    balance = response.json()['balance']
+    assert balance == 90
+
+    print('Test passed.')
+
+
+def test_transfer_bilateral_txn_thirdparty_fee_payer():
+    wallet1 = add_wallet()
+    wallet2 = add_wallet()
+    token1 = add_token_fee_payer(wallet1['address'], fee_payer_wallet=WALLET)
+    token2 = add_token_fee_payer(wallet2['address'], fee_payer_wallet=WALLET)
+
+    response = requests.get(NODE_URL + f"/get-balances?balance_type=TOKEN_IN_WALLET&token_code={token1}&wallet_address={wallet1['address']}")
+    assert response.status_code == 200
+    balance = response.json()['balance']
+    assert balance == 100
+    
+    response = requests.get(NODE_URL + f"/get-balances?balance_type=TOKEN_IN_WALLET&token_code={token1}&wallet_address={wallet2['address']}")
+    assert response.status_code == 200
+    balance = response.json()['balance']
+    assert balance == None
+    
+    response = requests.get(NODE_URL + f"/get-balances?balance_type=TOKEN_IN_WALLET&token_code={token2}&wallet_address={wallet2['address']}")
+    assert response.status_code == 200
+    balance = response.json()['balance']
+    assert balance == 100
+    
+    response = requests.get(NODE_URL + f"/get-balances?balance_type=TOKEN_IN_WALLET&token_code={token2}&wallet_address={wallet1['address']}")
+    assert response.status_code == 200
+    balance = response.json()['balance']
+    assert balance == None
+
+    transfer_bilateral(wallet1, wallet2, 
+        token1, token2, 5, 10, skip_wallet2=True, fee_payer_wallet=WALLET)
+    
+    response = requests.get(NODE_URL + f"/get-balances?balance_type=TOKEN_IN_WALLET&token_code={token1}&wallet_address={wallet1['address']}")
+    assert response.status_code == 200
+    balance = response.json()['balance']
+    assert balance == 95
+
+    response = requests.get(NODE_URL + f"/get-balances?balance_type=TOKEN_IN_WALLET&token_code={token1}&wallet_address={wallet2['address']}")
+    assert response.status_code == 200
+    balance = response.json()['balance']
+    assert balance == 5
+    
+    response = requests.get(NODE_URL + f"/get-balances?balance_type=TOKEN_IN_WALLET&token_code={token2}&wallet_address={wallet1['address']}")
+    assert response.status_code == 200
+    balance = response.json()['balance']
+    assert balance == 10
+
+    response = requests.get(NODE_URL + f"/get-balances?balance_type=TOKEN_IN_WALLET&token_code={token2}&wallet_address={wallet2['address']}")
     assert response.status_code == 200
     balance = response.json()['balance']
     assert balance == 90

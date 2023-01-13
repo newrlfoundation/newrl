@@ -18,4 +18,4 @@ if TEST_ENV == 'local':
 else:
     # NODE_URL = 'https://devnetapi.newrl.net'
     # NODE_URL = 'https://devnetapi.newrl.net'
-    NODE_URL = 'http://13.126.206.94:8424'
+    NODE_URL = 'http://65.0.104.146:8424'
