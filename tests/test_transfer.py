@@ -7,6 +7,7 @@ from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
 from setup import generate_random_token_code
 from test_add_wallet import add_wallet
 from test_add_token import add_token
+from test_fee_payer import add_token as add_token_fee_payer
 
 
 def test_transfer_unilateral():
@@ -83,7 +84,6 @@ def transfer_bilateral(wallet1, wallet2, token_code1, token_code2, amount1, amou
     unsigned_transaction['transaction']['fee'] = 1000000
     if fee_payer_wallet is not None:
         unsigned_transaction['transaction']['fee_payer'] = fee_payer_wallet['address']
-
     response = requests.post(NODE_URL + '/sign-transaction', json={
     "wallet_data": wallet1,
     "transaction_data": unsigned_transaction
