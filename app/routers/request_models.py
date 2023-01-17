@@ -28,7 +28,7 @@ class TransferRequest(BaseModel):
     asset1_code: str = 't0012'
     asset2_code: str = 't0023'
     wallet1_address: str = '0x762485963e99f6a6548729f11d610dd37ffd3b73'
-    wallet2_address: str = '0x9b85fcc6071cb974458ce9d2260fd1f102760f8b'
+    wallet2_address: Optional[str] = '0x9b85fcc6071cb974458ce9d2260fd1f102760f8b'
     asset1_qty: float = 100.0
     asset2_qty: float = 0
     description: str = ''

@@ -154,7 +154,17 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
 
     if transaction_type == TRANSACTION_TWO_WAY_TRANSFER:  # this is a transfer tx
         sender1 = transaction_data['wallet1']
-        sender2 = transaction_data['wallet2']
+
+        #wallet other than wallet one is inferred as wallet2 , assuming only two sigs are present
+        
+        if transaction_data['wallet2'] is not None:
+            sender2 = transaction_data['wallet2']
+        else:
+            if transaction_signer[0]["wallet_address"] == sender1:
+                sender2 = transaction_signer[1]["wallet_address"]
+            else:
+                sender2 = transaction_signer[0]["wallet_address"]
+
 
         tokencode1 = transaction_data['asset1_code']
         amount1 = int(transaction_data['asset1_number'] or 0)

@@ -8,7 +8,7 @@ from app.core.blockchain.transactionmanager import Transactionmanager, get_valid
 
 def check_signing_address(transaction, address):
     """Check if an address is allowed to sign a transaction"""
-    allowed_signing_addresses = get_valid_addresses(transaction)
+    allowed_signing_addresses = get_valid_addresses(transaction, address = address)
     if address in allowed_signing_addresses:
         print(f"{address} is authorised to sign this transaction.")
         return True
