@@ -316,7 +316,7 @@ class DaoMainTemplate(ContractMaster):
         # transferTxn = callparams['transferTxn']
 
         recipient_address = callparams['recipient_address']
-        amount = callparams['amount']
+        # amount = callparams['amount']  will be infered from value
         # Stable Coin transfer from user to DAO
         # Value Code here $$$$$$
         # transfer_tokens_and_update_balances(

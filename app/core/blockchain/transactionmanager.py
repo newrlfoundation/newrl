@@ -305,7 +305,7 @@ class Transactionmanager:
                     if tcode and tcode != "0" and tcode != "" and tcode != "string":
                         if is_token_valid(self.transaction['specific_data']['tokencode'], cur=cur):
                             existing_custodian = get_custodian_from_token(
-                                self.transaction['specific_data']['tokencode'])
+                                self.transaction['specific_data']['tokencode'],cur = cur)
                             if custodian == existing_custodian:
                                 self.validity = 1  # tokencode exists and is run by the given custodian
                             else:
