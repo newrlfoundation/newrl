@@ -579,10 +579,20 @@ class Transactionmanager:
         if transaction_data['wallet2'] is not None:
             return transaction_data['wallet2']
         else:
-            if transaction_signer[0]["wallet_address"] == sender1:
-                return transaction_signer[1]["wallet_address"]
-            else:
-                return transaction_signer[0]["wallet_address"]
+            # if transaction_signer[0]["wallet_address"] == sender1:
+            #     return transaction_signer[1]["wallet_address"]
+            # else:
+            #     return transaction_signer[0]["wallet_address"]
+            fee_payer = self.get_fee_payer()
+            for sig in transaction_signer:
+                if (sig["wallet_address"] != sender1) and (sig["wallet_address"] != fee_payer):
+                    return sig["wallet_address"]
+
+                    
+    def get_fee_payer(self):
+        if 'fee_payer' in self.transaction:
+            return self.transaction['fee_payer']
+        return None    
 
 def get_public_key_from_address(address, cur=None):
     if cur is None:

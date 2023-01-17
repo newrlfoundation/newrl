@@ -155,10 +155,8 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
     if transaction_type == TRANSACTION_TWO_WAY_TRANSFER:  # this is a transfer tx
         sender1 = transaction_data['wallet1']
 
-        logger.info("Tranasction signers are", transaction_signer)
         #wallet other than wallet one is inferred as wallet2 , assuming only two sigs are present
         
-        #TODO validation to prevent key
         if transaction_data['wallet2'] is not None:
             sender2 = transaction_data['wallet2']
         else:
