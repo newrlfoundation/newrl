@@ -3,8 +3,9 @@ import random
 import logging
 import json
 
-from app.config.nvalues import MIN_STAKE_AMOUNT, SENTINEL_NODE_WALLET
+from app.config.nvalues import MIN_STAKE_AMOUNT, SENTINEL_NODE_WALLET, NETWORK_TRUST_MANAGER_PID
 from app.config.constants import BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
+from app.config.forks import FORK_BLOCK_INDEX_FIX_VALIDATOR_SELECTION_1_5_0
 from ..clock.global_time import get_corrected_time_ms
 from ..helpers.utils import get_last_block_hash
 from app.core.trustnet.scoremanager import get_scores_for_wallets
@@ -111,7 +112,23 @@ def get_eligible_miners():
     con = sqlite3.connect(NEWRL_DB)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
-    miner_cursor = cur.execute(
+    if cutfoff_block > FORK_BLOCK_INDEX_FIX_VALIDATOR_SELECTION_1_5_0:
+        miner_cursor = cur.execute(
+            '''
+            select distinct m.wallet_address, network_address, last_broadcast_timestamp, block_index
+            from miners m
+            join person_wallet pw on m.wallet_address = pw.wallet_id
+            join trust_scores ts on pw.person_id = ts.dest_person_id
+            join stake_ledger sl on sl.wallet_address = m.wallet_address
+            and m.block_index > ?
+            and m.wallet_address != ?
+            and sl.amount >= ?
+            where ts.score > 0
+            and ts.src_person_id = ?
+            order by m.wallet_address asc
+            ''', (cutfoff_block, SENTINEL_NODE_WALLET, MIN_STAKE_AMOUNT, NETWORK_TRUST_MANAGER_PID)).fetchall()
+    else:
+        miner_cursor = cur.execute(
         '''
         select distinct m.wallet_address, network_address, last_broadcast_timestamp, block_index
         from miners m
