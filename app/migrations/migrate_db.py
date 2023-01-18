@@ -9,6 +9,7 @@ db_path = NEWRL_DB
 
 def run_migrations():
     migrations = os.listdir(DB_MIGRATIONS_PATH)
+    migrations.sort()
     migrations = filter(lambda migration: '.py' in migration, migrations)
     for migration in migrations:
         print(migration)
