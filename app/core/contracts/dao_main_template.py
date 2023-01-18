@@ -37,8 +37,8 @@ class DaoMainTemplate(ContractMaster):
         dao_pid = self.__get_pid_from_wallet_using_repo(repo, self.address)
         # qparam = {"tokencode": cspecs['token_name']} commented as token is not present with mem dao
 
-        token_code = cspecs.get('token_code', cspecs["token_name"])
         if self.dao_type == 2:
+            token_code = cspecs.get('token_code', cspecs["token_name"])
             qparam = {"tokencode": token_code,
                       "wallet_address": self.address}
 

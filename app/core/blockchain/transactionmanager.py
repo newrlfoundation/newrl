@@ -679,7 +679,7 @@ def is_custodian_wallet(address, cur=None):
     pid_cursor = cur.execute(
         'SELECT count(*) FROM dao_membership WHERE dao_person_id=? and member_person_id=?', (custodian_dao_pid, wallet_pid))
     pid = pid_cursor.fetchone()
-    is_valid_custodian = pid != None
+    is_valid_custodian = pid[0] != 0
     if cursor_opened:
         con.close()
 
