@@ -2,21 +2,21 @@ import random
 import string
 import time
 import requests
+import json
 
 from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
-
-token_code = 'TSTTK' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
 def test_add_token():
     add_token()
 
-def add_token(wallet_to_credit=WALLET['address'], amount=100):
+def add_token(wallet_to_credit=WALLET['address'], amount=100, custodian_wallet=WALLET):
+    token_code = 'TSTTK' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
     add_wallet_request = {
     "token_name": token_code,
     "token_code": token_code,
     "token_type": "1",
     "first_owner": wallet_to_credit,
-    "custodian": WALLET['address'],
+    "custodian": custodian_wallet['address'],
     "legal_doc": "",
     "amount_created": amount,
     "tokendecimal": 2,
@@ -26,11 +26,11 @@ def add_token(wallet_to_credit=WALLET['address'], amount=100):
     }
 
     response = requests.post(NODE_URL + '/add-token', json=add_wallet_request)
-
     unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
 
     response = requests.post(NODE_URL + '/sign-transaction', json={
-        "wallet_data": WALLET,
+        "wallet_data": custodian_wallet,
         "transaction_data": unsigned_transaction
     })
 

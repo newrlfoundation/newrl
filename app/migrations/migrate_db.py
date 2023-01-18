@@ -1,14 +1,15 @@
 import os
 import importlib
 
-from app.Configuration import Configuration
-from ..constants import DB_MIGRATIONS_PATH, NEWRL_DB
+from app.config.Configuration import Configuration
+from app.config.constants import DB_MIGRATIONS_PATH, NEWRL_DB
 
 db_path = NEWRL_DB
 
 
 def run_migrations():
     migrations = os.listdir(DB_MIGRATIONS_PATH)
+    migrations.sort()
     migrations = filter(lambda migration: '.py' in migration, migrations)
     for migration in migrations:
         print(migration)
