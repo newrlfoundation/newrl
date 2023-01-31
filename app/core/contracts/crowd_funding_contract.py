@@ -75,7 +75,7 @@ class crowd_funding_contract(ContractMaster):
             if goal_reached:
                 existing_fund["status"] = "goal_reached"
             existing_fund["amount_raised"] = amount + existing_fund["amount_raised"]
-            current_investors = json.loads(existing_fund["investor"])
+            current_investors = existing_fund["investor"]
             current_investors[callparams['function_caller'][0]['wallet_address']] = amount
             existing_fund["investor"]= json.dumps(current_investors)
             sc_state_proposal1_data = {
@@ -147,6 +147,48 @@ class crowd_funding_contract(ContractMaster):
 
         return child_transactions
 
+    def create_mirror_token(self, callparamsip, repo: FetchRepository):
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
+        callparams = input_to_dict(callparamsip)
+
+        benefeciary = cspecs['benefeciary_address']
+        mirror_token_code = cspecs['mirror_token_code']
+
+        existing_fund = self._fetch_fund(repo)
+
+        #check if goal is complete TODO
+
+        if not existing_fund:
+            raise Exception("No investments found for this fund")
+        
+        child_transactions = []
+
+        investors = existing_fund["investor"]
+
+        for investor in investors:
+            #create mirror token
+            transaction_creator = TransactionCreator()
+            tokendata = {
+                "tokenname": mirror_token_code,
+                "tokencode": mirror_token_code,
+                "tokentype": '1',
+                "tokenattributes": {},
+                "first_owner": investor,
+                "custodian": self.address,
+                "legaldochash": '',
+                "amount_created": investors[investor],
+                "value_created": '',
+                "disallowed": {},
+                "sc_flag": True,
+            }
+            create_proposal = transaction_creator.transaction_type_two(
+                tokendata)
+            child_transactions.append(create_proposal)
+
+        return child_transactions
+
+
+
     # def get_startup_tokens(self, callparamsip, repo: FetchRepository):
     #     cspecs = input_to_dict(self.contractparams['contractspecs'])
     #     callparams = input_to_dict(callparamsip)
@@ -209,5 +251,5 @@ class crowd_funding_contract(ContractMaster):
             existing_fund["address"] = state[0]
             existing_fund["amount_raised"] = state[1]
             existing_fund["status"] = state[2]
-            existing_fund["investor"] = state[3]
+            existing_fund["investor"] = json.loads(state[3])
         return existing_fund
