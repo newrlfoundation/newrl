@@ -23,11 +23,9 @@ class crowd_funding_contract(ContractMaster):
         goal_amount = cspecs['goal_amount']
         minimum_amount = cspecs['minimum_amount']
 
-        fund_state = None  # TODO fetch
         
         value = callparams['value']
 
-        state = None
         existing_fund = self._fetch_fund(repo)
 
 
@@ -99,11 +97,16 @@ class crowd_funding_contract(ContractMaster):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         callparams = input_to_dict(callparamsip)
 
-        benefeciary = cspecs['pledge_token_code']
+        benefeciary = cspecs['benefeciary_address']
         master_token_code = cspecs['master_token_code']
 
-        #check if goal is complete
+        existing_fund = self._fetch_fund(repo)
 
+        #check if goal is complete TODO
+
+        if not existing_fund:
+            raise Exception("No investments found for this fund")
+        
         child_transactions = []
 
         #create master token
@@ -126,8 +129,8 @@ class crowd_funding_contract(ContractMaster):
         child_transactions.append(create_proposal)
 
         #trasnfer master and ninr to benefeciary
-        ninr_to_send = self._fetch_token_balance("NEWRL",self.address,repo)
-
+        #TODO seperate fee part and send only raw
+        ninr_to_send = existing_fund["amount_raised"]
         transaction_creator = TransactionCreator()
         transfer_proposal_data = {
             "asset1_code": "NWRL",
@@ -142,6 +145,7 @@ class crowd_funding_contract(ContractMaster):
             transfer_proposal_data)
         child_transactions.append(transfer_proposal)
 
+        return child_transactions
 
     # def get_startup_tokens(self, callparamsip, repo: FetchRepository):
     #     cspecs = input_to_dict(self.contractparams['contractspecs'])
