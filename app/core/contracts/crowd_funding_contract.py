@@ -1,3 +1,4 @@
+import json
 import math
 from app.core.contracts.contract_master import ContractMaster
 from app.core.contracts.dao_main_template import DaoMainTemplate
@@ -6,15 +7,15 @@ from app.core.helpers.FetchRespository import FetchRepository
 from app.core.blockchain.TransactionCreator import TransactionCreator
 
 
-class crowd_funding_dao(ContractMaster):
+class crowd_funding_contract(ContractMaster):
     codehash = ""  # this is the hash of the entire document excluding this line, it is same for all instances of this class
 
     def __init__(self, contractaddress=None):
-        self.template = "crowd_funding_dao"
+        self.template = "crowd_funding_contract"
         self.version = "1.0.0"
         self.dao_type = 2
-        super().__init__(contractaddress)
-
+        ContractMaster.__init__(self, self.template,
+                                self.version, contractaddress)
     def invest(self, callparamsip, repo: FetchRepository):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         callparams = input_to_dict(callparamsip)
@@ -22,45 +23,76 @@ class crowd_funding_dao(ContractMaster):
         goal_amount = cspecs['goal_amount']
         minimum_amount = cspecs['minimum_amount']
 
-        pledge_token_code = cspecs['pledge_token_code']
-        current_outstanding = self.get_total_issued_tokens(
-            pledge_token_code, repo)
+        fund_state = None  # TODO fetch
+        
+        value = callparams['value']
 
-        if current_outstanding >= goal_amount:
-            raise Exception("goal amount already reached")
+        state = None
+        existing_fund = self._fetch_fund(repo)
+
+
+        status = existing_fund["status"] if existing_fund is not None else None
 
         unit_price = cspecs['unit_price']
+        amount = value[0]['amount']
+
         unit_currency = cspecs['unit_currency']
 
-        value = callparams['value']
+        if value[0]['amount'] < minimum_amount:
+            raise Exception("Minimum amount criteria not satisfied")
+        if existing_fund and existing_fund["amount_raised"] >= goal_amount:
+            raise Exception("goal amount already reached")
+        
         if value[0]["token_code"] != unit_currency:
             raise Exception("Invalid tokens sent as part of value")
 
-        amount = value[0]['amount']
-        token_issue_amount = math.floor(amount/unit_price)
-
-        recipient_address = callparams['recipient_address']
-
-        #TODO have new sc state to track raised amount, status, time period?
-        #TODO logic to check on time/min/max amount
+        #TODO 
+        goal_reached = False
 
         child_transactions = []
-        transaction_creator = TransactionCreator()
-        tokendata = {
-            "tokenname": pledge_token_code,
-            "tokencode": pledge_token_code,
-            "tokentype": '1',
-            "tokenattributes": {},
-            "first_owner": recipient_address,
-            "custodian": self.address,
-            "legaldochash": '',
-            "amount_created": token_issue_amount,
-            "value_created": '',
-            "disallowed": {},
-            "sc_flag": True,
-        }
-        child_transactions.append(
-            transaction_creator.transaction_type_two(tokendata))
+
+        #TODO else logic
+        if not existing_fund:
+            investor_data = {
+                callparams['function_caller'][0]['wallet_address'] : amount
+            }
+            state_data = {
+                "address":self.address,
+                "amount_raised" : amount,
+                "status":"open",
+                "investor": json.dumps(investor_data)
+            }
+
+            sc_state_proposal1_data = {
+                "operation": "save",
+                "table_name": "crowd_funding",
+                "sc_address": self.address,
+                "data": state_data
+            }
+            transaction_creator = TransactionCreator()
+            add_fundung_proposal = transaction_creator.transaction_type_8(
+                sc_state_proposal1_data)
+            child_transactions.append(add_fundung_proposal)
+        else:
+            if goal_reached:
+                existing_fund["status"] = "goal_reached"
+            existing_fund["amount_raised"] = amount + existing_fund["amount_raised"]
+            current_investors = json.loads(existing_fund["investor"])
+            current_investors[callparams['function_caller'][0]['wallet_address']] = amount
+            existing_fund["investor"]= json.dumps(current_investors)
+            sc_state_proposal1_data = {
+                "operation": "update",
+                "table_name": "crowd_funding",
+                "sc_address": self.address,
+                "data": existing_fund,
+                "unique_column": "address",
+                "unique_value": self.address
+            }
+            transaction_creator = TransactionCreator()
+            add_fundung_proposal = transaction_creator.transaction_type_8(
+                sc_state_proposal1_data)
+            child_transactions.append(add_fundung_proposal)
+            
         return child_transactions
 
     def create_master_token(self, callparamsip, repo: FetchRepository):
@@ -162,3 +194,16 @@ class crowd_funding_dao(ContractMaster):
         if balance == None:
             return 0
         return balance[0]
+    
+    def _fetch_fund(self, repo):
+        state = repo.select_Query().add_table_name('crowd_funding').where_clause('address', self.address,
+                                                                                          1).execute_query_single_result(
+            {'address': self.address})
+        
+        existing_fund = {}
+        if state is not None:
+            existing_fund["address"] = state[0]
+            existing_fund["amount_raised"] = state[1]
+            existing_fund["status"] = state[2]
+            existing_fund["investor"] = state[3]
+        return existing_fund

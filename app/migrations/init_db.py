@@ -312,6 +312,14 @@ def init_db():
                     )
                     ''')
 
+    cur.execute('''
+                    CREATE TABLE IF NOT EXISTS crowd_funding
+                    (address TEXT NOT NULL PRIMARY KEY,
+                    amount_raised INTEGER,
+                    status TEXT,
+                    investor TEXT)
+                    ''')
+    
     con.commit()
     con.close()
 
