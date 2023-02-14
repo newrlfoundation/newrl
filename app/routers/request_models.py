@@ -50,6 +50,7 @@ class CreateTokenRequest(BaseModel):
     tokendecimal: int = 0
     disallowed_regions: Optional[List[str]] = []
     is_smart_contract_token: bool = False
+    token_update: bool = False
     token_attributes: dict
 
 class CreateSCRequest(BaseModel):
