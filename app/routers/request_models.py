@@ -41,8 +41,8 @@ class TrustScoreUpdateRequest(BaseModel):
 
 class CreateTokenRequest(BaseModel):
     token_name: str = "NEWTOKEN"
-    token_code: str
-    token_type: str
+    token_code: str = ""
+    token_type: str = ""
     first_owner: str = '0x762485963e99f6a6548729f11d610dd37ffd3b73'
     custodian: str = '0x762485963e99f6a6548729f11d610dd37ffd3b73'
     legal_doc: str = '686f72957d4da564e405923d5ce8311b6567cedca434d252888cb566a5b4c401'
@@ -50,6 +50,7 @@ class CreateTokenRequest(BaseModel):
     tokendecimal: int = 0
     disallowed_regions: Optional[List[str]] = []
     is_smart_contract_token: bool = False
+    token_update: bool = False
     token_attributes: dict
 
 class CreateSCRequest(BaseModel):
