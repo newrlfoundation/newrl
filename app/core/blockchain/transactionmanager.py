@@ -308,6 +308,10 @@ class Transactionmanager:
                     tcode = self.transaction['specific_data']['tokencode']
                     if tcode and tcode != "0" and tcode != "" and tcode != "string":
                         if is_token_valid(self.transaction['specific_data']['tokencode'], cur=cur):
+                            #check if nft, if yes, cant be created if already exists
+                            if is_nft(tcode,cur):
+                                logger.error("this is an nft, cant be created further")
+                                return False
                             existing_custodian = get_custodian_from_token(
                                 self.transaction['specific_data']['tokencode'],cur = cur)
                             if custodian == existing_custodian:
@@ -914,6 +918,11 @@ def is_smart_contract(address, cur=None):
         return False
     else:
         return True
+
+def is_nft(token_code,cur):
+    token_attributes_dump = fetch_token(token_code,cur = cur)
+    token_attributes = json.loads(token_attributes_dump)
+    return token_attributes.get("is_nft",False)
 
 
 def __str__(self):

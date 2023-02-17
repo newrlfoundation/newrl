@@ -118,6 +118,9 @@ def test_modify_token_attributes_with_is_edit_not_present(request,custodian_wall
     response_json = response.json()
     assert response_json['response']['valid'] == False
 
+def test_create_more_nft_failure():
+    pass
+
 def add_token(wallet_to_credit=WALLET['address'], amount=100, custodian_wallet=WALLET,is_editable=True):
     token_code = 'TSTTK' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
     
