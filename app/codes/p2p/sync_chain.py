@@ -488,7 +488,7 @@ def get_majority_random_node(return_many=False):
     
     random.seed(get_corrected_time_ms())
 
-    while len(hash_url_map) < COMMITTEE_SIZE and len(peers) > 0:
+    while len(hash_url_map) < 3 and len(peers) > 0:
         peer_idx = random.choice(range(len(peers)))
         url = 'http://' + peers[peer_idx]['address'] + ':' + str(NEWRL_PORT)
         del peers[peer_idx]
@@ -497,7 +497,7 @@ def get_majority_random_node(return_many=False):
             valid_peers += 1
             if hash in hash_url_map:
                 hash_url_map[hash].append(url)
-                if len(hash_url_map[hash]) > COMMITTEE_SIZE * 0.6:
+                if len(hash_url_map[hash]) > 3 * 0.6:
                     if return_many:
                         return hash_url_map[hash]
                     random_majority_node_url = random.choice(hash_url_map[hash])
@@ -506,7 +506,7 @@ def get_majority_random_node(return_many=False):
             else:
                 hash_url_map[hash] = [url]
         queried_peers += 1
-        if valid_peers < COMMITTEE_SIZE and queried_peers > COMMITTEE_SIZE * 4:
+        if valid_peers < 3 and queried_peers > 3 * 4:
             break    
     # if valid_peers < COMMITTEE_SIZE:
     trusted_node = random.choice(NETWORK_TRUSTED_ARCHIVE_NODES)
