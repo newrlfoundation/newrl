@@ -50,41 +50,81 @@ class AuthorizeContract(ContractMaster):
             transaction_creator = TransactionCreator()
             trxn = []
             callparams = input_to_dict(callparamsip)
-            query_params = (
-                callparams['transaction']['transaction']['token_code'],
-                callparams['transaction']['transaction']['timestamp'],
-                callparams['transaction']['transaction']['token_attributes'],
+            if isinstance(callparams['transaction']['transaction']['token_code'],list):
+                count = 0
+                for tokenCode in callparams['transaction']['transaction']['token_code']:
+                    query_params = (
+                        callparams['transaction']['transaction']['token_code'][count],
+                        callparams['transaction']['transaction']['timestamp'],
+                        callparams['transaction']['transaction']['token_attributes'][count],
 
-            )
-            # cursor = cur.execute('SELECT token_attributes FROM tokens WHERE tokencode = :tokencode',
-            #                      {'tokencode': query_params[0]})
-            # tokenAttributes = cursor.fetchone()
-            tokenAttributes = repo.select_Query("token_attributes"). \
-                add_table_name("tokens").where_clause("tokencode", query_params[0], 1). \
-                execute_query_single_result({'tokencode': query_params[0]})
-            jsonObj = json.loads(tokenAttributes[0])
-            list = []
-            if "append" in jsonObj:
-                list = jsonObj["append"]
-            list.append({query_params[1]: query_params[2]})
-            jsonObj["append"] = list
-            attributes = json.dumps(jsonObj)
-            # cur.execute(f'''UPDATE tokens SET token_attributes= :attr WHERE tokenCode= :code''',
-            #             {'attr': attributes,
-            #              'code': query_params[0]})
-            sc_state_proposal1_data = {
-                "operation": "update",
-                "table_name": "tokens",
-                "sc_address": self.address,
-                "data": {
-                    "token_attributes": attributes
-                },
-                "unique_column": "tokenCode",
-                "unique_value": query_params[0]
-            }
-            trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
-            logger.info("Modification transaction successful %s" % query_params[0])
-            return trxn
+                    )
+                    # cursor = cur.execute('SELECT token_attributes FROM tokens WHERE tokencode = :tokencode',
+                    #                      {'tokencode': query_params[0]})
+                    # tokenAttributes = cursor.fetchone()
+                    tokenAttributes = repo.select_Query("token_attributes"). \
+                        add_table_name("tokens").where_clause("tokencode", query_params[0], 1). \
+                        execute_query_single_result({'tokencode': query_params[0]})
+                    jsonObj = json.loads(tokenAttributes[0])
+                    list = []
+                    if "append" in jsonObj:
+                        list = jsonObj["append"]
+                    list.append({query_params[1]: query_params[2]})
+                    jsonObj["append"] = list
+                    attributes = json.dumps(jsonObj)
+                    # cur.execute(f'''UPDATE tokens SET token_attributes= :attr WHERE tokenCode= :code''',
+                    #             {'attr': attributes,
+                    #              'code': query_params[0]})
+                    sc_state_proposal1_data = {
+                        "operation": "update",
+                        "table_name": "tokens",
+                        "sc_address": self.address,
+                        "data": {
+                            "token_attributes": attributes
+                        },
+                        "unique_column": "tokenCode",
+                        "unique_value": query_params[0]
+                    }
+                    trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
+                    logger.info("Modification transaction successful %s" % query_params[0])
+                    count = count + 1
+                return trxn
+            else:
+                query_params = (
+                    callparams['transaction']['transaction']['token_code'],
+                    callparams['transaction']['transaction']['timestamp'],
+                    callparams['transaction']['transaction']['token_attributes'],
+
+                )
+                # cursor = cur.execute('SELECT token_attributes FROM tokens WHERE tokencode = :tokencode',
+                #                      {'tokencode': query_params[0]})
+                # tokenAttributes = cursor.fetchone()
+                tokenAttributes = repo.select_Query("token_attributes"). \
+                    add_table_name("tokens").where_clause("tokencode", query_params[0], 1). \
+                    execute_query_single_result({'tokencode': query_params[0]})
+                jsonObj = json.loads(tokenAttributes[0])
+                list = []
+                if "append" in jsonObj:
+                    list = jsonObj["append"]
+                list.append({query_params[1]: query_params[2]})
+                jsonObj["append"] = list
+                attributes = json.dumps(jsonObj)
+                # cur.execute(f'''UPDATE tokens SET token_attributes= :attr WHERE tokenCode= :code''',
+                #             {'attr': attributes,
+                #              'code': query_params[0]})
+                sc_state_proposal1_data = {
+                    "operation": "update",
+                    "table_name": "tokens",
+                    "sc_address": self.address,
+                    "data": {
+                        "token_attributes": attributes
+                    },
+                    "unique_column": "tokenCode",
+                    "unique_value": query_params[0]
+                }
+                trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
+                logger.info("Modification transaction successful %s" % query_params[0])
+                return trxn
         else:
             return "Invalid Transaction: Error in custodian signature"
 
