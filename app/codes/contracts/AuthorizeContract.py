@@ -74,11 +74,11 @@ class AuthorizeContract(ContractMaster):
                         add_table_name("tokens").where_clause("tokencode", query_params[0], 1). \
                         execute_query_single_result({'tokencode': query_params[0]})
                     jsonObj = json.loads(tokenAttributes[0])
-                    list = []
+                    listvar = []
                     if "append" in jsonObj:
-                        list = jsonObj["append"]
-                    list.append({query_params[1]: query_params[2]})
-                    jsonObj["append"] = list
+                        listvar = jsonObj["append"]
+                    listvar.append({query_params[1]: query_params[2]})
+                    jsonObj["append"] = listvar
                     attributes = json.dumps(jsonObj)
                     # cur.execute(f'''UPDATE tokens SET token_attributes= :attr WHERE tokenCode= :code''',
                     #             {'attr': attributes,
@@ -111,11 +111,11 @@ class AuthorizeContract(ContractMaster):
                     add_table_name("tokens").where_clause("tokencode", query_params[0], 1). \
                     execute_query_single_result({'tokencode': query_params[0]})
                 jsonObj = json.loads(tokenAttributes[0])
-                list = []
+                listvar = []
                 if "append" in jsonObj:
-                    list = jsonObj["append"]
-                list.append({query_params[1]: query_params[2]})
-                jsonObj["append"] = list
+                    listvar = jsonObj["append"]
+                listvar.append({query_params[1]: query_params[2]})
+                jsonObj["append"] = listvar
                 attributes = json.dumps(jsonObj)
                 # cur.execute(f'''UPDATE tokens SET token_attributes= :attr WHERE tokenCode= :code''',
                 #             {'attr': attributes,
