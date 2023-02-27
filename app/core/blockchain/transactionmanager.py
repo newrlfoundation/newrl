@@ -308,6 +308,9 @@ class Transactionmanager:
                     tcode = self.transaction['specific_data']['tokencode']
                     if tcode and tcode != "0" and tcode != "" and tcode != "string":
                         if is_token_valid(self.transaction['specific_data']['tokencode'], cur=cur):
+                            if is_nft(tcode,cur):
+                                logger.error("this is an nft, cant be created further")
+                                return False
                             existing_custodian = get_custodian_from_token(
                                 self.transaction['specific_data']['tokencode'],cur = cur)
                             if custodian == existing_custodian:
@@ -686,6 +689,22 @@ def fetch_token(token_code, cur=None):
         return None
     return token[0]
 
+def fetch_token_type(token_code, cur=None):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
+    token_cursor = cur.execute(
+        'SELECT tokentype FROM tokens WHERE tokencode=?', (token_code, ))
+    token = token_cursor.fetchone()
+    if cursor_opened:
+        con.close()
+    if token is None:
+        return None
+    return token[0]
+
 def is_wallet_valid(address, cur=None, check_sc=True):
     if check_sc:
         if is_smart_contract(address, cur=cur):
@@ -919,6 +938,10 @@ def is_smart_contract(address, cur=None):
 def __str__(self):
     return str(self.get_transaction_complete())
 
+def is_nft(token_code,cur):
+    token_type = fetch_token_type(token_code,cur = cur)
+    is_nft =  token_type == 721
+    return is_nft
 
 def validate_transaction_fee(transaction, signatures, cur):
     if cur is None:
