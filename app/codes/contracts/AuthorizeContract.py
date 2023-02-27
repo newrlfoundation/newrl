@@ -53,12 +53,20 @@ class AuthorizeContract(ContractMaster):
             if isinstance(callparams['transaction']['transaction']['token_code'],list):
                 count = 0
                 for tokenCode in callparams['transaction']['transaction']['token_code']:
-                    query_params = (
-                        callparams['transaction']['transaction']['token_code'][count],
-                        callparams['transaction']['transaction']['timestamp'],
-                        callparams['transaction']['transaction']['token_attributes'][count],
+                    if isinstance(callparams['transaction']['transaction']['token_attributes'],list):
+                        query_params = (
+                            callparams['transaction']['transaction']['token_code'][count],
+                            callparams['transaction']['transaction']['timestamp'],
+                            callparams['transaction']['transaction']['token_attributes'][count],
 
-                    )
+                        )
+                    else:
+                        query_params = (
+                            callparams['transaction']['transaction']['token_code'][count],
+                            callparams['transaction']['transaction']['timestamp'],
+                            callparams['transaction']['transaction']['token_attributes'],
+
+                        )
                     # cursor = cur.execute('SELECT token_attributes FROM tokens WHERE tokencode = :tokencode',
                     #                      {'tokencode': query_params[0]})
                     # tokenAttributes = cursor.fetchone()
