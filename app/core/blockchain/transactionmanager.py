@@ -17,7 +17,7 @@ from app.core.db.db_updater import get_contract_from_address, get_wallet_token_b
 from app.core.helpers.CustomExceptions import ContractValidationError
 from app.core.helpers.FetchRespository import FetchRepository
 from app.config.Configuration import Configuration
-from app.config.nvalues import CUSTODIAN_DAO_ADDRESS
+from app.config.nvalues import CUSTODIAN_DAO_ADDRESS, TOKEN_NFT
 
 
 from app.config.ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_MULTIPLIER, NUSD_TOKEN_CODE, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
@@ -940,7 +940,7 @@ def __str__(self):
 
 def is_nft(token_code,cur):
     token_type = fetch_token_type(token_code,cur = cur)
-    is_nft =  token_type == 721
+    is_nft =  token_type == TOKEN_NFT
     return is_nft
 
 def validate_transaction_fee(transaction, signatures, cur):

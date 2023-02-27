@@ -4,6 +4,7 @@ from app.config.ntypes import NEWRL_TOKEN_DECIMAL
 
 
 NEWRL_ENV = os.environ.get('NEWRL_ENV')
+TOKEN_NFT = 721
 
 if NEWRL_ENV == 'testnet':
     ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
