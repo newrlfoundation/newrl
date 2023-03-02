@@ -22,6 +22,22 @@ class PledgingContract(ContractMaster):
         self.version = ""
         ContractMaster.__init__(self, self.template, self.version, contractaddress)
 
+    def validate(self, txn_data, repo: FetchRepository):
+        method = txn_data["function"]
+        callparams = txn_data["params"]
+
+        if method in ["pledge_tokens", "unpledge_tokens", "default_tokens"]:
+            lender = callparams["lender"]
+            wallet = repo.select_Query("wallet_address").add_table_name("wallets").where_clause(
+                "wallet_address", lender, 1).execute_query_multiple_result({"wallet_address": lender})
+            if len(wallet) == 0:
+                raise Exception("Lender wallet does not exist")
+        if method in ["unpledge_tokens", "default_tokens"]:
+            borrower_wallet = callparams["borrower_wallet"]
+            wallet = repo.select_Query("wallet_address").add_table_name("wallets").where_clause(
+                "wallet_address", borrower_wallet, 1).execute_query_multiple_result({"wallet_address": borrower_wallet})
+            if len(wallet) == 0:
+                raise Exception("Borrower wallet does not exist")
     def pledge_tokens(self, callparamsip, repo: FetchRepository):
         trxn = []
         callparams = input_to_dict(callparamsip)

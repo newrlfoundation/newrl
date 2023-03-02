@@ -33,6 +33,19 @@ class AuthorizeContract(ContractMaster):
         else:
             return False
 
+    def validate(self, txn_data, repo: FetchRepository):
+        method = txn_data["function"]
+        callparams = txn_data["params"]
+
+        if (method == "createTokens"):
+            recipient_address = callparams['recipient_address']
+
+            wallet = repo.select_Query("wallet_address").add_table_name("wallets").where_clause("wallet_address",
+                                                                                                recipient_address,
+                                                                                                1).execute_query_multiple_result(
+                {"wallet_address": recipient_address})
+            if len(wallet) == 0:
+                raise Exception("Receipt wallet does not exist")
     def _validate(self, callparamsip, repo: FetchRepository):
         callparams = input_to_dict(callparamsip)
         cspecs = input_to_dict(self.contractparams['contractspecs'])
