@@ -320,9 +320,16 @@ class Transactionmanager:
                                     "The custodian for that token is someone else.")
                                 self.validity = 0
                         else:
+
                             # print(
                             #     "Tokencode provided does not exist. Will append as new one.")
+                            #if nft then amount cant be more than one
+                            if self.transaction['specific_data']['tokentype'] == TOKEN_NFT and self.transaction['specific_data']['amount_created'] > 1:
+                                logger.error("This is an nft token type, Amount cant be grater than one")
+                                return False
                             self.validity = 1  # tokencode is provided by user
+                       
+
                     else:
                         # print(
                         #     "Tokencode provided does not exist. Will append as new one.")

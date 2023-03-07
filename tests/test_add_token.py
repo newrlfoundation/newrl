@@ -130,7 +130,7 @@ def test_create_more_nft_failure(custodian_wallet=WALLET):
     "first_owner": WALLET['address'],
     "custodian": custodian_wallet['address'],
     "legal_doc": "",
-    "amount_created": 100000,
+    "amount_created": 1,
     "tokendecimal": 2,
     "disallowed_regions": [],
     "is_smart_contract_token": False,
@@ -156,6 +156,56 @@ def test_create_more_nft_failure(custodian_wallet=WALLET):
 
     response_json = response.json()
     assert response_json['response']['valid'] == False
+
+def test_create_more_amount_nft_failure(custodian_wallet=WALLET):
+    # token = add_token(is_editable=False,is_nft=True)
+    # token_code = token['tokencode']
+    # token2 = add_token(token_code_input= token_code,is_editable=False,is_nft=True)
+
+    token_code = 'TSTTK' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+    
+    is_nft = True
+ 
+    token_attributes = {
+            "tat1":"tat1value"      
+        }   
+
+    add_token_request = {
+    "token_name": token_code,
+    "token_code": token_code,
+    "token_type": "1",
+    "first_owner": custodian_wallet['address'],
+    "custodian": custodian_wallet['address'],
+    "legal_doc": "",
+    "amount_created": 100,
+    "tokendecimal": 2,
+    "disallowed_regions": [],
+    "is_smart_contract_token": False,
+    "token_attributes": token_attributes
+    }
+
+    if is_nft:
+        add_token_request['token_type']=721
+
+    response = requests.post(NODE_URL + '/add-token', json=add_token_request)
+    unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    response = requests.post(NODE_URL + '/sign-transaction', json={
+        "wallet_data": custodian_wallet,
+        "transaction_data": unsigned_transaction
+    })
+
+    signed_transaction = response.json()
+
+    print('signed_transaction', signed_transaction)
+    response = requests.post(NODE_URL + '/validate-transaction', json=signed_transaction)
+    print(response.text)
+    assert response.status_code == 200
+
+    response_json = response.json()
+    assert response_json['response']['valid'] == False
+
 
 
 def add_token(wallet_to_credit=WALLET['address'], amount=100, custodian_wallet=WALLET,is_editable=True,is_nft = False):
