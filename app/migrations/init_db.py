@@ -311,6 +311,13 @@ def init_db():
                     unique_column text not NULL 
                     )
                     ''')
+    cur.execute('''
+                    CREATE TABLE IF NOT EXISTS alias
+                    (
+                    address text NOT NULL,
+                    identifier text NOT NULL,
+                    )
+    ''')
 
     con.commit()
     con.close()
