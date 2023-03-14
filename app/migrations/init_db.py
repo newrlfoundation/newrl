@@ -314,8 +314,8 @@ def init_db():
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS alias
                     (
-                    address text NOT NULL,
-                    identifier text NOT NULL,
+                    identifier text  PRIMARY KEY NOT NULL,
+                    address text NOT NULL
                     )
     ''')
 
