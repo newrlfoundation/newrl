@@ -178,7 +178,7 @@ def test_create_alias_contract(request):
             "version": "1.0.0",
             "creator": WALLET['address'],
             "actmode": "hybrid",
-            "signatories": {"add_entry": None},
+            "signatories": {"add_alias": None, "update_alias": None},
             "contractspecs": {
             },
             "legalparams": {}
@@ -249,11 +249,11 @@ def test_create_alias_contract(request):
 def test_create_alias(request):
     alias_address = request.config.cache.get('alias_address', None)
     wallet = create_wallet()
-    fund_wallet_nwrl(WALLET,wallet['address'],2000000)
+    fund_wallet_nwrl(WALLET,wallet['address'],8000000)
     alias = "alias_"+ str(random.randrange(111111, 999999, 5))
     req_json = {
         "sc_address": alias_address,
-        "function_called": "add_entry",
+        "function_called": "add_alias",
         "signers": [
             wallet['address']
         ],
@@ -294,14 +294,18 @@ def test_create_alias(request):
 
     params = {
             'table_name': "alias",
-            'contract_address': wallet['address'],
+            'contract_address': alias_address,
         }
     response = requests.get(NODE_URL+"/sc-states", params=params)
     assert response.status_code == 200
     response_val = response.json()
     assert response_val["data"] is not None
     assert len(response_val["data"]) > 0
-    assert response_val["data"][0][0] == alias
+    assert alias == response_val["data"][0][0]
+
+    request.config.cache.set('wallet1', wallet) 
+    request.config.cache.set('alias1', alias) 
+
 
 def test_existing_alias_fail(request):
     alias_address = request.config.cache.get('alias_address', None)
@@ -310,7 +314,7 @@ def test_existing_alias_fail(request):
     alias = "alias_"+ str(random.randrange(111111, 999999, 5))
     req_json = {
         "sc_address": alias_address,
-        "function_called": "add_entry",
+        "function_called": "add_alias",
         "signers": [
             wallet['address']
         ],
@@ -351,19 +355,20 @@ def test_existing_alias_fail(request):
 
     params = {
             'table_name': "alias",
-            'contract_address': wallet['address'],
+            'contract_address': alias_address,
         }
     response = requests.get(NODE_URL+"/sc-states", params=params)
     assert response.status_code == 200
     response_val = response.json()
     assert response_val["data"] is not None
     assert len(response_val["data"]) > 0
-    assert response_val["data"][0][0] == alias    
+    assert response_val["data"][1][0] == alias    
+    time.sleep(2)
 
     #duplicate entry    
     req_json = {
         "sc_address": alias_address,
-        "function_called": "add_entry",
+        "function_called": "add_alias",
         "signers": [
             wallet['address']
         ],
@@ -395,3 +400,59 @@ def test_existing_alias_fail(request):
     assert response.status_code == 200
     assert not response.json()['response']['valid']
 
+def test_update_alias(request):
+    alias_address = request.config.cache.get('alias_address', None)
+    wallet = request.config.cache.get('wallet1', None)
+    alias1 = request.config.cache.get('alias1', None)
+    alias_updated = alias1+"_updated"
+    req_json = {
+        "sc_address": alias_address,
+        "function_called": "update_alias",
+        "signers": [
+            wallet['address']
+        ],
+        "params": {
+            "alias": alias_updated
+    }
+    }
+    response = requests.post(NODE_URL+'/call-sc', json=req_json)
+
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    assert unsigned_transaction['transaction']
+    assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    response = requests.post(NODE_URL+'/sign-transaction', json={
+        "wallet_data": wallet,
+        "transaction_data": unsigned_transaction
+    })
+
+    assert response.status_code == 200
+    signed_transaction = response.json()
+    assert signed_transaction['transaction']
+    assert signed_transaction['signatures']
+    assert len(signed_transaction['signatures']) == 1
+
+    response = requests.post(
+        NODE_URL+'/validate-transaction', json=signed_transaction)
+    assert response.status_code == 200
+    assert  response.json()['response']['valid']
+    if TEST_ENV == 'local':
+        response = requests.post(
+            NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+    else:
+        print('Waiting to mine block')
+        time.sleep(BLOCK_WAIT_TIME)
+
+
+    params = {
+            'table_name': "alias",
+            'contract_address': alias_address,
+        }
+    response = requests.get(NODE_URL+"/sc-states", params=params)
+    assert response.status_code == 200
+    response_val = response.json()
+    assert response_val["data"] is not None
+    assert len(response_val["data"]) > 0
+    assert response_val["data"][0][0] == alias_updated

@@ -18,7 +18,7 @@ class alias(ContractMaster):
         ContractMaster.__init__(self, self.template,
                                 self.version, contractaddress)
     
-    def add_entry(self,callparamsip, repo: FetchRepository):
+    def add_alias(self,callparamsip, repo: FetchRepository):
         callparams = input_to_dict(callparamsip)
 
         alias = callparams['alias']
@@ -33,7 +33,8 @@ class alias(ContractMaster):
             "table_name": self.template,
             "sc_address": self.address,
             "data": {
-                "address": wallet_address, 
+                "address": self.address,
+                "wallet_address": wallet_address, 
                 "identifier": alias
             }
         }
@@ -42,6 +43,31 @@ class alias(ContractMaster):
 
         return [sc_state_proposal1]
     
+    def update_alias(self,callparamsip, repo: FetchRepository):
+        callparams = input_to_dict(callparamsip)
+
+        alias = callparams['alias']
+        wallet_address = callparams['function_caller'][0]['wallet_address']
+
+
+        transaction_creator = TransactionCreator()
+        '''txn type 8 (sc-private state update)'''
+        sc_state_proposal1_data = {
+            "operation": "update",
+            "table_name": self.template,
+            "sc_address": self.address,
+            "unique_column":"wallet_address",
+            "unique_value": wallet_address,
+            "data": {
+                "address": self.address,
+                "wallet_address": wallet_address, 
+                "identifier": alias
+            }
+        }
+        sc_state_proposal1 = transaction_creator.transaction_type_8(
+            sc_state_proposal1_data)
+        return [sc_state_proposal1]
+
     def _is_alias_unique(self, alias,repo:FetchRepository):
         qparam = {"identifier": alias}
         alias = repo.select_count().add_table_name("alias").where_clause(
@@ -51,12 +77,33 @@ class alias(ContractMaster):
         else:
             return False
         
+    def _fetch_alias(self, alias,repo:FetchRepository):
+          
+        alias = repo.select_Query("address").add_table_name("alias").where_clause("alias", alias, 1).execute_query_multiple_result({"alias": alias})
+        if len(alias) == 0:
+                raise Exception("Alias does not exist")
+        return alias[0]
+
     def validate(self, txn_data, repo: FetchRepository):
         method = txn_data["function"]
         callparams = txn_data["params"]
-        if (method == "add_entry"):
+        if (method == "add_alias"):
             callparams = input_to_dict(callparams)
             alias = callparams["alias"]
             if not self._is_alias_unique(alias, repo):
                 raise Exception("Contract Validation Failed, Alias already exists with given identifier")
+        if (method == "update_alias"):
+            callparams = input_to_dict(callparams)
+            alias = callparams["alias"]
+
+            existing_alias_wallet = self._fetch_alias(alias)
+            if not existing_alias_wallet == wallet_address:
+                raise Exception("Alias wallet and signer mismatch")
+            wallet_address = callparams['function_caller'][0]['wallet_address']
+            if self._is_alias_unique(alias,repo):
+                raise Exception("This alias is not present yet to update")
+            existing_alias_wallet = self._fetch_alias(alias,repo)
+            if existing_alias_wallet != wallet_address:
+                raise Exception("Alias existing wallet and signer mismatch")
+            
 

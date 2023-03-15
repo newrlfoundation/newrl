@@ -315,6 +315,7 @@ def init_db():
                     CREATE TABLE IF NOT EXISTS alias
                     (
                     identifier text  PRIMARY KEY NOT NULL,
+                    wallet_address text NOT NULL,
                     address text NOT NULL
                     )
     ''')
