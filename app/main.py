@@ -54,12 +54,14 @@ def initialze_params():
     parser.add_argument("--disableupdate", help="run the node without updating software", action="store_true")
     parser.add_argument("--disablebootstrap", help="run the node without bootstrapping", action="store_true")
     parser.add_argument("--fullnode", help="run a full/archive node", action="store_true")
+    parser.add_argument("--noreload", help="no auto-reload from code", action="store_true")
     _args, unknown = parser.parse_known_args()
     args = {
         'disablenetwork': _args.disablenetwork,
         'disableupdate': _args.disableupdate,
         'disablebootstrap': _args.disablebootstrap,
         'fullnode': _args.fullnode,
+        'noreload': _args.noreload,
     }
     return args
 
@@ -73,6 +75,7 @@ except Exception as e:
         'disableupdate': False,
         'disablebootstrap': False,
         'fullnode': False,
+        'noreload': False,
     }
 Configuration.conf['FULL_NODE'] = args["fullnode"]
 
@@ -113,7 +116,7 @@ def shutdown_event():
     os._exit(0)
 
 if __name__ == "__main__":
-    uvicorn.run("app.main:app", host="0.0.0.0", port=NEWRL_PORT, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=NEWRL_PORT, reload=not args['noreload'])
 
 
 
