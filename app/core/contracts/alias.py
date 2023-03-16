@@ -79,14 +79,22 @@ class alias(ContractMaster):
         
     def _fetch_alias(self, alias,repo:FetchRepository):
           
-        alias = repo.select_Query("address").add_table_name("alias").where_clause("alias", alias, 1).execute_query_multiple_result({"alias": alias})
+        alias = repo.select_Query("wallet_address").add_table_name("alias").where_clause("identifier", alias, 1).execute_query_multiple_result({"identifier": alias})
+        if len(alias) == 0:
+                raise Exception("Alias does not exist to modify/update")
+        return alias[0]
+
+    def _fetch_entry_from_wallet(self, wallet_address,repo:FetchRepository):
+          
+        alias = repo.select_Query().add_table_name("alias").where_clause("wallet_address", wallet_address, 1).execute_query_multiple_result({"wallet_address":wallet_address})
         if len(alias) == 0:
                 raise Exception("Alias does not exist")
-        return alias[0]
+        return alias
 
     def validate(self, txn_data, repo: FetchRepository):
         method = txn_data["function"]
         callparams = txn_data["params"]
+        signers = txn_data["signers"]
         if (method == "add_alias"):
             callparams = input_to_dict(callparams)
             alias = callparams["alias"]
@@ -95,15 +103,8 @@ class alias(ContractMaster):
         if (method == "update_alias"):
             callparams = input_to_dict(callparams)
             alias = callparams["alias"]
-
-            existing_alias_wallet = self._fetch_alias(alias)
-            if not existing_alias_wallet == wallet_address:
-                raise Exception("Alias wallet and signer mismatch")
-            wallet_address = callparams['function_caller'][0]['wallet_address']
-            if self._is_alias_unique(alias,repo):
-                raise Exception("This alias is not present yet to update")
-            existing_alias_wallet = self._fetch_alias(alias,repo)
-            if existing_alias_wallet != wallet_address:
-                raise Exception("Alias existing wallet and signer mismatch")
+            wallet_address = signers[0]            
+            existing_alias = self._fetch_entry_from_wallet(wallet_address,repo)
+            if not self._is_alias_unique(alias,repo):
+                raise Exception("Updated alias provided is already taken")
             
-

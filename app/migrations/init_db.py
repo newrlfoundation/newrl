@@ -314,9 +314,10 @@ def init_db():
     cur.execute('''
                     CREATE TABLE IF NOT EXISTS alias
                     (
-                    identifier text  PRIMARY KEY NOT NULL,
+                    identifier text  NOT NULL,
                     wallet_address text NOT NULL,
-                    address text NOT NULL
+                    address text NOT NULL,
+                    PRIMARY KEY (identifier, wallet_address)
                     )
     ''')
 

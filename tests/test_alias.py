@@ -307,7 +307,7 @@ def test_create_alias(request):
     request.config.cache.set('alias1', alias) 
 
 
-def test_existing_alias_fail(request):
+def test_add_alias_duplicate_fail(request):
     alias_address = request.config.cache.get('alias_address', None)
     wallet = create_wallet()
     fund_wallet_nwrl(WALLET,wallet['address'],9000000)
@@ -456,3 +456,127 @@ def test_update_alias(request):
     assert response_val["data"] is not None
     assert len(response_val["data"]) > 0
     assert response_val["data"][0][0] == alias_updated
+    request.config.cache.set('alias1', alias_updated) 
+
+
+def test_update_alias_fail(request):
+    alias_address = request.config.cache.get('alias_address', None)
+    wallet = request.config.cache.get('wallet1', None)
+    alias1 = request.config.cache.get('alias1', None)
+    wallet2 = create_wallet()
+    fund_wallet_nwrl(WALLET,wallet2['address'], 5000000)
+    req_json = {
+        "sc_address": alias_address,
+        "function_called": "update_alias",
+        "signers": [
+            wallet2['address']
+        ],
+        "params": {
+            "alias": alias1
+    }
+    }
+    response = requests.post(NODE_URL+'/call-sc', json=req_json)
+
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    assert unsigned_transaction['transaction']
+    assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    response = requests.post(NODE_URL+'/sign-transaction', json={
+        "wallet_data": wallet2,
+        "transaction_data": unsigned_transaction
+    })
+
+    assert response.status_code == 200
+    signed_transaction = response.json()
+    assert signed_transaction['transaction']
+    assert signed_transaction['signatures']
+    assert len(signed_transaction['signatures']) == 1
+
+    response = requests.post(
+        NODE_URL+'/validate-transaction', json=signed_transaction)
+    assert response.status_code == 200
+    assert not  response.json()['response']['valid']
+
+def test_update_alias_fail(request):
+    alias_address = request.config.cache.get('alias_address', None)
+    wallet = request.config.cache.get('wallet1', None)
+    alias1 = request.config.cache.get('alias1', None)
+    wallet2 = create_wallet()
+    fund_wallet_nwrl(WALLET,wallet2['address'], 5000000)
+    req_json = {
+        "sc_address": alias_address,
+        "function_called": "update_alias",
+        "signers": [
+            wallet2['address']
+        ],
+        "params": {
+            "alias": alias1
+    }
+    }
+    response = requests.post(NODE_URL+'/call-sc', json=req_json)
+
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    assert unsigned_transaction['transaction']
+    assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    response = requests.post(NODE_URL+'/sign-transaction', json={
+        "wallet_data": wallet2,
+        "transaction_data": unsigned_transaction
+    })
+
+    assert response.status_code == 200
+    signed_transaction = response.json()
+    assert signed_transaction['transaction']
+    assert signed_transaction['signatures']
+    assert len(signed_transaction['signatures']) == 1
+
+    response = requests.post(
+        NODE_URL+'/validate-transaction', json=signed_transaction)
+    assert response.status_code == 200
+    assert not  response.json()['response']['valid']    
+
+
+
+def test_update_alias_duplicate_fail(request):
+    alias_address = request.config.cache.get('alias_address', None)
+    wallet = request.config.cache.get('wallet1', None)
+    alias1 = request.config.cache.get('alias1', None)
+
+    #duplicate entry    
+    req_json = {
+        "sc_address": alias_address,
+        "function_called": "update_alias",
+        "signers": [
+            wallet['address']
+        ],
+        "params": {
+            "alias": alias1
+    }
+    }
+    response = requests.post(NODE_URL+'/call-sc', json=req_json)
+
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    assert unsigned_transaction['transaction']
+    assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    response = requests.post(NODE_URL+'/sign-transaction', json={
+        "wallet_data": wallet,
+        "transaction_data": unsigned_transaction
+    })
+
+    assert response.status_code == 200
+    signed_transaction = response.json()
+    assert signed_transaction['transaction']
+    assert signed_transaction['signatures']
+    assert len(signed_transaction['signatures']) == 1
+
+    response = requests.post(
+        NODE_URL+'/validate-transaction', json=signed_transaction)
+    assert response.status_code == 200
+    assert not response.json()['response']['valid']
