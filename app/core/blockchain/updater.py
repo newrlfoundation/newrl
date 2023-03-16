@@ -338,6 +338,7 @@ def global_internal_clock():
             logger.exception('Error in global clock')
 
     timer = threading.Timer(GLOBAL_INTERNAL_CLOCK_SECONDS, global_internal_clock)
+    TIMERS['global_timer'] = timer
     timer.start()
 
 

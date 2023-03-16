@@ -1,6 +1,7 @@
 import logging
 
 from app.config.Configuration import Configuration
+from app.core.clock.timers import TIMERS
 from .core.helpers.log_config import logger_init
 logger_init()
 import argparse
@@ -104,7 +105,11 @@ def app_startup():
 
 @app.on_event("shutdown")
 def shutdown_event():
-    print('Shutting down node')
+    print('Shutting down node and stopping timers')
+    try:
+        TIMERS['global_timer'].cancel()
+    except:
+        pass
     os._exit(0)
 
 if __name__ == "__main__":
