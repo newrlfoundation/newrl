@@ -163,7 +163,9 @@ def count_block_receipts(block):
 def validate_block(block):
     if not validate_block_data(block['data']):
         return False
-    if calculate_hash(block['data']) != block['hash']:
+    calculated_hash = calculate_hash(block['data'])
+    if calculated_hash != block['hash']:
+        logger.warn(f"Calculated hash {calculated_hash} does not match block hash {block['hash']}")
         return False
     # if not validate_block_transactions(block['data']):
     #     return False
@@ -177,14 +179,15 @@ def validate_block_data(block):
         # No local chain. Sync anyway.
         return True
 
-    if last_block['hash'] != block['previous_hash']:
-        logger.info(f"Previous block hash does not match at index {last_block['index']}. {last_block['hash']} != {block['previous_hash']}")
-        return False
-    
     block_index = block['block_index'] if 'block_index' in block else block['index']
     if last_block['index'] != block_index - 1:
-        logger.info(f"New block index is {block['index']} which is not 1 more than last block index {last_block['index']}")
+        logger.warn(f"New block index is {block['index']} which is not 1 more than last block index {last_block['index']}")
+        return None
+    
+    if last_block['hash'] != block['previous_hash']:
+        logger.warn(f"Previous block hash does not match at index {last_block['index']}. {last_block['hash']} != {block['previous_hash']}")
         return False
+    
     return True
 
 

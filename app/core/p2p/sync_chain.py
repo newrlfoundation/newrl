@@ -223,7 +223,11 @@ def sync_chain_from_node(url, block_index=None):
             #     logger.warn('Block hash does not match caculated hash. Aborting sync.')
             #     # return True
 
-            if not validate_block_data(block):
+            block_validation_result = validate_block_data(block)
+            if block_validation_result is None:  # validation_result is None if ordering issue
+                logger.warn(f"Cannot add block {block['index']}")
+                return None
+            elif block_validation_result == False: # validation_result is False for fork
                 logger.warn('Invalid block. Aborting sync.')
                 return False
             else:
@@ -257,15 +261,19 @@ def sync_chain_from_peers(force_sync=False):
         if url:
             logger.info(f'Syncing from peer {url}')
             sync_success = sync_chain_from_node(url, block_index)
-            if not sync_success:
+            # sync_success can be True, False or None(indeterminate)
+            if sync_success == False:
                 forking_block = find_forking_block(url)
-                logger.info(f'Chains forking from block {forking_block}. Need to revert.')
-                snapshot_last_block = get_snapshot_last_block_index()
-                logger.info('Last snapshot block is %s and forking from %s.', snapshot_last_block, forking_block)
-                if snapshot_last_block is not None and snapshot_last_block < forking_block:
-                    revert_chain_quick(revert_to_snapshot=True)
+                if forking_block is None:
+                    logger.info('Chains are not forking')
                 else:
-                    revert_chain_quick(revert_to_snapshot=False)
+                    logger.info(f'Chains forking from block {forking_block}. Need to revert.')
+                    snapshot_last_block = get_snapshot_last_block_index()
+                    logger.info('Last snapshot block is %s and forking from %s.', snapshot_last_block, forking_block)
+                    if snapshot_last_block is not None and snapshot_last_block < forking_block:
+                        revert_chain_quick(revert_to_snapshot=True)
+                    else:
+                        revert_chain_quick(revert_to_snapshot=False)
 
         else:
             logger.info('No node available to sync')
@@ -544,7 +552,7 @@ def find_forking_block(node_url):
     start_idx = my_last_block_index - batch_size
 
     while start_idx >= 0:
-        end_idx = start_idx + batch_size
+        end_idx = start_idx + batch_size + 1
         hash_tree = get_block_tree_from_url_retry(node_url, start_idx, end_idx)
         my_blocks = get_block_hashes(start_idx, end_idx)
 
@@ -552,6 +560,8 @@ def find_forking_block(node_url):
 
         while idx >= 0:
             if hash_tree[idx]['hash'] == my_blocks[idx]['hash']:
+                if my_last_block_index == my_blocks[idx]['index']:
+                    return None
                 return idx + start_idx
             idx -= 1
 
