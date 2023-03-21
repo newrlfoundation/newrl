@@ -311,6 +311,15 @@ def init_db():
                     unique_column text not NULL 
                     )
                     ''')
+    cur.execute('''
+                    CREATE TABLE IF NOT EXISTS alias
+                    (
+                    identifier text  NOT NULL,
+                    wallet_address text NOT NULL,
+                    address text NOT NULL,
+                    PRIMARY KEY (identifier, wallet_address)
+                    )
+    ''')
 
     con.commit()
     con.close()
