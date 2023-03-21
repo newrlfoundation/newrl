@@ -10,7 +10,7 @@ from app.config.nvalues import ZERO_ADDRESS
 from .contract_master import ContractMaster
 
 
-class Verification(ContractMaster):
+class verification(ContractMaster):
     codehash = ""  # this is the hash of the entire document excluding this line, it is same for all instances of this class
 
     def __init__(self, contractaddress=None):
@@ -20,7 +20,7 @@ class Verification(ContractMaster):
                                 self.version, contractaddress)
     
 
-    def verify(self,callparamsip, repo: FetchRepository):
+    def add_verification(self,callparamsip, repo: FetchRepository):
         callparams = input_to_dict(callparamsip)
         asset_id = callparams['asset_id']
         verifier_address =  callparams['function_caller'][0]['wallet_address']
@@ -32,7 +32,7 @@ class Verification(ContractMaster):
         doc_link_list = callparams['doc_link_list']
         outcome = callparams['outcome']
         remarks = callparams['remarks']
-        deletable_after = callparams['delete_after']
+        deletable_after = callparams['deletable_after']
         asset_type = callparams['asset_type']
 
         data = {
@@ -65,7 +65,11 @@ class Verification(ContractMaster):
           "asset_id":asset_id,
           "verifier_address":verifier_address  
         }  
-        alias = repo.select_count().add_table_name("verifications").where_clause("asset_id", asset_id, 1).and_clause("verifier_address",verifier_address,1).execute_query_multiple_result({"identifier": alias})
-        if alias is None:
+        verification = repo.select_count().add_table_name("verification").where_clause("asset_id", asset_id, 1).and_clause("verifier_address",verifier_address,1).execute_query_multiple_result(qparam)
+        if verification is None:
                 raise Exception("Could not fetch verification")
-        return alias[0] > 0
+        return verification[0][0] > 0
+    
+    def is_asset_valid(self,asset_id,asset_type):
+         pass
+    
