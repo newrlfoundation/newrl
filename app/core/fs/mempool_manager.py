@@ -87,7 +87,10 @@ def mempool_cleanup():
     transaction_files = glob.glob(f'{MEMPOOL_PATH}transaction-*.json')
 
     for transaction_file in transaction_files:
-        with open(transaction_file, 'r') as _file:
-            t = json.load(_file)
-            if t['transaction']['timestamp'] < get_corrected_time_ms() - MEMPOOL_TRANSACTION_LIFETIME_SECONDS * 1000:
-                os.remove(transaction_file)
+        try:
+            with open(transaction_file, 'r') as _file:
+                t = json.load(_file)
+                if t['transaction']['timestamp'] < get_corrected_time_ms() - MEMPOOL_TRANSACTION_LIFETIME_SECONDS * 1000:
+                    os.remove(transaction_file)
+        except:
+            os.remove(transaction_file)
