@@ -66,52 +66,6 @@ def create_wallet():
     print('Test passed.')
     return wallet
 
-def create_token(wallet, owner , token_name,token_code, amount):
-    response = requests.post(NODE_URL+'/add-token', json={
-        "token_name": token_name,
-        "token_code": token_code,
-        "token_type": "1",
-        "first_owner":owner,
-        "custodian": wallet["address"],
-        "legal_doc": "686f72957d4da564e405923d5ce8311b6567cedca434d252888cb566a5b4c401",
-        "amount_created": amount,
-        "tokendecimal": 0,
-        "disallowed_regions": [],
-        "is_smart_contract_token": False,
-        "token_attributes": {}
-    })
-
-
-    assert response.status_code == 200
-    unsigned_transaction = response.json()
-    assert unsigned_transaction['transaction']
-    assert len(unsigned_transaction['signatures']) == 0
-
-    response = requests.post(NODE_URL+'/sign-transaction', json={
-        "wallet_data": wallet,
-        "transaction_data": unsigned_transaction
-    })
-
-    print("adding token")
-    assert response.status_code == 200
-    signed_transaction = response.json()
-    print("signing tx")
-    assert signed_transaction['transaction']
-    assert signed_transaction['signatures']
-    assert len(signed_transaction['signatures']) == 1
-
-    print("validating tx")
-    response = requests.post(
-        NODE_URL+'/validate-transaction', json=signed_transaction)
-    assert response.status_code == 200
-
-    if TEST_ENV == 'local':
-        response = requests.post(
-            NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
-    else:
-        print('Waiting to mine block')
-        time.sleep(BLOCK_WAIT_TIME)
-
 def fund_wallet_nwrl(wallet,address,amount):
     req ={
         "transfer_type": 5,
