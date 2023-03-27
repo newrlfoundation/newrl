@@ -83,6 +83,68 @@ def test_fee_payer():
     tk2 = add_token(custodian_wallet=w1, fee_payer_wallet=WALLET, skip_fee_payer_sign=True)
     check_token_present(tk2, should_fail=True)
     
+def test_fee_payer_type5():
+
+    #create 2 wallets
+    w1= add_wallet()
+    w2= add_wallet()
+
+    #create tokens and fund wallet 1
+    tk1 = add_token(custodian_wallet=w1, wallet_to_credit = w1['address'],fee_payer_wallet=WALLET, amount = 500)
+    check_token_present(tk1)
+
+    #do a type 5 with WALLET as fee payer
+    transfer_unilateral(w1,w2,tk1,200,WALLET)
+    pass
+
+
+def transfer_unilateral(from_wallet, to_wallet, token_code, amount, fee_payer_wallet = WALLET):
+    # token_code = token['tokencode']
+    req ={
+        "transfer_type": 5,
+        "asset1_code": token_code,
+        "asset2_code": "",
+        "wallet1_address": from_wallet['address'],
+        "wallet2_address": to_wallet['address'],
+        "asset1_qty": amount,
+        "description": "",
+        "additional_data": {}
+    }
+    response = requests.post(NODE_URL + '/add-transfer', json=req)
+
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
+    unsigned_transaction['transaction']['fee_payer'] = fee_payer_wallet['address']
+
+    response = requests.post(NODE_URL + '/sign-transaction', json={
+    "wallet_data": from_wallet,
+    "transaction_data": unsigned_transaction
+    })
+    signed_transaction = response.json()
+
+    #fee payer sign
+    response = requests.post(NODE_URL + '/sign-transaction', json={
+    "wallet_data": WALLET,
+    "transaction_data": signed_transaction
+    })
+    signed_transaction = response.json()
+
+    response = requests.post(NODE_URL + '/validate-transaction', json=signed_transaction)
+
+    if TEST_ENV == 'local':
+        response = requests.post(NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+    else:
+        print('Waiting to mine block')
+        time.sleep(BLOCK_WAIT_TIME)
+    
+    response = requests.get(NODE_URL + f"/get-balances?balance_type=TOKEN_IN_WALLET&token_code={token_code}&wallet_address={to_wallet['address']}")
+    assert response.status_code == 200
+    balance = response.json()['balance']
+    assert balance == amount
+
+
+    print('Test passed.')
 
 def add_wallet():
     response = requests.get(NODE_URL + '/generate-wallet-address')
