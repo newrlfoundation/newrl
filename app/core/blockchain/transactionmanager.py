@@ -463,6 +463,7 @@ class Transactionmanager:
                     sender2, tokencode2, cur)
 
             if ttype == 5:
+                token1_balance_validity = False
                 # If fee_payer is present, fee is deducted before from fee_payer
                 if 'fee_payer' in self.transaction:
                     token1_balance_validity = token1amt < startingbalance1
@@ -472,7 +473,7 @@ class Transactionmanager:
                         if token1amt + fee <= startingbalance1:
                             print(
                                 "Valid economics of transaction. Changing economic validity value to 1")
-                            self.validity = 1
+                            token1_balance_validity = True
                     else:
                         #check for fee and token1 balances seperately
                         fee_token_balance = get_wallet_token_balance_tm(
@@ -481,7 +482,10 @@ class Transactionmanager:
                             if token1amt <= startingbalance1:
                                 print(
                                     "Valid economics of transaction. Changing economic validity value to 1")
-                                self.validity = 1
+                                token1_balance_validity = True
+                if token1_balance_validity:
+                    self.validity = 1                
+
             if ttype == 4:
                 token1_balance_validity = False
                 token2_balance_validity = False
