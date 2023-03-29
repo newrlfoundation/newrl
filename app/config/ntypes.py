@@ -15,6 +15,8 @@ NEWRL_TOKEN_DECIMAL = 6
 NEWRL_TOKEN_MULTIPLIER = 1000000
 NUSD_TOKEN_MULTIPLIER = 1000000
 
+TOKEN_NFT = 721
+
 BLOCK_VOTE_VALID = 1  # Valid block by committee members
 BLOCK_VOTE_INVALID = 5  # Invalid block and also for proposing an empty block
 BLOCK_VOTE_MINER = 9  # Block miner's receipt
