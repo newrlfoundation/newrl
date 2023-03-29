@@ -231,7 +231,7 @@ class og_stake(ContractMaster):
             raise Exception("Stake cooldown period not yet finished")    
         return child_transactions
 
-    def unstake_master(self, callparamsip, repo: FetchRepository):
+    def unstake_master_former(self, callparamsip, repo: FetchRepository):
 
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         callparams = input_to_dict(callparamsip)
@@ -327,6 +327,124 @@ class og_stake(ContractMaster):
         else:
             raise Exception("Stake cooldown period not yet finished")
         return child_transactions
+
+    def unstake_master(self, callparamsip, repo: FetchRepository):
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
+        callparams = input_to_dict(callparamsip)
+
+        partial_newrl_unstake_amount = callparams['partial_newrl_unstake_amount']
+        og_unstake_token_code = cspecs['og_unstake_token_code']
+        og_unstake_token_name = cspecs['og_unstake_token_name']
+
+        token_stake_multiplier = cspecs['token_stake_multiplier']
+        wallet_address = callparams['wallet_address']
+        person_id = callparams['person_id']
+        og_unstake_amount = cspecs['stake_allowed']
+        newrl_unstake_amount = og_unstake_amount * token_stake_multiplier
+
+        #TODO add diff validation
+        # if not self.__check_if_slashed(wallet_address, person_id, og_unstake_amount, token_stake_multiplier, repo):
+        #     raise Exception(
+        #         "Newrl stake has been slashed, cant withdraw og for now")
+
+        child_transactions = []
+
+        #og stake query
+        qparam = {"person_id": callparams['person_id'],
+                  "wallet_address": wallet_address, "address": self.address}
+        data = repo.select_Query('time_updated,amount,staker_wallet_address').add_table_name('stake_ledger').where_clause('person_id',
+                                                                                                                          callparams[
+                                                                                                                              'person_id'],
+                                                                                                                          1).and_clause(
+            "wallet_address", wallet_address, 1).and_clause("address", self.address, 1).execute_query_single_result(qparam)
+
+        staker_wallet_address = wallet_address
+        amount_update = 0
+        existing_og_stake = 0
+
+        #newrl stake query
+        qparam = {"person_id": callparams['person_id'],
+                  "wallet_address": wallet_address, "address": STAKE_CT_ADDRESS}
+        newrl_stake_data = repo.select_Query('amount').add_table_name('stake_ledger').where_clause('person_id',
+                                                                                                                          callparams[
+                                                                                                                              'person_id'],
+                                                                                                                          1).and_clause(
+            "wallet_address", wallet_address, 1).and_clause("address", STAKE_CT_ADDRESS, 1).execute_query_single_result(qparam)
+        newrl_updated_stake = newrl_stake_data[0]-partial_newrl_unstake_amount
+        is_newrl_stake_depleted = newrl_updated_stake < 1
+        if data is None:
+            raise Exception("No existing og stake entry for this data")
+        data_json = json.loads(data[2])
+        for index, value in enumerate(data_json):
+            if staker_wallet_address in value.keys():
+                existing_og_stake = value[staker_wallet_address]
+                if not existing_og_stake > 0:
+                    raise Exception("Cant unstake via OG Unstake as current OG STAKE is 0")
+                if is_newrl_stake_depleted:
+                    amount_update = value[staker_wallet_address]    
+                    data_json[index][staker_wallet_address] = 0
+                break
+
+        if get_last_block_hash()["timestamp"] >= (int(data[0]) + int(Configuration.config("STAKE_COOLDOWN_MS"))):
+            #call sc newrl txn
+            transaction_creator = TransactionCreator()
+            params = {
+                "token_amount": partial_newrl_unstake_amount,
+                "wallet_address": wallet_address,
+                "person_id": person_id
+            }
+            txspecdata = {
+                "address": STAKE_CT_ADDRESS,
+                "function": 'unstake_tokens',
+                "signers": [self.address],
+                "params": params,
+                "function_caller": self.address
+            }
+            sc_transaction = transaction_creator.transaction_type_3(txspecdata)
+            child_transactions.append(sc_transaction)
+
+
+            #if new stake amount is 0, then unstake og and update the stake ledger data.
+            if is_newrl_stake_depleted:
+            # type 2 to issue og_unstake token
+                transaction_creator = TransactionCreator()
+                tokendata = {
+                    "tokenname": og_unstake_token_name,
+                    "tokencode": og_unstake_token_code,
+                    "tokentype": '1',
+                    "tokenattributes": {},
+                    "first_owner": staker_wallet_address,
+                    "custodian": self.address,
+                    "legaldochash": '',
+                    "amount_created": 1,
+                    "value_created": '',
+                    "disallowed": {},
+                    "sc_flag": True,
+                }
+                og_unstake = transaction_creator.transaction_type_two(tokendata)
+                child_transactions.append(og_unstake)
+
+                # type 8 to change stake ledger data
+                sc_state_proposal1_data = {
+                    "operation": "update",
+                    "table_name": "stake_ledger",
+                    "sc_address": self.address,
+                    "data": {
+                        "amount": math.floor(data[1]-amount_update),
+                        "time_updated": get_last_block_hash()["timestamp"],
+                        "staker_wallet_address": json.dumps(data_json),
+                    },
+                    "unique_column": "person_id",
+                    "unique_value": callparams['person_id']
+                }
+                transaction_creator = TransactionCreator()
+                txtype1 = transaction_creator.transaction_type_8(
+                    sc_state_proposal1_data)
+                child_transactions.append(txtype1)
+        else:
+            raise Exception("Stake cooldown period not yet finished")
+        return child_transactions
+
 
     def remove(self, callparamsip, repo: FetchRepository):
         cspecs = input_to_dict(self.contractparams['contractspecs'])
@@ -424,9 +542,3 @@ class og_stake(ContractMaster):
             return False
         return stakers[0]
         
-
-
-     #validation
-     # stake
-     #  valid tokens
-     #  stake not already present   

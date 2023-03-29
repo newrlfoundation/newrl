@@ -108,14 +108,27 @@ class NewrlStakeContract(ContractMaster):
                                                                                                     1).and_clause(
             "wallet_address", wallet_address, 1).and_clause("address", self.address,1).execute_query_single_result(qparam)
         staker_wallet_address=callparams['function_caller'][0]['wallet_address']
-        amount_update=0
+        
+        partial_unstake = False
+        if "token_amount" in callparams.keys():
+            partial_unstake = True
+
+        amount_exist=0
+        amount_to_unstake = 0
         if data is None:
             return trxn
         data_json=json.loads(data[2])
         for index, value in enumerate(data_json):
             if staker_wallet_address in value.keys():
-                amount_update=value[staker_wallet_address]
-                data_json[index][staker_wallet_address] = 0
+                amount_exist=value[staker_wallet_address]
+                if partial_unstake:
+                    if amount_exist < callparams['token_amount']:
+                        raise Exception("Requested partial unstake exceeds stake present")
+                    amount_to_unstake = callparams['token_amount']
+                    data_json[index][staker_wallet_address] = amount_exist - callparams['token_amount']
+                else: 
+                    data_json[index][staker_wallet_address] = 0
+                    amount_to_unstake = amount_exist    
                 break
 
         if get_last_block_hash()["timestamp"] >= (int(data[0]) + int(Configuration.config("STAKE_COOLDOWN_MS"))):
@@ -125,7 +138,7 @@ class NewrlStakeContract(ContractMaster):
                 "asset2_code": "",
                 "wallet1": self.address,
                 "wallet2": staker_wallet_address,
-                "asset1_number": int(amount_update),
+                "asset1_number": int(amount_to_unstake),
                 "asset2_number": 0,
                 "additional_data": {}
             }
@@ -136,7 +149,7 @@ class NewrlStakeContract(ContractMaster):
                 "table_name": "stake_ledger",
                 "sc_address": self.address,
                 "data": {
-                    "amount": math.floor(data[1]-amount_update),
+                    "amount": math.floor(data[1]-amount_to_unstake),
                     "time_updated": get_last_block_hash()["timestamp"],
                     "staker_wallet_address":json.dumps(data_json),
                 },
