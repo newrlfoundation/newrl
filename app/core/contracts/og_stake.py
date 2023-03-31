@@ -342,6 +342,9 @@ class og_stake(ContractMaster):
         og_unstake_amount = cspecs['stake_allowed']
         newrl_unstake_amount = og_unstake_amount * token_stake_multiplier
 
+        if partial_newrl_unstake_amount < 0:
+                self.logger.info("token amount should pe positive Integer.")
+
         #TODO add diff validation
         # if not self.__check_if_slashed(wallet_address, person_id, og_unstake_amount, token_stake_multiplier, repo):
         #     raise Exception(

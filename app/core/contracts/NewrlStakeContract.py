@@ -111,6 +111,8 @@ class NewrlStakeContract(ContractMaster):
         
         partial_unstake = False
         if "token_amount" in callparams.keys():
+            if callparams['token_amount'] < 0:
+                self.logger.info("token amount should pe positive Integer.")
             partial_unstake = True
 
         amount_exist=0
