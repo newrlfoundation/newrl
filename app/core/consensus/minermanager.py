@@ -32,7 +32,7 @@ def miner_addition_transaction(wallet=None, my_address=None):
         'type': TRANSACTION_MINER_ADDITION,
         'currency': "NWRL",
         'fee': 0.0,
-        'descr': "Miner addition",
+        'descr': "",
         'valid': 1,
         'block_index': 0,
         'specific_data': {

@@ -2,6 +2,30 @@ import json
 import glob
 import os
 from app.config.constants import BLOCK_ARCHIVE_PATH
+import shutil
+import os
+import logging
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def is_disk_getting_full():
+    """
+    Check if the disk is full. If yes, delete JSON files from the 'archive' folder.
+    """
+    # Get the free and total disk space in bytes
+    disk = shutil.disk_usage("/")
+    free_space = disk.free
+    total_space = disk.total
+
+    # Calculate the percentage of free disk space
+    free_percent = (free_space / total_space) * 100
+
+    # If the free percentage is less than 10%, delete JSON files from the 'archive' folder
+    return free_percent < 5
+
 
 
 def archive_block(block):
@@ -23,9 +47,11 @@ def get_block_from_archive(block_index):
 
 
 def cleanup_old_archive_blocks(block_index):
-    return False  # Archive cleanup disabled 
+    if not is_disk_getting_full():
+        return
+    logger.info('Disk is getting full. Cleaning up old blocks from archive folder.')
     blocks_to_persist = set()
-    for i in range(max(block_index - 10000, 0), block_index):
+    for i in range(max(block_index - 5000, 0), block_index):
         blocks_to_persist.add(f'{BLOCK_ARCHIVE_PATH}block_{i}.json')
 
     for block_file in glob.glob(f'{BLOCK_ARCHIVE_PATH}/block_*.json'):
