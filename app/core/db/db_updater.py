@@ -180,6 +180,30 @@ def add_token(cur, token, txcode=None):
 
     return True
 
+def update_token(cur, token, txcode=None):
+    existingflag = False
+    if 'tokencode' in token:  # creating more of an existing token or tokencode provided by user
+        if token['tokencode'] and token['tokencode'] != "0" and token['tokencode'] != "":
+            tid = cur.execute(
+                'SELECT tokencode FROM tokens WHERE tokencode=?', (token['tokencode'], )).fetchone()
+            if tid:  # tokencode exists, more of an existing token is being added to the first_owner
+                tid = tid[0]
+                existingflag = True
+            else:
+                # if provided code does not exist, it is considered new token addition
+                tid = str(token['tokencode'])
+                existingflag = False
+        else:   # mistakenly entered tokencode value as "" or "0" or 0
+            tcodenewflag = True
+            existingflag = False
+
+
+    if not existingflag:    # new token , cant be updated
+        return False
+    else:
+        update_token_attributes(cur,tid,token['tokenattributes'])
+
+    return True
 
 def get_kyc_doc_hash_json(kyc_docs, kyc_doc_hashes):
     doc_list = []
@@ -239,6 +263,14 @@ def update_token_amount(cur, tid, amt):
 #				 VALUES (?, ?)''', (tid, cumul_amt))
     cur.execute(
         f'''UPDATE tokens SET amount_created=? WHERE tokencode=?''', (cumul_amt, tid))
+
+    return True
+
+def update_token_attributes(cur, tid, token_attributes):
+
+    token_attributes_dump = json.dumps(token_attributes)
+    cur.execute(
+        f'''UPDATE tokens SET token_attributes=? WHERE tokencode=?''', (token_attributes_dump, tid))
 
     return True
 

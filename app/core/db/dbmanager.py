@@ -61,18 +61,19 @@ def create_block_snapshot(block_index):
         except Exception as e:
             logger.error('Error during snapshot creation' + str(e))
         snapshot_schedule['snapshot_creation_in_progress'] = False
+        return True
     # Set the next_snapshot schedule variable based on block size
     # Next snapshot increase ~ block size
 
 
 def check_and_create_snapshot_in_thread(block_index):
     if snapshot_schedule['snapshot_creation_in_progress']:
-        return
+        return False
     # thread = threading.Thread(target=create_block_snapshot,
     #     args = (block_index, ))
     # thread.start()
     # TODO - Check and enable threading
-    create_block_snapshot(block_index)
+    return create_block_snapshot(block_index)
 
 
 def get_or_create_db_snapshot():

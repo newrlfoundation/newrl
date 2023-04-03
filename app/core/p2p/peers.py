@@ -58,7 +58,7 @@ def add_peer(peer_address):
     con = sqlite3.connect(NEWRL_P2P_DB)
     cur = con.cursor()
     try:
-        logger.info('Adding peer %s', peer_address)
+        logger.debug('Adding peer %s', peer_address)
         # await register_me_with_them(peer_address)
         cur.execute('INSERT OR REPLACE INTO peers(id, address) VALUES(?, ?)', (peer_address, peer_address, ))
         con.commit()
@@ -95,7 +95,7 @@ def clear_peers():
     return True
 
 def init_bootstrap_nodes():
-    print(f'Initiating node discovery from bootstrap nodes: {BOOTSTRAP_NODES}')
+    logger.info(f'Initiating node discovery from bootstrap nodes: {BOOTSTRAP_NODES}')
     # clear_peer_db()
     init_peer_db()
 
@@ -112,7 +112,7 @@ def init_bootstrap_nodes():
             except Exception as e:
                 their_peers = []
                 print('Error getting nodes.', e)
-            print(f'Peers from node {node} : {their_peers}')
+            print(f'Peers from node {node} : {len(their_peers)}')
             for their_peer in their_peers:
                 add_peer (their_peer['address'])
         except:
@@ -120,6 +120,7 @@ def init_bootstrap_nodes():
     
     my_peers = get_peers()
 
+    threads = []
     for peer in my_peers:
         try:
             address = peer['address']
@@ -128,18 +129,24 @@ def init_bootstrap_nodes():
             try:
                 # response = register_me_with_them(address)
                 thread = Thread(target=register_me_with_them, args=(address,))
+                thread.setDaemon(True)
                 thread.start()
+                threads.append(thread)
             except Exception as e:
                 print(f'Peer unreachable: {peer}')
                 # remove_peer(peer['address'])
         except:
             pass
+    
+    for thread in threads:
+        thread.join()
+    logger.info('Finished bootstrapping')
     return True
 
 
 def register_me_with_them(address):
     # auth_data = get_auth()
-    logger.info(f'Registering me with node {address}')
+    logger.debug(f'Registering me with node {address}')
     try:
         response = requests.post('http://' + address + f':{NEWRL_PORT}/add-peer', timeout=REQUEST_TIMEOUT)
         return response.json()
@@ -235,6 +242,13 @@ def remove_dead_peers():
     my_peers = get_peers()
     my_address = get_my_address()
 
+    threads = []
+
     for peer in my_peers:
         thread = Thread(target=remove_dead_peer, args=(peer, my_address))
+        thread.setDaemon(True)
         thread.start()
+        threads.append(thread)
+    
+    for thread in threads:
+        thread.join()

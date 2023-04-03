@@ -20,7 +20,7 @@ from app.config.Configuration import Configuration
 from app.config.nvalues import CUSTODIAN_DAO_ADDRESS
 
 
-from app.config.ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_MULTIPLIER, NUSD_TOKEN_CODE, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION
+from app.config.ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_MULTIPLIER, NUSD_TOKEN_CODE, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION,TOKEN_NFT
 
 from app.config.constants import CUSTODIAN_OWNER_TYPE, MEMPOOL_PATH, NEWRL_DB
 from app.core.helpers.utils import get_person_id_for_wallet_address, get_time_ms
@@ -273,38 +273,44 @@ class Transactionmanager:
             custodian = self.transaction['specific_data']['custodian']
             fovalidity = False
             custvalidity = False
-            if firstowner:
-                if is_wallet_valid(firstowner, cur=cur):
-                    # print("Valid first owner")
-                    fovalidity = True
-                else:
-                    fovalidity = False
-            else:   # there is no first owner, transaction to create token only
-                if self.transaction['specific_data']['amount_created']:
-                    print(
-                        "Amount created cannot be non-zero if there is no first owner.")
-                    fovalidity = False  # amount cannot be non-zero if no first owner
-                else:
-                    fovalidity = True
-            if is_wallet_valid(custodian, cur=cur):
-                # print("Valid custodian")
-                custvalidity = True
-            if not fovalidity:
-                print("No first owner address found")
-            #	self.transaction['valid']=0
-                self.validity = 0
-            if not custvalidity:
-                print("No custodian address found")
-                self.validity = 0
-            if fovalidity and custvalidity:
+
+            is_token_update = self.transaction['specific_data'].get('token_update', False)
+            if not is_token_update:
+                if firstowner:
+                    if is_wallet_valid(firstowner, cur=cur):
+                        # print("Valid first owner")
+                        fovalidity = True
+                    else:
+                        fovalidity = False
+                else:   # there is no first owner, transaction to create token only
+                    if self.transaction['specific_data']['amount_created']:
+                        print(
+                            "Amount created cannot be non-zero if there is no first owner.")
+                        fovalidity = False  # amount cannot be non-zero if no first owner
+                    else:
+                        fovalidity = True
+                if is_wallet_valid(custodian, cur=cur):
+                    # print("Valid custodian")
+                    custvalidity = True
+                if not fovalidity:
+                    print("No first owner address found")
+                #	self.transaction['valid']=0
+                    self.validity = 0
+                if not custvalidity:
+                    print("No custodian address found")
+                    self.validity = 0
+                if fovalidity and custvalidity:
                 # print("Valid first owner and custodian")
                 #	self.transaction['valid']=1
                 #   now checking for instances where more tokens are added for an existing tokencode
-                self.validity = 1
+                   self.validity = 1
                 if 'tokencode' in self.transaction['specific_data']:
                     tcode = self.transaction['specific_data']['tokencode']
                     if tcode and tcode != "0" and tcode != "" and tcode != "string":
                         if is_token_valid(self.transaction['specific_data']['tokencode'], cur=cur):
+                            if is_nft(tcode,cur):
+                                logger.error("this is an nft, cant be created further")
+                                return False
                             existing_custodian = get_custodian_from_token(
                                 self.transaction['specific_data']['tokencode'],cur = cur)
                             if custodian == existing_custodian:
@@ -314,13 +320,53 @@ class Transactionmanager:
                                     "The custodian for that token is someone else.")
                                 self.validity = 0
                         else:
+
                             # print(
                             #     "Tokencode provided does not exist. Will append as new one.")
+                            #if nft then amount cant be more than one
+                            if self.transaction['specific_data']['tokentype'] == TOKEN_NFT and self.transaction['specific_data']['amount_created'] > 1:
+                                logger.error("This is an nft token type, Amount cant be grater than one")
+                                return False
                             self.validity = 1  # tokencode is provided by user
+                       
+
                     else:
                         # print(
                         #     "Tokencode provided does not exist. Will append as new one.")
                         self.validity = 1  # tokencode is provided by user
+            else: 
+            
+                if is_wallet_valid(custodian, cur=cur):
+                    # print("Valid custodian")
+                    custvalidity = True 
+                if not custvalidity:
+                    print("No custodian address found")
+                    self.validity = 0
+                if 'tokencode' in self.transaction['specific_data']:
+                    tcode = self.transaction['specific_data']['tokencode']
+                    if tcode and tcode != "0" and tcode != "" and tcode != "string":
+                        token_attributes_dump = fetch_token(tcode,cur = cur)
+                        token_attributes = json.loads(token_attributes_dump)
+
+                        is_editable = token_attributes.get("editable",False)
+
+                        if not is_editable:
+                            self.validity = 0
+                        else:
+                            if is_token_valid(self.transaction['specific_data']['tokencode'], cur=cur):
+                                existing_custodian = get_custodian_from_token(
+                                    self.transaction['specific_data']['tokencode'],cur = cur)
+                                if custodian == existing_custodian:
+                                    self.validity = 1  # tokencode exists and is run by the given custodian
+                                else:
+                                    print(
+                                        "The custodian for that token is someone else.")
+                                    self.validity = 0
+                            else:
+                                # print(
+                                #     "Tokencode provided does not exist. Will append as new one.")
+                                self.validity = 1 
+                        
 
         if self.transaction['type'] == TRANSACTION_SMART_CONTRACT:
             self.validity = 1
@@ -427,6 +473,7 @@ class Transactionmanager:
                     sender2, tokencode2, cur)
 
             if ttype == 5:
+                token1_balance_validity = False
                 # If fee_payer is present, fee is deducted before from fee_payer
                 if 'fee_payer' in self.transaction:
                     token1_balance_validity = token1amt < startingbalance1
@@ -436,7 +483,7 @@ class Transactionmanager:
                         if token1amt + fee <= startingbalance1:
                             print(
                                 "Valid economics of transaction. Changing economic validity value to 1")
-                            self.validity = 1
+                            token1_balance_validity = True
                     else:
                         #check for fee and token1 balances seperately
                         fee_token_balance = get_wallet_token_balance_tm(
@@ -445,7 +492,10 @@ class Transactionmanager:
                             if token1amt <= startingbalance1:
                                 print(
                                     "Valid economics of transaction. Changing economic validity value to 1")
-                                self.validity = 1
+                                token1_balance_validity = True
+                if token1_balance_validity:
+                    self.validity = 1                
+
             if ttype == 4:
                 token1_balance_validity = False
                 token2_balance_validity = False
@@ -634,6 +684,37 @@ def is_token_valid(token_code, cur=None):
         return False
     return True
 
+def fetch_token(token_code, cur=None):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
+    token_cursor = cur.execute(
+        'SELECT token_attributes FROM tokens WHERE tokencode=?', (token_code, ))
+    token = token_cursor.fetchone()
+    if cursor_opened:
+        con.close()
+    if token is None:
+        return None
+    return token[0]
+
+def fetch_token_type(token_code, cur=None):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
+    token_cursor = cur.execute(
+        'SELECT tokentype FROM tokens WHERE tokencode=?', (token_code, ))
+    token = token_cursor.fetchone()
+    if cursor_opened:
+        con.close()
+    if token is None:
+        return None
+    return token[0]
 
 def is_wallet_valid(address, cur=None, check_sc=True):
     if check_sc:
@@ -868,6 +949,10 @@ def is_smart_contract(address, cur=None):
 def __str__(self):
     return str(self.get_transaction_complete())
 
+def is_nft(token_code,cur):
+    token_type = fetch_token_type(token_code,cur = cur)
+    is_nft =  token_type == TOKEN_NFT
+    return is_nft
 
 def validate_transaction_fee(transaction, signatures, cur):
     if cur is None:
