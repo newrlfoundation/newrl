@@ -14,6 +14,7 @@ from fastapi.responses import PlainTextResponse
 from app.core.blockchain.chainscanner import download_chain, download_state, get_config
 from app.core.clock.global_time import get_time_stats
 from app.core.fs.mempool_manager import clear_mempool
+from app.core.helpers.system import update_and_restart
 from app.core.p2p.peers import add_peer, clear_peers, get_peers, init_bootstrap_nodes, remove_dead_peers, update_software
 from app.core.p2p.sync_chain import get_blocks, get_last_block_index, quick_sync, sync_chain_from_node, sync_chain_from_peers
 from app.core.p2p.sync_mempool import list_mempool_transactions, sync_mempool_transactions
@@ -114,6 +115,13 @@ def update_software_api(propogate: bool = False):
     timer = threading.Timer(randint(30, 120), update_software, [propogate])
     timer.start()
     return {'status': 'SUCCESS'}
+
+
+@router.post("/update-and-restart", tags=[p2p_tag])
+def update_and_restart_api(api_key):
+    if calculate_hash(api_key) != '4a01127180cb827a4752abe578b47cbe23ba677037b5bb0cd420549bdb4a274d':
+        return {'status': 'INVALID_KEY'}
+    update_and_restart()
 
 
 @router.get('/stream-logs',tags=[p2p_tag])
