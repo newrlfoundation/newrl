@@ -181,6 +181,18 @@ def update_software(propogate):
     subprocess.call(["sh", "scripts/install.sh"])
     init_newrl()
 
+def update_software_service(propogate):
+    "Update the client software from repo"
+    if propogate is True:
+        logger.info('Propogaring update request to network')
+        update_peers()
+
+    logger.info('Getting latest code from repo')
+    subprocess.call(["sh", "scripts/install.sh"])
+    init_newrl()
+    logger.info("restarting the service")
+    subprocess.call(["service", "newrl","restart"])
+
 
 def validate_auth(auth):
     data = {

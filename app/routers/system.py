@@ -14,7 +14,7 @@ from fastapi.responses import PlainTextResponse
 from app.core.blockchain.chainscanner import download_chain, download_state, get_config
 from app.core.clock.global_time import get_time_stats
 from app.core.fs.mempool_manager import clear_mempool
-from app.core.p2p.peers import add_peer, clear_peers, get_peers, init_bootstrap_nodes, remove_dead_peers, update_software
+from app.core.p2p.peers import add_peer, clear_peers, get_peers, init_bootstrap_nodes, remove_dead_peers, update_software,update_software_service
 from app.core.p2p.sync_chain import get_blocks, get_last_block_index, quick_sync, sync_chain_from_node, sync_chain_from_peers
 from app.core.p2p.sync_mempool import list_mempool_transactions, sync_mempool_transactions
 from app.core.clock.timers import SYNC_STATUS
@@ -26,7 +26,7 @@ from app.core.p2p.peers import call_api_on_peers
 from app.core.auth.auth import get_node_wallet_public
 from app.core.consensus.minermanager import add_miners_as_peers, broadcast_miner_update, get_miner_info
 from app.core.db.dbmanager import snapshot_schedule, get_snapshot_last_block_index
-
+import subprocess
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -113,6 +113,14 @@ def update_software_api(propogate: bool = False):
     # update_software(propogate)
     timer = threading.Timer(randint(30, 120), update_software, [propogate])
     timer.start()
+    return {'status': 'SUCCESS'}
+
+@router.post("/update-software-service", tags=[p2p_tag])
+def update_software_api2(propogate: bool = False):
+    timer = threading.Timer(randint(30, 120), update_software_service, [propogate])
+    timer.start()
+    # cmd_str = "service newrl restart"
+    # subprocess.call(cmd_str,shell=True)
     return {'status': 'SUCCESS'}
 
 
