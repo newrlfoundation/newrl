@@ -48,7 +48,6 @@ def get_blocks(block_indexes):
 
 def get_block_hashes(start_index, end_index):
     con = sqlite3.connect(NEWRL_DB)
-    # con.row_factory = sqlite3.Row
     cur = con.cursor()
 
     blocks = cur.execute(

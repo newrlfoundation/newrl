@@ -43,23 +43,6 @@ def weighted_random_choices(population, weights, k, seed_prefix=0):
     order = sorted(range(len(population)), key=lambda i: v[i])
     return [population[i] for i in order[-k:]]
 
-# def weighted_random_choices(population, weights, k, seed_prefix):
-#     if len(population) < k:
-#         raise Exception('Population less than selection count')
-    
-#     selections = []
-#     previous_idx = 0
-#     while len(selections) < k:
-#         random.seed(seed_prefix + previous_idx)
-#         choice = random.choices(population, weights=weights)[0]
-#         index = population.index(choice)
-#         previous_idx = index
-#         selections.append(choice)
-#         del population[index]
-#         del weights[index]
-    
-#     return selections
-
 
 def get_miner_for_current_block(last_block=None):
     global miner_committee_cache
@@ -89,24 +72,10 @@ def get_miner_for_current_block(last_block=None):
     }
     return miner
 
-    # return committee_list[0]
-
 
 
 def get_eligible_miners():
     last_block = get_last_block_hash()
-    # last_block_epoch = 0
-    # try:
-    #     # Need try catch to support older block timestamps
-    #     last_block_epoch = int(last_block['timestamp'])
-    # except:
-    #     pass
-    # if last_block:
-    #     cutfoff_epoch = last_block_epoch - TIME_MINER_BROADCAST_INTERVAL
-    # else:
-    #     cutfoff_epoch = 0
-    # last_block_epoch = int(last_block['timestamp'])
-    # cutfoff_epoch = get_corrected_time_ms() - TIME_MINER_BROADCAST_INTERVAL_SECONDS * 2 * 1000
     cutfoff_block = last_block['index'] - 1000
 
     con = sqlite3.connect(NEWRL_DB)
