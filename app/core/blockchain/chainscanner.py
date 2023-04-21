@@ -27,15 +27,21 @@ class Chainscanner():
 
         return balances
 
-    def getbalancesbyaddress(self, address):
+    def getbalancesbyaddress(self, address, token_type):
         """Get all tokens in address"""
         balances = []
-        balances_cur = self.cur.execute(
-            'SELECT tokencode, balance FROM balances WHERE wallet_address = :address', {'address': address})
+        query = '''
+            SELECT b.tokencode, b.balance FROM balances b
+            join tokens t on b.tokencode = t.tokencode
+            WHERE wallet_address = :address
+        '''
+        if token_type:
+            query += ' AND t.tokentype = :token_type'
+        balances_cur = self.cur.execute(query,
+            {'address': address, 'token_type': token_type}
+        )
         for row in balances_cur:
-            print(row)
             balances.append({
-                'wallet': address,
                 'token_code': row[0],
                 'balance': row[1]
             })
