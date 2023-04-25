@@ -33,13 +33,7 @@ value_txns = []
 def update_db_states(cur, block):
     newblockindex = block['index'] if 'index' in block else block['block_index']
     transactions = block['text']['transactions']
-    # last_block_cursor = cur.execute(
-    #     f'''SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1''')
-    # last_block = last_block_cursor.fetchone()
-    # if newblockindex != last_block[0]:
-    #     print("The latest block index does not match given previous index")
-    #     return False
-    #    latest_index = cur.execute('SELECT MAX(block_index) FROM blocks')
+
     add_tx_to_block(cur, newblockindex, transactions)
 
     if 'creator_wallet' in block and block['creator_wallet'] is not None:
@@ -50,82 +44,66 @@ def update_db_states(cur, block):
     simplified_transactions = []
     global config_updated
     config_updated = False
+    for transaction in transactions:
+        if transaction['transaction']['type']== TRANSACTION_SMART_CONTRACT:
+            handle_sc_transaction(cur,transaction,block['creator_wallet'],newblockindex)
+        else:
+            handle_txn(cur, transaction,newblockindex,newblockindex)
+    if config_updated:
+        Configuration.updateDataFromDB(cur)
+    return True
 
-    sc_nesting = 0  # Denotes the level of nesting of smart contract call. 1 for a normal sc call. 2 for sc calling sc. 
-    sc_in_failed_state = False  # Used to flag a sc execution failure for flushing out all future child transactions
-    for transaction in collated_txns:
-        if sc_in_failed_state:  # If any transaction in SC fails, keep flushing future transactions till all parent SCs end
-            if transaction == 'SC_END':
-                sc_nesting -= 1
-                if sc_nesting == 0:
-                    sc_in_failed_state = False
-            continue
-                
-        if transaction == 'SC_START':
-            if sc_nesting == 0:  # One savepoint for complete nested SC
-                cur.execute(f'SAVEPOINT sc_start')
-            sc_nesting += 1
-            continue
-        elif transaction == 'SC_END':
-            sc_nesting -= 1
-            if sc_nesting == 0:
-                cur.execute(f'RELEASE SAVEPOINT sc_start')
-            continue
+def handle_txn(cur,transaction,newblockindex, creator_wallet):
+    transaction_all = transaction
+    signature = transaction['signatures']
+    transaction = transaction['transaction']
+    transaction_data = transaction['specific_data']
+    while isinstance(transaction_data, str):
+        transaction_data = json.loads(transaction_data)
+        transaction['specific_data']=transaction_data
 
-        if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
-            if sc_nesting > 1:  # Not to charge fee for child sc transactions
-                continue
-            if not pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
-                sc_in_failed_state = True
-                cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
-                continue
+    transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
+        'trans_code']
+    
+    if newblockindex > 60000:  # prior to this block, the account balance could've been negative
+        if not pay_fee_for_transaction(cur, transaction, creator_wallet):
+            logger.error(f'Fee payment failed for transaction {transaction_code}')
+            #TODO capture the reason and update as txn status 
+            return
+
+        tm = Transactionmanager()
+        tm.set_transaction_data(transaction_all)
+        tm.transactioncreator(transaction_all)
+        if not tm.econvalidator(cur=cur):
+            #TODO capture the reason and update as txn status
+            return
+    else:
+        tm = Transactionmanager()
+        tm.set_transaction_data(transaction_all)
+        tm.transactioncreator(transaction_all)
+        if not tm.econvalidator(cur=cur):
+            #TODO capture the reason and update as txn status
+            return
         
-        transaction_all = transaction
-        signature = transaction['signatures']
-        transaction = transaction['transaction']
-        transaction_data = transaction['specific_data']
-        while isinstance(transaction_data, str):
+        if not pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
+            logger.error(f'Fee payment failed for transaction {transaction_code}')
+                #TODO capture the reason and update as txn status
+            return
+    process_txn(cur, transaction_all,newblockindex)  #TODO capture excpetion reason and update as txn status     
+
+def process_txn(cur, transaction, newblockindex):
+    transaction_all = transaction
+    signature = transaction['signatures']
+    transaction = transaction['transaction']
+    transaction_data = transaction['specific_data']
+    while isinstance(transaction_data, str):
             transaction_data = json.loads(transaction_data)
             transaction['specific_data']=transaction_data
 
-        transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
+    transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
             'trans_code']
-        
-        if newblockindex > 60000:  # prior to this block, the account balance could've been negative
-            if sc_nesting == 0 and not pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
-                logger.error(f'Fee payment failed for transaction {transaction_code}')
-                if sc_nesting > 0:
-                    sc_in_failed_state = True
-                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
-                continue
-
-            tm = Transactionmanager()
-            tm.set_transaction_data(transaction_all)
-            tm.transactioncreator(transaction_all)
-            if not tm.econvalidator(cur=cur):
-                if sc_nesting > 0:
-                    sc_in_failed_state = True
-                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
-                continue
-        else:
-            tm = Transactionmanager()
-            tm.set_transaction_data(transaction_all)
-            tm.transactioncreator(transaction_all)
-            if not tm.econvalidator(cur=cur):
-                if sc_nesting > 0:
-                    sc_in_failed_state = True
-                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
-                continue
-            
-            if sc_nesting == 0 and not pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
-                logger.error(f'Fee payment failed for transaction {transaction_code}')
-                if sc_nesting > 0:
-                    sc_in_failed_state = True
-                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
-                continue
-
-        try:
-            update_state_from_transaction(
+    try:
+        update_state_from_transaction(
                 cur,
                 transaction['type'],
                 transaction_data,
@@ -135,14 +113,10 @@ def update_db_states(cur, block):
                 newblockindex,
                 transaction
             )
-        except Exception as e:
+    except Exception as e:
             logger.error(f'Error in transaction: {str(transaction)}')
             logger.error(str(e))
             logger.error(traceback.format_exc())
-    if config_updated:
-        Configuration.updateDataFromDB(cur)
-    return True
-
 
 def update_state_from_transaction(cur, transaction_type, transaction_data, transaction_code, transaction_timestamp,
                                   transaction_signer=None, block_index=None, full_transaction=None):
@@ -292,6 +266,26 @@ def update_miners(cur, block):
     ):
         logger.info('Removing miner %s due to timeout', block['expected_miner'])
         cur.execute('DELETE FROM miners WHERE wallet_address = ?', (block['expected_miner'], ))
+
+def simplify_transactions_sc(cur, transaction):
+  global value_txns
+  simplified_transactions = []
+  simplified_transactions.append('SC_START')
+  simplified_transactions.append(transaction)
+
+  try:
+    non_sc_txns = get_non_sc_txns(cur, transaction)
+    simplified_transactions.extend(value_txns)
+    simplified_transactions.extend(non_sc_txns)
+  except Exception as e:
+    value_txns = []
+    logger.error(f"Exception during sc txn execution for txn : {transaction}")
+    logger.error(traceback.format_exc())  
+  
+  simplified_transactions.append('SC_END')
+  value_txns = []
+  return simplified_transactions  
+
 
 def simplify_transactions(cur, transactions):
   global value_txns
@@ -468,7 +462,90 @@ def pay_fee_for_transaction(cur, transaction, creator):
         )
     return True
 
+def handle_sc_transaction(cur, transaction, creator_wallet, newblockindex):
+    
+    transaction_all = transaction
+    signature = transaction['signatures']
+    transaction = transaction['transaction']
+    transaction_data = transaction['specific_data']
+    while isinstance(transaction_data, str):
+            transaction_data = json.loads(transaction_data)
+            transaction['specific_data']=transaction_data
 
+    transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
+            'trans_code']
+    
+    sc_txns_simplified = simplify_transactions_sc(cur = cur, transaction= transaction_all)
+    sc_nesting = 0  # Denotes the level of nesting of smart contract call. 1 for a normal sc call. 2 for sc calling sc. 
+    sc_in_failed_state = False  # Used to flag a sc execution failure for flushing out all future child transactions
+    for transaction in sc_txns_simplified:
+
+        if sc_in_failed_state:  # If any transaction in SC fails, keep flushing future transactions till all parent SCs end
+            if transaction == 'SC_END':
+                sc_nesting -= 1
+                if sc_nesting == 0:
+                    sc_in_failed_state = False
+            continue
+        
+        if transaction == 'SC_START':
+            if sc_nesting == 0:  # One savepoint for complete nested SC
+                cur.execute(f'SAVEPOINT sc_start')
+            sc_nesting += 1
+            continue
+        elif transaction == 'SC_END':
+            sc_nesting -= 1
+            if sc_nesting == 0:
+                cur.execute(f'RELEASE SAVEPOINT sc_start')
+            continue    
+
+        #use root txn and pay for fee. If fee cant be paid, break
+        if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
+            if not pay_fee_for_transaction(cur, transaction, creator_wallet):
+                sc_in_failed_state = True
+                cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
+                break    
+
+        transaction_all = transaction
+        signature = transaction['signatures']
+        transaction = transaction['transaction']
+        transaction_data = transaction['specific_data']
+        while isinstance(transaction_data, str):
+            transaction_data = json.loads(transaction_data)
+            transaction['specific_data']=transaction_data
+
+        transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
+    'trans_code']    
+        
+        if newblockindex > 60000:  # prior to this block, the account balance could've been negative
+            if sc_nesting == 0 and not pay_fee_for_transaction(cur, transaction, creator_wallet):
+                logger.error(f'Fee payment failed for transaction {transaction_code}')
+                #TODO capture the reason and update as txn status 
+                continue
+
+            tm = Transactionmanager()
+            tm.set_transaction_data(transaction_all)
+            tm.transactioncreator(transaction_all)
+            if not tm.econvalidator(cur=cur):
+                if sc_nesting > 0:
+                    sc_in_failed_state = True
+                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
+                continue
+        else:
+            tm = Transactionmanager()
+            tm.set_transaction_data(transaction_all)
+            tm.transactioncreator(transaction_all)
+            if not tm.econvalidator(cur=cur):
+                logger.warn("Transaction ecomoic validation during mid block processing")
+                continue
+            
+            if sc_nesting == 0 and not pay_fee_for_transaction(cur, transaction,creator_wallet):
+                logger.error(f'Fee payment failed for transaction {transaction_code}')
+                if sc_nesting > 0:
+                    sc_in_failed_state = True
+                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
+                continue
+        process_txn(cur,transaction_all,newblockindex)    
+    
 def state_cleanup(cur, block):
     return False  # Do not clean blocks
     # Delete old blocks as well. Not useful to keep them on light nodes.
