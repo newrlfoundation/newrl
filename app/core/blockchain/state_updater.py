@@ -39,9 +39,7 @@ def update_db_states(cur, block):
     if 'creator_wallet' in block and block['creator_wallet'] is not None:
         add_block_reward(cur, block['creator_wallet'], newblockindex)
 
-    collated_txns = simplify_transactions(cur, transactions)
     global simplified_transactions
-    simplified_transactions = []
     global config_updated
     config_updated = False
     for transaction in transactions:
@@ -55,7 +53,6 @@ def update_db_states(cur, block):
 
 def handle_txn(cur,transaction,newblockindex, creator_wallet):
     transaction_all = transaction
-    signature = transaction['signatures']
     transaction = transaction['transaction']
     transaction_data = transaction['specific_data']
     while isinstance(transaction_data, str):
@@ -85,14 +82,13 @@ def handle_txn(cur,transaction,newblockindex, creator_wallet):
             #TODO capture the reason and update as txn status
             return
         
-        if not pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
+        if not pay_fee_for_transaction(cur, transaction, creator_wallet):
             logger.error(f'Fee payment failed for transaction {transaction_code}')
                 #TODO capture the reason and update as txn status
             return
     process_txn(cur, transaction_all,newblockindex)  #TODO capture excpetion reason and update as txn status     
 
 def process_txn(cur, transaction, newblockindex):
-    transaction_all = transaction
     signature = transaction['signatures']
     transaction = transaction['transaction']
     transaction_data = transaction['specific_data']
@@ -117,6 +113,8 @@ def process_txn(cur, transaction, newblockindex):
             logger.error(f'Error in transaction: {str(transaction)}')
             logger.error(str(e))
             logger.error(traceback.format_exc())
+            #TODO capture the reason and update as txn status
+
 
 def update_state_from_transaction(cur, transaction_type, transaction_data, transaction_code, transaction_timestamp,
                                   transaction_signer=None, block_index=None, full_transaction=None):
@@ -281,36 +279,37 @@ def simplify_transactions_sc(cur, transaction):
     value_txns = []
     logger.error(f"Exception during sc txn execution for txn : {transaction}")
     logger.error(traceback.format_exc())  
+    raise e
   
   simplified_transactions.append('SC_END')
   value_txns = []
   return simplified_transactions  
 
 
-def simplify_transactions(cur, transactions):
-  global value_txns
-  simplified_transactions = []
-  for transaction in transactions:
-    if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
-      non_sc_txns = []
-      #recursive method that iterates till there is no sc txn
-      try:
-        non_sc_txns = get_non_sc_txns(cur, transaction)
-      except Exception:
-        value_txns = []
-        logger.error(
-            f"Exception during sc txn execution for txn : {transaction}")
-        logger.error(traceback.format_exc())
-      print(f"Value transactions are {value_txns}")
-      simplified_transactions.append('SC_START')
-      simplified_transactions.append(transaction)
-      simplified_transactions.extend(value_txns)
-      simplified_transactions.extend(non_sc_txns)
-      simplified_transactions.append('SC_END')
-      value_txns = []
-    else:
-      simplified_transactions.append(transaction)
-  return simplified_transactions
+# def simplify_transactions(cur, transactions):
+#   global value_txns
+#   simplified_transactions = []
+#   for transaction in transactions:
+#     if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
+#       non_sc_txns = []
+#       #recursive method that iterates till there is no sc txn
+#       try:
+#         non_sc_txns = get_non_sc_txns(cur, transaction)
+#       except Exception:
+#         value_txns = []
+#         logger.error(
+#             f"Exception during sc txn execution for txn : {transaction}")
+#         logger.error(traceback.format_exc())
+#       print(f"Value transactions are {value_txns}")
+#       simplified_transactions.append('SC_START')
+#       simplified_transactions.append(transaction)
+#       simplified_transactions.extend(value_txns)
+#       simplified_transactions.extend(non_sc_txns)
+#       simplified_transactions.append('SC_END')
+#       value_txns = []
+#     else:
+#       simplified_transactions.append(transaction)
+#   return simplified_transactions
 
 
 def get_non_sc_txns(cur, transaction):
@@ -465,7 +464,6 @@ def pay_fee_for_transaction(cur, transaction, creator):
 def handle_sc_transaction(cur, transaction, creator_wallet, newblockindex):
     
     transaction_all = transaction
-    signature = transaction['signatures']
     transaction = transaction['transaction']
     transaction_data = transaction['specific_data']
     while isinstance(transaction_data, str):
@@ -506,16 +504,14 @@ def handle_sc_transaction(cur, transaction, creator_wallet, newblockindex):
                 break    
 
         transaction_all = transaction
-        signature = transaction['signatures']
         transaction = transaction['transaction']
         transaction_data = transaction['specific_data']
         while isinstance(transaction_data, str):
             transaction_data = json.loads(transaction_data)
             transaction['specific_data']=transaction_data
 
-        transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
-    'trans_code']    
-        
+        transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction['trans_code']    
+ 
         if newblockindex > 60000:  # prior to this block, the account balance could've been negative
             if sc_nesting == 0 and not pay_fee_for_transaction(cur, transaction, creator_wallet):
                 logger.error(f'Fee payment failed for transaction {transaction_code}')
