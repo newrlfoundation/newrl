@@ -321,6 +321,29 @@ def init_db():
                     )
     ''')
 
+
+    cur.execute('''
+                    CREATE TABLE IF NOT EXISTS traceability_contract
+                    (
+                    address text NOT NULL,
+                    initiator_wallet text NOT NULL,
+                    init_timestamp TIMESTAMP,
+                    status text NOT NULL,
+                    parent_token_code text NOT NULL,
+                    parent_token_transaction text NOT NULL,
+                    claimer_wallet text NOT NULL,
+                    claim_timesteamp TIMESTAMP,
+                    child_token_code text,
+                    child_token_type text,
+                    amount INT,
+                    ratio INT,
+                    diff INT,
+                    PRIMARY KEY (initiator_wallet, parent_token_code)
+                    )
+    ''')
+
+
+
     con.commit()
     con.close()
 
