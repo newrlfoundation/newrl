@@ -44,6 +44,7 @@ class Transactionmanager:
         self.signatures = []
         self.mempool = MEMPOOL_PATH
         self.validity = 0
+        self.errors = []
 
     def get_valid_addresses(self):
         """Get valid signature addresses for a transaction"""
@@ -296,6 +297,7 @@ class Transactionmanager:
                     print("No first owner address found")
                 #	self.transaction['valid']=0
                     self.validity = 0
+                    self.errors.append("Invalid First Owner")
                 if not custvalidity:
                     print("No custodian address found")
                     self.validity = 0
@@ -582,9 +584,16 @@ class Transactionmanager:
             self.validity = 1
 
         if self.validity == 1:
-            return True
+            return {
+                "validity" :True,
+                "reason": self.errors
+            }
         else:
-            return False  # this includes the case where valid=-1 i.e. yet to be validated
+             return {
+                "validity" :False,
+                "reason": self.errors
+            } 
+         # this includes the case where valid=-1 i.e. yet to be validated
 
     def contract_validate(self):
         transaction = self.transaction

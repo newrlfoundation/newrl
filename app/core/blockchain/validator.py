@@ -62,8 +62,8 @@ def validate(transaction, propagate=False, validate_economics=True):
             cur = con.cursor()
             economics_valid = transaction_manager.econvalidator(cur=cur)
             con.close()
-            if not economics_valid:
-                msg = "Transaction economic validation failed"
+            if not economics_valid["validity"]:
+                msg = economics_valid["reason"]
                 valid = False
             else:
                 msg = "Transaction economic validation successful"
