@@ -286,32 +286,6 @@ def simplify_transactions_sc(cur, transaction):
   return simplified_transactions  
 
 
-# def simplify_transactions(cur, transactions):
-#   global value_txns
-#   simplified_transactions = []
-#   for transaction in transactions:
-#     if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
-#       non_sc_txns = []
-#       #recursive method that iterates till there is no sc txn
-#       try:
-#         non_sc_txns = get_non_sc_txns(cur, transaction)
-#       except Exception:
-#         value_txns = []
-#         logger.error(
-#             f"Exception during sc txn execution for txn : {transaction}")
-#         logger.error(traceback.format_exc())
-#       print(f"Value transactions are {value_txns}")
-#       simplified_transactions.append('SC_START')
-#       simplified_transactions.append(transaction)
-#       simplified_transactions.extend(value_txns)
-#       simplified_transactions.extend(non_sc_txns)
-#       simplified_transactions.append('SC_END')
-#       value_txns = []
-#     else:
-#       simplified_transactions.append(transaction)
-#   return simplified_transactions
-
-
 def get_non_sc_txns(cur, transaction):
     child_transactions = execute_sc(cur, transaction)
     simplified_child_transactions = []
