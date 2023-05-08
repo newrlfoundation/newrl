@@ -39,7 +39,6 @@ def update_db_states(cur, block):
     if 'creator_wallet' in block and block['creator_wallet'] is not None:
         add_block_reward(cur, block['creator_wallet'], newblockindex)
 
-    global simplified_transactions
     global config_updated
     config_updated = False
     for transaction in transactions:
