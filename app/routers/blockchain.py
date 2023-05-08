@@ -440,7 +440,7 @@ def get_sc_state(table_name, contract_address, unique_column, unique_value):
         repo = FetchRepository(cur)
 
         data = repo.select_Query().add_table_name(table_name).where_clause(unique_column, unique_value, 1).and_clause(
-            "address", contract_address,1).execute_query_single_result({unique_column: unique_value, "address": contract_address})
+            "address", contract_address,1).execute_query_multiple_result({unique_column: unique_value, "address": contract_address})
 
         con.close()
         resp = {"status": "SUCCESS", 'data': data}
