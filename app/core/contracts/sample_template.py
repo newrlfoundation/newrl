@@ -153,6 +153,31 @@ class sample_template(ContractMaster):
         sc_proposal1 = transaction_creator.transaction_type_3(
             sc_proposal1_data)
         return [sc_proposal1]
+    
+    def sample_sc_call_sc(self, params, fetFetchRepository: FetchRepository):
+        nested_sc_address = params['nested_sc_address']
+        name = params["name"]
+        '''txn type 3 (sc call) sample proposal'''
+        transaction_creator = TransactionCreator()
+        sc_proposal1_params = {
+            "name": name,
+            "wallet_address": self.address,
+            "value":[
+                {
+                    "token_code": "NWRL",
+                    "amount":41080000000
+                }
+            ]
+        }
+        sc_proposal1_data = {
+            "address": nested_sc_address,
+            "function": 'create_entry',
+            "signers": [self.address],
+            "params": sc_proposal1_params
+        }
+        sc_proposal1 = transaction_creator.transaction_type_3(
+            sc_proposal1_data)
+        return [sc_proposal1]
 
     def sample_validate(self, params, fetFetchRepository: FetchRepository):
         print("Sample_validate invoked")
