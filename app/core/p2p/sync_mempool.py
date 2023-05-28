@@ -76,7 +76,7 @@ def validate_transaction(transaction):
         print("Transaction id ", trandata['transaction']['trans_code'], " has invalid signatures")
         return False
 
-    if not tmtemp.econvalidator():
+    if not tmtemp.econvalidator()['validity']:
         print("Economic validation failed for transaction ", trandata['transaction']['trans_code'])
         return False
     return True

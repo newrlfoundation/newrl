@@ -102,7 +102,7 @@ def update_db_states(cur, block):
             tm = Transactionmanager()
             tm.set_transaction_data(transaction_all)
             tm.transactioncreator(transaction_all)
-            if not tm.econvalidator(cur=cur):
+            if not tm.econvalidator(cur=cur)["validity"]:
                 if sc_nesting > 0:
                     sc_in_failed_state = True
                     cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
@@ -111,7 +111,7 @@ def update_db_states(cur, block):
             tm = Transactionmanager()
             tm.set_transaction_data(transaction_all)
             tm.transactioncreator(transaction_all)
-            if not tm.econvalidator(cur=cur):
+            if not tm.econvalidator(cur=cur)['validity']:
                 if sc_nesting > 0:
                     sc_in_failed_state = True
                     cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
@@ -405,7 +405,7 @@ def get_value_txns(transaction_signer, transaction_data):
         }
         transfer_proposal = transaction_creator.transaction_type_5(
             transfer_proposal_data)
-        if not transfer_proposal.econvalidator():
+        if not transfer_proposal.econvalidator()['validity']:
             logger.error(
                 "SC-value txn economic validation failed for transaction")
             raise Exception("SC-value txn validation failed for transaction")
