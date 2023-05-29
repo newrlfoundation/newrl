@@ -119,7 +119,7 @@ def test_modify_token_attributes_with_is_edit_not_present(request,custodian_wall
     assert response_json['response']['valid'] == False
 
 def test_create_more_nft_failure(custodian_wallet=WALLET):
-    token = add_token(is_editable=False,is_nft=True)
+    token = add_token(is_editable=False,is_nft=True, amount= 1)
     token_code = token['tokencode']
     # token2 = add_token(token_code_input= token_code,is_editable=False,is_nft=True)
 
@@ -262,6 +262,7 @@ def add_token(wallet_to_credit=WALLET['address'], amount=100, custodian_wallet=W
 
     response = requests.get(NODE_URL + '/get-token?token_code=' + token_code)
     assert response.status_code == 200
+
     token = response.json()
     assert token['tokencode'] == token_code
     assert token['first_owner'] == wallet_to_credit
