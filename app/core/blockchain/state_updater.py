@@ -48,7 +48,7 @@ def update_db_states(cur, block):
             else:
                 handle_txn(cur, transaction,newblockindex,newblockindex)
         except Exception as e:
-            txn_code = transaction["transaction"]['transaction_code']
+            txn_code = transaction["transaction"]['trans_code']
             logger.error(f'Error in transaction: {str(txn_code)}')
             logger.error(str(e))
             logger.error(traceback.format_exc()) 
