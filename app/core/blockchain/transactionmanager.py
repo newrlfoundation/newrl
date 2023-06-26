@@ -44,6 +44,7 @@ class Transactionmanager:
         self.signatures = []
         self.mempool = MEMPOOL_PATH
         self.validity = 0
+        self.errors = []
 
     def get_valid_addresses(self):
         """Get valid signature addresses for a transaction"""
@@ -232,7 +233,11 @@ class Transactionmanager:
 
         if not validate_transaction_fee(self.transaction, self.signatures, cur=cur):
             logger.error("Fee validation failed")
-            return False
+            self.errors.append("Fee validation failed")
+            return {
+                "validity" :True,
+                "reason": self.errors
+            }
         fee_token_code = self.transaction['currency']
         if 'fee' in self.transaction:
             fee = self.transaction['fee']
@@ -244,6 +249,7 @@ class Transactionmanager:
             walletaddress = self.transaction['specific_data']['wallet_address']
             if not is_custodian_wallet(custodian, cur=cur):
                 logger.warn('Invalid custodian wallet')
+                self.errors.append("Invalid custodian wallet")
                 self.validity = 0
             else:
                 # print("Valid custodian address")
@@ -258,11 +264,15 @@ class Transactionmanager:
                         self.validity = 1  # linking a new wallet is signed by existing wallet itself
                     else:
                         self.validity = 0  # other custodian cannot sign someone's linked wallet address
+                        logger.error("Other custodian cannot sign someone's linked wallet address")
+                        self.errors.append("Other custodian cannot sign someone's linked wallet address")
                 else:   # this is a new wallet and person
                     if is_wallet_valid(walletaddress, cur=cur) and not is_smart_contract(walletaddress, cur=cur):
-                        print("Wallet with address",
+                        logger.error("Wallet with address",
                               walletaddress, " already exists.")
                         self.validity = 0
+                        self.errors.append("Wallet with address"+
+                              walletaddress+" already exists.")
                     else:
                         self.validity = 1
 
@@ -293,65 +303,75 @@ class Transactionmanager:
                     # print("Valid custodian")
                     custvalidity = True
                 if not fovalidity:
-                    print("No first owner address found")
+                    logger.error("No first owner address found")
+                    self.errors.append("No first owner address found")
+
                 #	self.transaction['valid']=0
                     self.validity = 0
                 if not custvalidity:
                     print("No custodian address found")
                     self.validity = 0
+                    self.errors.append("Invalid custodian wallet")
+          
                 if fovalidity and custvalidity:
-                # print("Valid first owner and custodian")
-                #	self.transaction['valid']=1
-                #   now checking for instances where more tokens are added for an existing tokencode
-                   self.validity = 1
-                if 'tokencode' in self.transaction['specific_data']:
-                    tcode = self.transaction['specific_data']['tokencode']
-                    if tcode and tcode != "0" and tcode != "" and tcode != "string":
-                        if is_token_valid(self.transaction['specific_data']['tokencode'], cur=cur):
-                            if is_nft(tcode,cur):
-                                logger.error("this is an nft, cant be created further")
-                                return False
-                            existing_custodian = get_custodian_from_token(
-                                self.transaction['specific_data']['tokencode'],cur = cur)
-                            if custodian == existing_custodian:
-                                self.validity = 1  # tokencode exists and is run by the given custodian
+            # print("Valid first owner and custodian")
+            #	self.transaction['valid']=1
+            #   now checking for instances where more tokens are added for an existing tokencode
+                    self.validity = 1
+                    if 'tokencode' in self.transaction['specific_data']:
+                        tcode = self.transaction['specific_data']['tokencode']
+                        if tcode and tcode != "0" and tcode != "" and tcode != "string":
+                            if is_token_valid(self.transaction['specific_data']['tokencode'], cur=cur):
+                                if is_nft(tcode,cur):
+                                    logger.error("this is an nft, cant be created further")
+                                    self.errors.append("This is an nft, cant be created further")
+                                    return {
+                                        "validity" :False,
+                                        "reason": self.errors
+                                    } 
+                                existing_custodian = get_custodian_from_token(
+                                    self.transaction['specific_data']['tokencode'],cur = cur)
+                                if custodian == existing_custodian:
+                                    self.validity = 1  # tokencode exists and is run by the given custodian
+                                else:
+                                    print(
+                                        "The custodian for that token is someone else.")
+                                    self.validity = 0
+                                    self.errors.append("The custodian for that token is someone else.")
                             else:
-                                print(
-                                    "The custodian for that token is someone else.")
-                                self.validity = 0
-                        else:
 
+                                # print(
+                                #     "Tokencode provided does not exist. Will append as new one.")
+                                #if nft then amount cant be more than one
+                                if self.transaction['specific_data']['tokentype'] == TOKEN_NFT and self.transaction['specific_data']['amount_created'] > 1:
+                                    logger.error("This is an nft token type, Amount cant be grater than one")
+                                    self.errors.append("This is an nft token type, Amount cant be grater than one")
+                                    return {
+                                        "validity" :False,
+                                        "reason": self.errors
+                                     } 
+                                self.validity = 1  # tokencode is provided by user
+                        else:
                             # print(
                             #     "Tokencode provided does not exist. Will append as new one.")
-                            #if nft then amount cant be more than one
-                            if self.transaction['specific_data']['tokentype'] == TOKEN_NFT and self.transaction['specific_data']['amount_created'] > 1:
-                                logger.error("This is an nft token type, Amount cant be grater than one")
-                                return False
                             self.validity = 1  # tokencode is provided by user
-                       
-
-                    else:
-                        # print(
-                        #     "Tokencode provided does not exist. Will append as new one.")
-                        self.validity = 1  # tokencode is provided by user
             else: 
             
                 if is_wallet_valid(custodian, cur=cur):
-                    # print("Valid custodian")
                     custvalidity = True 
                 if not custvalidity:
                     print("No custodian address found")
                     self.validity = 0
+                    self.errors.append("Invalid custodian wallet")
                 if 'tokencode' in self.transaction['specific_data']:
                     tcode = self.transaction['specific_data']['tokencode']
                     if tcode and tcode != "0" and tcode != "" and tcode != "string":
                         token_attributes_dump = fetch_token(tcode,cur = cur)
                         token_attributes = json.loads(token_attributes_dump)
-
                         is_editable = token_attributes.get("editable",False)
-
                         if not is_editable:
                             self.validity = 0
+                            self.errors.append("This token is not editable")
                         else:
                             if is_token_valid(self.transaction['specific_data']['tokencode'], cur=cur):
                                 existing_custodian = get_custodian_from_token(
@@ -362,6 +382,7 @@ class Transactionmanager:
                                     print(
                                         "The custodian for that token is someone else.")
                                     self.validity = 0
+                                    self.errors.append("The custodian for that token is someone else.")
                             else:
                                 # print(
                                 #     "Tokencode provided does not exist. Will append as new one.")
@@ -373,20 +394,24 @@ class Transactionmanager:
             for wallet in self.transaction['specific_data']['signers']:
                 if not is_wallet_valid(wallet, cur=cur):
                     self.validity = 0
+                    self.errors.append("Singer wallet is invalid "+wallet)
             if 'participants' in self.transaction['specific_data']['params']:
                 for wallet in self.transaction['specific_data']['params']['participants']:
                     if not is_wallet_valid(wallet, cur=cur):
                         self.validity = 0
+                        self.errors.append("Participant wallet is invalid "+wallet)
             if 'value' in self.transaction['specific_data']['params']:
                 for value in self.transaction['specific_data']['params']['value']:
                     print(value)
                     if not is_token_valid(value['token_code'], cur=cur):
                         self.validity = 0
+                        self.errors.append("Invalid token in value"+value['token_code'])
                         break
                     sender_balance = get_wallet_token_balance_tm(
                         self.transaction['specific_data']['signers'][0], value['token_code'], cur)
                     if value['amount'] > sender_balance:
                         self.validity = 0
+                        self.errors.append("Invalid balance in value")
                         break
     #	self.validity=0
         if self.transaction['type'] == TRANSACTION_TWO_WAY_TRANSFER or self.transaction['type'] == TRANSACTION_ONE_WAY_TRANSFER:
@@ -410,7 +435,11 @@ class Transactionmanager:
             ):
                 logger.warn('Token quantity cannot be negative')
                 self.validity = 0
-                return False
+                self.errors.append("Token quantity cannot be negative")
+                return {
+                    "validity" :False,
+                    "reason": self.errors
+                } 
 
             # for ttype=5, there is no tokencode for asset2 since it is off-chain, there is no amount either
             if ttype == 4:  # some attributes of transaction apply only for bilateral transfer and not unilateral
@@ -431,11 +460,13 @@ class Transactionmanager:
                 print("Invalid sender1 wallet")
             #	self.transaction['valid']=0
                 self.validity = 0
+                self.errors.append("Invalid sender2 wallet")
             #	return False
             if not sender2valid:
                 print("Invalid sender2 wallet")
             #	self.transaction['valid']=0
                 self.validity = 0
+                self.errors.append("Invalid sender2 wallet")
             #	return False
 
             # tokenvalidity applies for both senders only in ttype 4
@@ -446,10 +477,12 @@ class Transactionmanager:
             token1valid = is_token_valid(tokencode1, cur=cur)
             token2valid = ttype == 4 and is_token_valid(tokencode2, cur=cur)
             if not token1valid:
-                print("Invalid asset1 code")
+                logger.info("Invalid asset1 code")
+                self.errors.append("Invalid asset1 code")
                 self.validity = 0
             if ttype == 4 and not token2valid:
-                print("Invalid asset1 code")
+                logger.info("Invalid asset2 code")
+                self.errors.append("Invalid asset2 code")
                 self.validity = 0
             if ttype == 4 and token1valid and token2valid:
                 print("Valid tokens")
@@ -460,8 +493,11 @@ class Transactionmanager:
                     self.validity = 1
 
             if self.validity == 0 or not sender1valid or not sender2valid:
-                print("Transaction not valid due to invalid tokens or addresses")
-                return False
+                logger.error("Transaction not valid due to invalid tokens or addresses")
+                return {
+                "validity" :False,
+                "reason": self.errors
+                } 
 
             # resetting to check the balances being sufficient, in futures, make different functions
             self.validity = 0
@@ -553,6 +589,7 @@ class Transactionmanager:
             if not wallet1valid or not wallet2valid:
                 print("One of the wallets is invalid")
                 self.validity = 0
+                self.errors.append("One of the wallets is invalid")
             else:
                 #    if get_pid_from_wallet(wallet1) != personid1 or get_pid_from_wallet(wallet2) != personid2:
                 pid_1 = get_pid_from_wallet(wallet1, cur=cur)
@@ -561,6 +598,7 @@ class Transactionmanager:
                     print(
                         "One of the wallet addresses does not have a valid associated personids.")
                     self.validity = 0
+                    
                 elif pid_1 == pid_2:
                     logger.warn('src and dst person ids cannot be same')
                     self.validity = 0
@@ -582,9 +620,16 @@ class Transactionmanager:
             self.validity = 1
 
         if self.validity == 1:
-            return True
+            return {
+                "validity" :True,
+                "reason": self.errors
+            }
         else:
-            return False  # this includes the case where valid=-1 i.e. yet to be validated
+             return {
+                "validity" :False,
+                "reason": self.errors
+            } 
+         # this includes the case where valid=-1 i.e. yet to be validated
 
     def contract_validate(self):
         transaction = self.transaction

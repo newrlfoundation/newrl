@@ -103,6 +103,7 @@ def process_txn(cur, transaction, newblockindex):
 
     transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
             'trans_code']
+
     try:
         update_state_from_transaction(
                 cur,
@@ -356,7 +357,7 @@ def get_value_txns(transaction_signer, transaction_data):
         }
         transfer_proposal = transaction_creator.transaction_type_5(
             transfer_proposal_data)
-        if not transfer_proposal.econvalidator():
+        if not transfer_proposal.econvalidator()['validity']:
             logger.error(
                 "SC-value txn economic validation failed for transaction")
             raise Exception("SC-value txn validation failed for transaction")

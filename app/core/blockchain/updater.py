@@ -101,7 +101,7 @@ def run_updater(add_to_chain=False):
         if transaction['type'] != TRANSACTION_MINER_ADDITION and not pay_fee_for_transaction(cur, transaction, get_wallet()['address']):
             os.remove(file)
             continue
-        if not tmtemp.econvalidator():
+        if not tmtemp.econvalidator()['validity']:
             logger.info(f"Economic validation failed for transaction {trandata['transaction']['trans_code']}")
             os.remove(file)
             continue

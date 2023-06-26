@@ -203,8 +203,8 @@ def test_create_more_amount_nft_failure(custodian_wallet=WALLET):
     print(response.text)
     assert response.status_code == 200
 
-    response_json = response.json()
-    assert response_json['response']['valid'] == False
+    response_data = response.json()['response']
+    assert not response_data['valid']
 
 
 
