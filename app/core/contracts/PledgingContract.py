@@ -40,6 +40,99 @@ class PledgingContract(ContractMaster):
         ContractMaster.__init__(self, self.template,
                                 self.version, contractaddress)
 
+    def pledge_tokens(self, callparamsip, repo: FetchRepository):
+        trxn = []
+        callparams = input_to_dict(callparamsip)
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
+        custodian_address = cspecs['custodian_address']
+        tokens = callparams['tokens']
+        signed_wallets = callparams['function_caller']
+        lender = callparams["lender"]
+        function_caller = {}
+        custodian_present = False
+
+        if len(signed_wallets) != 2:
+            raise ContractValidationError("Only two signatures are required")
+        for i in signed_wallets:
+            if i["wallet_address"] == custodian_address:
+                custodian_present = True
+            else:
+                function_caller = i["wallet_address"]
+        if not custodian_present:
+            raise ContractValidationError("Custodian signatures are mandatory")
+
+        for i in tokens:
+            if i in callparams["value"]:
+                index_count = 0
+                for j in callparams["value"]:
+                    if j["token_code"] == i["token_code"] and j["amount"] == i["amount"]:
+                        del callparams["value"][index_count]
+                        break
+                    index_count += 1
+                qparam = {"borrower": function_caller,
+                          "address": self.address,
+                          "lender": lender,
+                          "token_code": i["token_code"]
+                          }
+                count = repo.select_count().add_table_name("pledge_ledger").where_clause("borrower", function_caller,
+                                                                                         1).and_clause("address",
+                                                                                                       self.address, 1).and_clause(
+                    "lender", lender, 1).and_clause("token_code", i["token_code"], 1).execute_query_single_result(
+                    qparam)
+                if i['amount'] < 0:
+                    raise ContractValidationError(
+                        "amount shall be positive for token code %s" % i)
+                value = function_caller + lender + i["token_code"]
+                result = hashlib.sha256(value.encode()).hexdigest()
+                if count[0] == 0:
+                    sc_state_proposal1_data = {
+                        "operation": "save",
+                        "table_name": "pledge_ledger",
+                        "sc_address": self.address,
+                        "data": {
+                            "borrower": function_caller,
+                            "amount": i['amount'],
+                            "time_updated": get_corrected_time_ms(),
+                            "lender": lender,
+                            "token_code": i["token_code"],
+                            "unique_column": result,
+                            "status": 1,
+                            "address": self.address,
+                        }
+                    }
+                    transaction_creator = TransactionCreator()
+                    txtype1 = transaction_creator.transaction_type_8(
+                        sc_state_proposal1_data)
+                    trxn.append(txtype1)
+                else:
+                    amount = repo.select_Query("id,amount").add_table_name("pledge_ledger").where_clause("borrower",
+                                                                                                         function_caller,
+                                                                                                         1).and_clause(
+                        "address", self.address, 1).and_clause("lender", lender, 1).and_clause("token_code", i[
+                            "token_code"], 1).execute_query_single_result(
+                        qparam)
+                    if count[0] == 1:
+                        sc_state_proposal1_data = {
+                            "operation": "update",
+                            "table_name": "pledge_ledger",
+                            "sc_address": self.address,
+                            "data": {
+                                "amount": amount[1] + i['amount'],
+                                "time_updated": get_corrected_time_ms()
+                            },
+                            "unique_column": "id",
+                            "unique_value": amount[0],
+                        }
+                        transaction_creator = TransactionCreator()
+                        txtype1 = transaction_creator.transaction_type_8(
+                            sc_state_proposal1_data)
+                        trxn.append(txtype1)
+                    else:
+                        raise ContractValidationError(
+                            "more than one record found")
+        return trxn
+
+
     def pledge_request(self, callparamsip, repo: FetchRepository):
         trxn = []
         callparams = input_to_dict(callparamsip)
@@ -96,7 +189,7 @@ class PledgingContract(ContractMaster):
                             "lender": lender,
                             "token_code": i["token_code"],
                             "unique_column": result,
-                            "status": 0,
+                            "status": 10,
                             "address": self.address,
                         }
                     }
@@ -205,6 +298,8 @@ class PledgingContract(ContractMaster):
         wallet_address = callparams["borrower_wallet"]
         lender = callparams["lender"]
         tokens = callparams["tokens"]
+        signed_wallets = callparams['function_caller']
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
         for i in tokens:
 
             qparam = {"borrower": wallet_address,
@@ -221,7 +316,7 @@ class PledgingContract(ContractMaster):
                 raise ContractValidationError(
                     "No pledge record found ofr tokencode %s" % i["token_code"])
 
-            data = repo.select_Query("id,amount").add_table_name("pledge_ledger").where_clause("borrower",
+            data = repo.select_Query("id,amount,status,borrower,lender").add_table_name("pledge_ledger").where_clause("borrower",
                                                                                                wallet_address,
                                                                                                1).and_clause("address",
                                                                                                              self.address, 1).and_clause(
@@ -230,6 +325,38 @@ class PledgingContract(ContractMaster):
             if i["amount"] > data[1]:
                 raise ContractValidationError(
                     "token amount for token code %s is greater than pledged amount" % i["token_code"])
+            
+            borrower_address = data[3]
+            lender_address = data[4]
+            custodian_address = cspecs['custodian_address']
+
+            if data[2] == 10:
+                #check for borrower sig
+                if len(signed_wallets) != 2:
+                    raise ContractValidationError("Total three signatures are required for pledge finalise")
+                for i in signed_wallets:
+                    if i["wallet_address"] == custodian_address:
+                        custodian_present = True
+                    if i["wallet_address"] == borrower_address:
+                        borrower_present = True
+                if not borrower_present and custodian_present:
+                    raise ContractValidationError("Wrong sigantures provided")
+                pass
+            elif data[2] == 11:
+                #check for borrower, lender sig
+                if len(signed_wallets) != 3:
+                    raise ContractValidationError("Total three signatures are required for pledge finalise")
+                for i in signed_wallets:
+                    if i["wallet_address"] == custodian_address:
+                        custodian_present = True
+                    if i["wallet_address"] == borrower_address:
+                        borrower_present = True
+                    if i["wallet_address"] == lender_address:
+                        lender_present = True
+                if not borrower_present and lender_present and custodian_present:
+                    raise ContractValidationError("Wrong sigantures provided")
+
+
             transfer_proposal_data = {
                 "transfer_type": 1,
                 "asset1_code": i["token_code"],
@@ -250,6 +377,7 @@ class PledgingContract(ContractMaster):
                 "data": {
                     "amount": int(math.floor(data[1] - i["amount"])),
                     "time_updated": get_corrected_time_ms(),
+                    "status": 2
                 },
                 "unique_column": "id",
                 "unique_value": data[0]
