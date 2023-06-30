@@ -321,7 +321,20 @@ def init_db():
                     PRIMARY KEY (identifier, wallet_address)
                     )
     ''')
-
+    cur.execute('''
+                    CREATE TABLE IF NOT EXISTS verification 
+                    (
+                    address text NOT NULL,
+                    asset_id text NOT NULL,
+                    asset_type text NOT NULL, 
+                    verifier_address text NOT NULL,
+                    outcome INT Not NULL, 
+                    doc_hash_list text, 
+                    doc_link_list text, 
+                    remarks text,
+                    deletable_after INT
+                    )
+                    ''')
     con.commit()
     con.close()
 
