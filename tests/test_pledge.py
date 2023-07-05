@@ -135,10 +135,11 @@ def test_create_pledge_contract(request):
                 "setup": WALLET['address'],
                 "deploy": WALLET['address'],
                 "create": WALLET['address'],
+                "pledge_tokens": None,
                 "pledge_request": None,
                 "pledge_finalise": None,
-                "unpledge_tokens": WALLET['address'],
-                "default_tokens": WALLET['address']
+                "unpledge_tokens": None,
+                "default_tokens":None
             },
             "contractspecs": {
                         "custodian_address": WALLET['address']
@@ -146,7 +147,7 @@ def test_create_pledge_contract(request):
             "legalparams": {}
         }
     
-    response = requests.post(NODE_URL+'/add-sc', json= request_create    )
+    response = requests.post(NODE_URL+'/add-sc', json= request_create )
 
     print(response.text)
     assert response.status_code == 200
@@ -293,98 +294,9 @@ def test_finalise_pledge_Req(request):
         "params": {
              "borrower_wallet": borrower_wallet['address'],
              "token_code":"NWRL",
-             "lender": lender_wallet['address']
-    }
-    }
-    response = requests.post(NODE_URL+'/call-sc', json=req_json)
-
-    assert response.status_code == 200
-    unsigned_transaction = response.json()
-    assert unsigned_transaction['transaction']
-    assert len(unsigned_transaction['signatures']) == 0
-    unsigned_transaction['transaction']['fee'] = 1000000
-
-    response = requests.post(NODE_URL+'/sign-transaction', json={
-        "wallet_data":borrower_wallet ,
-        "transaction_data": unsigned_transaction
-    })
-
-    assert response.status_code == 200
-    signed_transaction = response.json()
-    assert signed_transaction['transaction']
-    assert signed_transaction['signatures']
-    assert len(signed_transaction['signatures']) == 1
-
-    req_sign = {
-        "wallet_data":WALLET, 
-        "transaction_data": signed_transaction
-    }
-    signed_transaction_response = requests.post(NODE_URL+'/sign-transaction', json= req_sign)
-
-    assert signed_transaction_response.status_code == 200
-    signed_transaction = signed_transaction_response.json()
-    assert signed_transaction['transaction']
-    assert signed_transaction['signatures']
-    assert len(signed_transaction['signatures']) == 2
-
-    req_sign = {
-        "wallet_data":lender_wallet, 
-        "transaction_data": signed_transaction
-    }
-    signed_transaction_response = requests.post(NODE_URL+'/sign-transaction', json= req_sign)
-
-    assert signed_transaction_response.status_code == 200
-    signed_transaction = signed_transaction_response.json()
-    assert signed_transaction['transaction']
-    assert signed_transaction['signatures']
-    assert len(signed_transaction['signatures']) == 3
-
-    response = requests.post(
-        NODE_URL+'/validate-transaction', json=signed_transaction)
-    assert response.status_code == 200
-    assert  response.json()['response']['valid']
-    if TEST_ENV == 'local':
-        response = requests.post(
-            NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
-    else:
-        print('Waiting to mine block')
-        time.sleep(BLOCK_WAIT_TIME)
-
-
-    params = {
-            'table_name': "pledge_ledger",
-            'contract_address': pledge_address,
-            'unique_column': 'borrower',
-            'unique_value': borrower_wallet['address']
-        }
-    response = requests.get(NODE_URL+"/sc-state", params=params)
-    assert response.status_code == 200
-    response_val = response.json()
-    assert response_val["data"] is not None
-    assert len(response_val["data"]) > 0
-
-
-def test_unpledge(request):
-    pledge_address = request.config.cache.get('pledge_address', None)
-    borrower_wallet = request.config.cache.get('borrower_wallet', None)
-    lender_wallet = request.config.cache.get('lender_wallet', None)
-    
-    
-    req_json = {
-        "sc_address": pledge_address,
-        "function_called": "unpledge_tokens",
-        "signers": [
-            borrower_wallet['address'],
-            lender_wallet['address'],
-            WALLET['address']
-        ],
-        "params": {
-             "borrower_wallet": borrower_wallet['address'],
-             "token_code":"NWRL",
              "lender": lender_wallet['address'],
               "tokens":[{
-                "token_code":"NWRL",
-                "amount":1000000
+                "token_code":"NWRL"
             }]
     }
     }
@@ -454,6 +366,160 @@ def test_unpledge(request):
     response_val = response.json()
     assert response_val["data"] is not None
     assert len(response_val["data"]) > 0
+    assert response_val["data"][7] == 11
+
+
+def test_unpledge(request):
+    pledge_address = request.config.cache.get('pledge_address', None)
+    borrower_wallet = request.config.cache.get('borrower_wallet', None)
+    lender_wallet = request.config.cache.get('lender_wallet', None)
+    
+    
+    req_json = {
+        "sc_address": pledge_address,
+        "function_called": "unpledge_tokens",
+        "signers": [
+            WALLET['address']
+        ],
+        "params": {
+             "borrower_wallet": borrower_wallet['address'],
+             "token_code":"NWRL",
+             "lender": lender_wallet['address'],
+              "tokens":[{
+                "token_code":"NWRL",
+                "amount":1000000
+            }]
+    }
+    }
+    response = requests.post(NODE_URL+'/call-sc', json=req_json)
+
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    assert unsigned_transaction['transaction']
+    assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    signed_transaction_response = requests.post(NODE_URL+'/sign-transaction', json={
+        "wallet_data":WALLET ,
+        "transaction_data": unsigned_transaction
+    })
+
+    assert signed_transaction_response.status_code == 200
+    signed_transaction = signed_transaction_response.json()
+    assert signed_transaction['transaction']
+    assert signed_transaction['signatures']
+    assert len(signed_transaction['signatures']) == 1
+
+    # req_sign = {
+    #     "wallet_data":lender_wallet, 
+    #     "transaction_data": signed_transaction
+    # }
+    # signed_transaction_response = requests.post(NODE_URL+'/sign-transaction', json= req_sign)
+
+    # assert signed_transaction_response.status_code == 200
+    # signed_transaction = signed_transaction_response.json()
+    # assert signed_transaction['transaction']
+    # assert signed_transaction['signatures']
+    # assert len(signed_transaction['signatures']) == 2
+
+    response = requests.post(
+        NODE_URL+'/validate-transaction', json=signed_transaction)
+    assert response.status_code == 200
+    assert  response.json()['response']['valid']
+    if TEST_ENV == 'local':
+        response = requests.post(
+            NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+    else:
+        print('Waiting to mine block')
+        time.sleep(BLOCK_WAIT_TIME)
+
+
+    params = {
+            'table_name': "pledge_ledger",
+            'contract_address': pledge_address,
+            'unique_column': 'borrower',
+            'unique_value': borrower_wallet['address']
+        }
+    response = requests.get(NODE_URL+"/sc-state", params=params)
+    assert response.status_code == 200
+    response_val = response.json()
+    assert response_val["data"] is not None
+    assert len(response_val["data"]) > 0
+    assert response_val["data"][7] == 2
+
+def test_default(request):
+    pledge_address = request.config.cache.get('pledge_address', None)
+    borrower_wallet = request.config.cache.get('borrower_wallet', None)
+    lender_wallet = request.config.cache.get('lender_wallet', None)
+    
+    
+    req_json = {
+        "sc_address": pledge_address,
+        "function_called": "default_tokens",
+        "signers": [
+            WALLET['address']
+        ],
+        "params": {
+             "borrower_wallet": borrower_wallet['address'],
+             "token_code":"NWRL",
+             "lender": lender_wallet['address']
+    }
+    }
+    response = requests.post(NODE_URL+'/call-sc', json=req_json)
+
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    assert unsigned_transaction['transaction']
+    assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    signed_transaction_response = requests.post(NODE_URL+'/sign-transaction', json={
+        "wallet_data":WALLET ,
+        "transaction_data": unsigned_transaction
+    })
+
+    assert signed_transaction_response.status_code == 200
+    signed_transaction = signed_transaction_response.json()
+    assert signed_transaction['transaction']
+    assert signed_transaction['signatures']
+    assert len(signed_transaction['signatures']) == 1
+
+    # req_sign = {
+    #     "wallet_data":lender_wallet, 
+    #     "transaction_data": signed_transaction
+    # }
+    # signed_transaction_response = requests.post(NODE_URL+'/sign-transaction', json= req_sign)
+
+    # assert signed_transaction_response.status_code == 200
+    # signed_transaction = signed_transaction_response.json()
+    # assert signed_transaction['transaction']
+    # assert signed_transaction['signatures']
+    # assert len(signed_transaction['signatures']) == 2
+
+    response = requests.post(
+        NODE_URL+'/validate-transaction', json=signed_transaction)
+    assert response.status_code == 200
+    assert  response.json()['response']['valid']
+    if TEST_ENV == 'local':
+        response = requests.post(
+            NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+    else:
+        print('Waiting to mine block')
+        time.sleep(BLOCK_WAIT_TIME)
+
+
+    params = {
+            'table_name': "pledge_ledger",
+            'contract_address': pledge_address,
+            'unique_column': 'borrower',
+            'unique_value': borrower_wallet['address']
+        }
+    response = requests.get(NODE_URL+"/sc-state", params=params)
+    assert response.status_code == 200
+    response_val = response.json()
+    assert response_val["data"] is not None
+    assert len(response_val["data"]) > 0
+    assert response_val["data"][7] == -1
 
 # def test_add_alias_duplicate_fail(request):
 #     alias_address = request.config.cache.get('alias_address', None)

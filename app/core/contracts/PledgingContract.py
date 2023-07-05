@@ -230,65 +230,65 @@ class PledgingContract(ContractMaster):
         callparams = input_to_dict(callparamsip)
         wallet_address = callparams["borrower_wallet"]
         lender = callparams["lender"]
-        token_code = callparams["token_code"]
         signed_wallets = callparams['function_caller']
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         custodian_address = cspecs['custodian_address']
 
-  
+        tokens = callparams["tokens"]
+        for i in tokens:
+            token_code = i["token_code"]
+            qparam = {"borrower": wallet_address,
+                    "address": self.address,
+                    "lender": lender,
+                    "token_code": token_code
+                    }
+            count = repo.select_count().add_table_name("pledge_ledger").where_clause("borrower", wallet_address,
+                                                                                    1).and_clause("address",
+                                                                                                self.address, 1).and_clause(
+                "lender", lender, 1).and_clause("token_code", token_code, 1).execute_query_single_result(
+                qparam)
+            if count[0] == 0:
+                raise ContractValidationError(
+                    "No pledge record found for tokencode %s" % token_code)
 
-        qparam = {"borrower": wallet_address,
-                  "address": self.address,
-                  "lender": lender,
-                  "token_code": token_code
-                  }
-        count = repo.select_count().add_table_name("pledge_ledger").where_clause("borrower", wallet_address,
-                                                                                 1).and_clause("address",
-                                                                                               self.address, 1).and_clause(
-            "lender", lender, 1).and_clause("token_code", token_code, 1).execute_query_single_result(
-            qparam)
-        if count[0] == 0:
-            raise ContractValidationError(
-                "No pledge record found for tokencode %s" % token_code)
+            data = repo.select_Query("id,amount,borrower,lender").add_table_name("pledge_ledger").where_clause("borrower",
+                                                                                            wallet_address,
+                                                                                            1).and_clause("address",
+                                                                                                            self.address, 1).and_clause(
+                "lender", lender, 1).and_clause("token_code", token_code, 1).execute_query_single_result(
+                qparam)
+            
+            borrower_address = data[2]
+            lender_address = data[3]
+            
+            if len(signed_wallets) != 3:
+                raise ContractValidationError("Total three signatures are required for pledge finalise")
+            for i in signed_wallets:
+                if i["wallet_address"] == custodian_address:
+                    custodian_present = True
+                if i["wallet_address"] == borrower_address:
+                    borrower_present = True
+                if i["wallet_address"] == lender_address:
+                    lender_present = True
 
-        data = repo.select_Query("id,amount,borrower,lender").add_table_name("pledge_ledger").where_clause("borrower",
-                                                                                           wallet_address,
-                                                                                           1).and_clause("address",
-                                                                                                         self.address, 1).and_clause(
-            "lender", lender, 1).and_clause("token_code", token_code, 1).execute_query_single_result(
-            qparam)
-        
-        borrower_address = data[2]
-        lender_address = data[3]
-        
-        if len(signed_wallets) != 3:
-            raise ContractValidationError("Total three signatures are required for pledge finalise")
-        for i in signed_wallets:
-            if i["wallet_address"] == custodian_address:
-                custodian_present = True
-            if i["wallet_address"] == borrower_address:
-                borrower_present = True
-            if i["wallet_address"] == lender_address:
-                lender_present = True
+            if not borrower_present and lender_present and custodian_present:
+                raise ContractValidationError("Wrong sigantures provided")
 
-        if not borrower_present and lender_present and custodian_present:
-           raise ContractValidationError("Wrong sigantures provided")
-
-        sc_state_proposal1_data = {
-            "operation": "update",
-            "table_name": "pledge_ledger",
-            "sc_address": self.address,
-            "data": {
-                "time_updated": get_corrected_time_ms(),
-                "status": 1
-            },
-            "unique_column": "id",
-            "unique_value": data[0]
-        }
-        transaction_creator = TransactionCreator()
-        txtype1 = transaction_creator.transaction_type_8(
-            sc_state_proposal1_data)
-        trxn.append(txtype1)
+            sc_state_proposal1_data = {
+                "operation": "update",
+                "table_name": "pledge_ledger",
+                "sc_address": self.address,
+                "data": {
+                    "time_updated": get_corrected_time_ms(),
+                    "status": 11
+                },
+                "unique_column": "id",
+                "unique_value": data[0]
+            }
+            transaction_creator = TransactionCreator()
+            txtype8 = transaction_creator.transaction_type_8(
+                sc_state_proposal1_data)
+            trxn.append(txtype8)
 
         return trxn
     
@@ -330,31 +330,31 @@ class PledgingContract(ContractMaster):
             lender_address = data[4]
             custodian_address = cspecs['custodian_address']
 
-            if data[2] == 10:
-                #check for borrower sig
-                if len(signed_wallets) != 2:
-                    raise ContractValidationError("Total three signatures are required for pledge finalise")
-                for i in signed_wallets:
-                    if i["wallet_address"] == custodian_address:
-                        custodian_present = True
-                    if i["wallet_address"] == borrower_address:
-                        borrower_present = True
-                if not borrower_present and custodian_present:
-                    raise ContractValidationError("Wrong sigantures provided")
-                pass
-            elif data[2] == 11:
-                #check for borrower, lender sig
-                if len(signed_wallets) != 3:
-                    raise ContractValidationError("Total three signatures are required for pledge finalise")
-                for i in signed_wallets:
-                    if i["wallet_address"] == custodian_address:
-                        custodian_present = True
-                    if i["wallet_address"] == borrower_address:
-                        borrower_present = True
-                    if i["wallet_address"] == lender_address:
-                        lender_present = True
-                if not borrower_present and lender_present and custodian_present:
-                    raise ContractValidationError("Wrong sigantures provided")
+            # if data[2] == 10:
+            #     #check for borrower sig
+            #     if len(signed_wallets) != 2:
+            #         raise ContractValidationError("Total three signatures are required for pledge finalise")
+            #     for i in signed_wallets:
+            #         if i["wallet_address"] == custodian_address:
+            #             custodian_present = True
+            #         if i["wallet_address"] == borrower_address:
+            #             borrower_present = True
+            #     if not borrower_present and custodian_present:
+            #         raise ContractValidationError("Wrong sigantures provided")
+            #     pass
+            # elif data[2] == 11:
+            #     #check for borrower, lender sig
+            #     if len(signed_wallets) != 3:
+            #         raise ContractValidationError("Total three signatures are required for pledge finalise")
+            #     for i in signed_wallets:
+            #         if i["wallet_address"] == custodian_address:
+            #             custodian_present = True
+            #         if i["wallet_address"] == borrower_address:
+            #             borrower_present = True
+            #         if i["wallet_address"] == lender_address:
+            #             lender_present = True
+            #     if not borrower_present and lender_present and custodian_present:
+            #         raise ContractValidationError("Wrong sigantures provided")
 
 
             transfer_proposal_data = {
@@ -383,9 +383,9 @@ class PledgingContract(ContractMaster):
                 "unique_value": data[0]
             }
             transaction_creator = TransactionCreator()
-            txtype1 = transaction_creator.transaction_type_8(
+            txtype8 = transaction_creator.transaction_type_8(
                 sc_state_proposal1_data)
-            trxn.append(txtype1)
+            trxn.append(txtype8)
         return trxn
 
     def default_tokens(self, callparamsip, repo: FetchRepository):
@@ -394,6 +394,9 @@ class PledgingContract(ContractMaster):
         wallet_address = callparams["borrower_wallet"]
         lender = callparams["lender"]
         token_code = callparams["token_code"]
+        signed_wallets = callparams['function_caller']
+        cspecs = input_to_dict(self.contractparams['contractspecs'])
+
         qparam = {"borrower": wallet_address,
                   "address": self.address,
                   "lender": lender,
@@ -408,12 +411,25 @@ class PledgingContract(ContractMaster):
             raise ContractValidationError(
                 "No pledge record found ofr tokencode %s" % token_code)
 
-        data = repo.select_Query("id,amount").add_table_name("pledge_ledger").where_clause("borrower",
+        data = repo.select_Query("id,amount,lender").add_table_name("pledge_ledger").where_clause("borrower",
                                                                                            wallet_address,
                                                                                            1).and_clause("address",
                                                                                                          self.address, 1).and_clause(
             "lender", lender, 1).and_clause("token_code", token_code, 1).execute_query_single_result(
             qparam)
+
+        # lender_address = data[2]
+        # custodian_address = cspecs['custodian_address']    
+        # if len(signed_wallets) != 2:
+        #     raise ContractValidationError("Total two signatures are required for pledge finalise")
+        # for i in signed_wallets:
+        #     if i["wallet_address"] == custodian_address:
+        #         custodian_present = True
+        #     if i["wallet_address"] == lender_address:
+        #         lender_present = True
+        # if not lender_present and custodian_present:
+        #         raise ContractValidationError("Wrong sigantures provided")
+        
         transfer_proposal_data = {
             "transfer_type": 1,
             "asset1_code": token_code,
@@ -424,6 +440,8 @@ class PledgingContract(ContractMaster):
             "asset2_number": 0,
             "additional_data": {}
         }
+
+
         transaction_creator = TransactionCreator()
         trxn.append(transaction_creator.transaction_type_5(
             transfer_proposal_data))
