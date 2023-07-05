@@ -308,8 +308,7 @@ def init_db():
                     token_code text not NULL,
                     time_updated TIMESTAMP,
                     status INT,
-                    unique_column text not NULL ,
-                    pledge_status text,
+                    unique_column text not NULL 
                     )
                     ''')
     cur.execute('''
