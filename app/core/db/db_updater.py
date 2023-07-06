@@ -232,13 +232,17 @@ def add_tx_to_block(cur, block_index, transactions):
         description = transaction['descr'] if 'descr' in transaction else transaction['description']
         specific_data = json.dumps(
             transaction['specific_data']) if 'specific_data' in transaction else ''
+        status = transaction_signature.get('status',1)
+        exec_msg = transaction_signature.get('exec_msg',None)
         db_transaction_data = (
             block_index,
             transaction_code,
+            status,
+            exec_msg
         )
         cur.execute(f'''INSERT OR IGNORE INTO transactions
-            (block_index, transaction_code)
-            VALUES (?, ?)''', db_transaction_data)
+            (block_index, transaction_code, status, exec_msg)
+            VALUES (?, ?, ?, ?)''', db_transaction_data)
 
 
 def update_token_amount(cur, tid, amt):

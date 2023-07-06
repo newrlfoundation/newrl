@@ -5,7 +5,7 @@ from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
 
 
 def create_wallet():
-    # def test_create_wallet():
+# def test_create_wallet():
     response = requests.get(NODE_URL+"/generate-wallet-address")
     assert response.status_code == 200
     wallet = response.json()
@@ -30,6 +30,7 @@ def create_wallet():
     print(response.text)
     assert response.status_code == 200
     unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
 
@@ -49,20 +50,13 @@ def create_wallet():
     assert response.status_code == 200
 
     if TEST_ENV == 'local':
-        response = requests.post(
-            NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+        response = requests.post(NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
     else:
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response = requests.get(NODE_URL+'/download-state')
+    response = requests.get(NODE_URL + '/get-wallet?wallet_address=' + wallet['address'])
     assert response.status_code == 200
-    state = response.json()
-
-    wallets = state['wallets']
-    wallet_in_state = next(
-        x for x in wallets if x['wallet_address'] == wallet['address'])
-    assert wallet_in_state
 
     print("Wallet created with address "+wallet['address'])
     print('Test passed.')
@@ -78,7 +72,7 @@ def test_create_sample_template(request):
         "version": "1.0.0",
         "creator": WALLET['address'],
         "actmode": "hybrid",
-        "signatories": {"initialise_liquidity": None, "value_issue": None, "update_entry": None, "create_entry": None, "sample_validate": None},
+        "signatories": {"initialise_liquidity": None, "value_issue": None, "update_entry": None, "create_entry": None, "sample_validate": None,"sample_validate_exp":None},
         "contractspecs": {},
         "legalparams": {}
     })
@@ -87,6 +81,7 @@ def test_create_sample_template(request):
     unsigned_transaction=response.json()
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
 
     response=requests.post(NODE_URL+'/sign-transaction', json={
         "wallet_data": WALLET,
@@ -102,7 +97,7 @@ def test_create_sample_template(request):
     response=requests.post(
         NODE_URL+'/validate-transaction', json=signed_transaction)
     assert response.status_code == 200
-
+    assert response.json()['response']['valid']
     if TEST_ENV == 'local':
         response=requests.post(
             NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
@@ -110,21 +105,15 @@ def test_create_sample_template(request):
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response=requests.get(NODE_URL+'/download-state')
+    params = {
+            'table_name': "contracts",
+            'contract_address':ct_address,
+        }
+    response = requests.get(NODE_URL+"/sc-states", params=params)
     assert response.status_code == 200
-    state=response.json()
-
-    contracts=state['contracts']
-    # contracts_in_state = next(
-    #     x for x in contracts if x['address'] == ct_address)
-    contracts_in_state=False
-    for x in contracts:
-        c=x['address']
-        d=ct_address
-        if c == d:
-            contracts_in_state=True
-            break
-    assert contracts_in_state
+    response_val = response.json()
+    assert response_val["data"] is not None
+    assert len(response_val["data"]) > 0
     request.config.cache.set('st_address', ct_address) 
 
 
@@ -155,6 +144,7 @@ def test_invlaid_sc_call(request):
     unsigned_transaction = response.json()
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
 
     response = requests.post(NODE_URL+'/sign-transaction', json={
         "wallet_data": WALLET,
@@ -173,4 +163,51 @@ def test_invlaid_sc_call(request):
     assert response.json()["response"]["valid"] == False
 
     
+
+
+def test_invlaid_sc_call_exp(request):
+    wallet1 = create_wallet()
+    st_address = request.config.cache.get('st_address', None)
+    request.config.cache.set('wallet1', wallet1)
+    req_json = {
+        "sc_address": st_address,
+        "function_called": "sample_validate_exp",
+        "signers": [
+            WALLET['address']
+        ],
+        "params": {
+            "amount_to_issue": 1,
+            "address_to_issue": wallet1['address']
+        }
+    }
+    response = requests.post(NODE_URL+'/call-sc', json=req_json)
+
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    assert unsigned_transaction['transaction']
+    assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    response = requests.post(NODE_URL+'/sign-transaction', json={
+        "wallet_data": WALLET,
+        "transaction_data": unsigned_transaction
+    })
+
+    assert response.status_code == 200
+    signed_transaction = response.json()
+    assert signed_transaction['transaction']
+    assert signed_transaction['signatures']
+    assert len(signed_transaction['signatures']) == 1
+
+    response = requests.post(
+        NODE_URL+'/validate-transaction', json=signed_transaction)
+    
+    assert response.json()["response"]["valid"] == True
+
+    if TEST_ENV == 'local':
+        response=requests.post(
+            NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+    else:
+        print('Waiting to mine block')
+        time.sleep(BLOCK_WAIT_TIME)
 
