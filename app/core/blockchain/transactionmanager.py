@@ -186,14 +186,13 @@ class Transactionmanager:
             if addvaliditydict[valadd]:
                 validsignspresent += 1
             else:
-                print(
-                    "Either couldn't find signature or found invalid signature for ", valadd)
+                logger.error(f"Either couldn't find signature or found invalid signature for  {valadd}")
             #	valaddsignpresent=valaddsignpresent*0;	#any one signaure not being present will throw an error
         if prodflag and validsignspresent >= len(validadds):
             # print("All provided signatures valid and all required signatures provided")
             return True
         else:
-            print("Either some signatures invalid or some required ones missing")
+            logger.error("Either some signatures invalid or some required ones missing")
             return False
 
     def mempoolpayment(self, sender, tokencode):
