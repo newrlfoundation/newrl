@@ -155,51 +155,51 @@ def test_sign_and_submit_with_non_sig_wallet(request):
     assert response.json()["response"]["valid"] == False
 
     
-# def test_sign_and_submit_all_wallets(request):
-#     wallet1 = create_wallet()
-#     st_address = request.config.cache.get('st_address', None)
-#     request.config.cache.set('wallet1', wallet1)
-#     req_json = {
-#         "sc_address": st_address,
-#         "function_called": "sample_validate_test",
-#         "signers": [
-#             wallet1['address'],
-#             WALLET['address']
-#         ],
-#         "params": {
-#         }
-#     }
-#     response = requests.post(NODE_URL+'/call-sc', json=req_json)
+def test_sign_and_submit_all_wallets(request):
+    wallet1 = create_wallet()
+    st_address = request.config.cache.get('st_address', None)
+    request.config.cache.set('wallet1', wallet1)
+    req_json = {
+        "sc_address": st_address,
+        "function_called": "sample_validate_test",
+        "signers": [
+            wallet1['address'],
+            WALLET['address']
+        ],
+        "params": {
+        }
+    }
+    response = requests.post(NODE_URL+'/call-sc', json=req_json)
 
-#     assert response.status_code == 200
-#     unsigned_transaction = response.json()
-#     assert unsigned_transaction['transaction']
-#     assert len(unsigned_transaction['signatures']) == 0
-#     unsigned_transaction['transaction']['fee'] = 1000000
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    assert unsigned_transaction['transaction']
+    assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
 
-#     response = requests.post(NODE_URL+'/sign-transaction', json={
-#         "wallet_data": wallet1,
-#         "transaction_data": unsigned_transaction
-#     })
+    response = requests.post(NODE_URL+'/sign-transaction', json={
+        "wallet_data": wallet1,
+        "transaction_data": unsigned_transaction
+    })
 
-#     assert response.status_code == 200
-#     signed_transaction = response.json()
-#     assert signed_transaction['transaction']
-#     assert signed_transaction['signatures']
-#     assert len(signed_transaction['signatures']) == 1
+    assert response.status_code == 200
+    signed_transaction = response.json()
+    assert signed_transaction['transaction']
+    assert signed_transaction['signatures']
+    assert len(signed_transaction['signatures']) == 1
 
-#     response = requests.post(NODE_URL+'/sign-transaction', json={
-#         "wallet_data": WALLET,
-#         "transaction_data": signed_transaction
-#     })
+    response = requests.post(NODE_URL+'/sign-transaction', json={
+        "wallet_data": WALLET,
+        "transaction_data": signed_transaction
+    })
 
-#     assert response.status_code == 200
-#     signed_transaction = response.json()
-#     assert signed_transaction['transaction']
-#     assert signed_transaction['signatures']
-#     assert len(signed_transaction['signatures']) == 2
+    assert response.status_code == 200
+    signed_transaction = response.json()
+    assert signed_transaction['transaction']
+    assert signed_transaction['signatures']
+    assert len(signed_transaction['signatures']) == 2
 
-#     response = requests.post(
-#         NODE_URL+'/validate-transaction', json=signed_transaction)
+    response = requests.post(
+        NODE_URL+'/validate-transaction', json=signed_transaction)
     
-#     assert response.json()["response"]["valid"] == False
+    assert response.json()["response"]["valid"] == True
