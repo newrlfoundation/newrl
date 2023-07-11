@@ -182,7 +182,11 @@ class sample_template(ContractMaster):
     def sample_validate(self, params, fetFetchRepository: FetchRepository):
         print("Sample_validate invoked")
         return []
-
+    
+    def sample_validate_test(self, params, fetFetchRepository: FetchRepository):
+        print("Sample_validate invoked")
+        return []
+    
     def validate(self, txn_data, fetFetchRepository: FetchRepository):
         method = txn_data["function"]
         if(method == "sample_validate"):

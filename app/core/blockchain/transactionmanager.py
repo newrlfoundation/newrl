@@ -910,11 +910,11 @@ def get_sc_validadds(transaction, cur=None):
     functsignmap = json.loads(signatories[0])
     if funct in functsignmap:  # function is allowed to be called
         # checking if stated signer is in allowed list
-        for signer in (transaction['specific_data']['signers']):
-            if not functsignmap[funct] or signer in functsignmap[funct]:
-                validadds.append(signer)
+        # for signer in (transaction['specific_data']['signers']):
+        #     if not functsignmap[funct] or signer in functsignmap[funct]:
+        #         validadds.append(signer)
             # a function may allow anyone to call or the signer may be present in the dictionary funcsignmap
-        return validadds
+        return functsignmap[funct]
     else:
         print("Either function is not valid or it cannot be called in a transaction.")
         return [-1]
