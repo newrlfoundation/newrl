@@ -132,7 +132,10 @@ def init_db():
                     CREATE TABLE IF NOT EXISTS transactions
                     (
                     transaction_code text PRIMARY KEY,
-                    block_index integer)
+                    block_index integer,
+                    status integer,
+                    exec_msg text
+                 )
                     ''')
 
     cur.execute('''
