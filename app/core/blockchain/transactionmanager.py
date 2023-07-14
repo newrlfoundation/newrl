@@ -914,7 +914,10 @@ def get_sc_validadds(transaction, cur=None):
         #     if not functsignmap[funct] or signer in functsignmap[funct]:
         #         validadds.append(signer)
             # a function may allow anyone to call or the signer may be present in the dictionary funcsignmap
-        return functsignmap[funct]
+        if functsignmap[funct]:    
+            return functsignmap[funct]
+        else:
+            return transaction['specific_data']['signers']
     else:
         print("Either function is not valid or it cannot be called in a transaction.")
         return [-1]

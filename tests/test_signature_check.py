@@ -203,3 +203,51 @@ def test_sign_and_submit_all_wallets(request):
         NODE_URL+'/validate-transaction', json=signed_transaction)
     
     assert response.json()["response"]["valid"] == True
+
+
+def test_sign_and_submit_none_sigs(request):
+    wallet1 = create_wallet()
+    st_address = request.config.cache.get('st_address', None)
+    request.config.cache.set('wallet1', wallet1)
+    req_json = {
+        "sc_address": st_address,
+        "function_called": "sample_validate",
+        "signers": [
+            WALLET['address']
+        ],
+        "params": {
+            "amount_to_issue": 1,
+            "address_to_issue": WALLET['address'],
+            "value": [
+                {
+                    "token_code": "NWRL",
+                    "amount": 1
+                }
+            ]
+        }
+    }
+    response = requests.post(NODE_URL+'/call-sc', json=req_json)
+
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    assert unsigned_transaction['transaction']
+    assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    response = requests.post(NODE_URL+'/sign-transaction', json={
+        "wallet_data": WALLET,
+        "transaction_data": unsigned_transaction
+    })
+
+    assert response.status_code == 200
+    signed_transaction = response.json()
+    assert signed_transaction['transaction']
+    assert signed_transaction['signatures']
+    assert len(signed_transaction['signatures']) == 1
+
+    response = requests.post(
+        NODE_URL+'/validate-transaction', json=signed_transaction)
+    
+    assert response.json()["response"]["valid"] == True
+
+    

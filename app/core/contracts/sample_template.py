@@ -193,7 +193,7 @@ class sample_template(ContractMaster):
             value = txn_data["params"]["value"]
             token_1 = value[0]
             token_1_code = token_1["token_code"]
-            if token_1_code != "OT1":
+            if token_1_code != 'NWRL':
                 raise ContractValidationError("Provided value tokens are incorrect, please provide ot1 tokens only")
         pass
                             
