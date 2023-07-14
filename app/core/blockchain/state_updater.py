@@ -52,8 +52,9 @@ def update_db_states(cur, block):
             logger.error(f'Error in transaction: {str(txn_code)}')
             logger.error(str(e))
             logger.error(traceback.format_exc())
-            transaction['status'] = 2     
-            transaction['exec_msg'] = str(e)
+            transaction['status'] = 2  
+            exec_msg = str(e) if len(str(e)) < 100 else str(e)[:100]
+            transaction['exec_msg'] = exec_msg
     if config_updated:
         Configuration.updateDataFromDB(cur)
     add_tx_to_block(cur, newblockindex, transactions)

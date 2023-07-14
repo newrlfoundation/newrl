@@ -211,3 +211,8 @@ def test_invlaid_sc_call_exp(request):
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
+    response = requests.get(NODE_URL+'/get-transaction',
+                            params={'transaction_code': signed_transaction['transaction']['trans_code']})
+    assert response.status_code == 200 
+    assert response.json()["status"] == 2  
+
