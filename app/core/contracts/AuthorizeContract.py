@@ -5,6 +5,7 @@ from ecdsa import BadSignatureError
 
 from app.core.contracts.contract_master import ContractMaster
 from app.core.db.db_updater import *
+from app.core.helpers.CustomExceptions import ContractValidationError
 from ..helpers.FetchRespository import FetchRepository
 from app.core.blockchain.TransactionCreator import TransactionCreator
 from app.core.blockchain.transactionmanager import get_public_key_from_address, Transactionmanager
@@ -29,6 +30,21 @@ class AuthorizeContract(ContractMaster):
             wallet = repo.select_Query("wallet_address").add_table_name("wallets").where_clause("wallet_address", recipient_address, 1).execute_query_multiple_result({"wallet_address": recipient_address})
             if len(wallet) == 0:
                 raise Exception("Receipt wallet does not exist")
+        if (method=="modifyTokenAttributes"):
+            if isinstance(callparams['transaction']['transaction']['token_code'], list):
+                for tokenCode in callparams['transaction']['transaction']['token_code']:
+                    token_code = tokenCode
+                    if not self.token_exists(token_code, repo):
+                        raise ContractValidationError("Provided token code doesnt exist")
+            else:
+                token_code = callparams['transaction']['transaction']['token_code']
+                if not self.token_exists(token_code, repo):
+                    raise ContractValidationError("Provided token code doesnt exist")
+            if not self._validate(callparams, repo):
+                raise ContractValidationError("Custodian error or transaction signature didnt match")
+
+
+
 
 
     def validateCustodian(self, transaction, custodian_address, custodian_wallet, transaction_manager):
@@ -82,6 +98,11 @@ class AuthorizeContract(ContractMaster):
                             callparams['transaction']['transaction']['token_attributes'],
 
                         )
+
+                    if not self.token_exists( query_params[0], repo):
+                        raise ContractValidationError("Provided token code doesnt exist")
+
+
                     # cursor = cur.execute('SELECT token_attributes FROM tokens WHERE tokencode = :tokencode',
                     #                      {'tokencode': query_params[0]})
                     # tokenAttributes = cursor.fetchone()
@@ -117,8 +138,11 @@ class AuthorizeContract(ContractMaster):
                     callparams['transaction']['transaction']['token_code'],
                     callparams['transaction']['transaction']['timestamp'],
                     callparams['transaction']['transaction']['token_attributes'],
-
                 )
+
+                if not self.token_exists( query_params[0], repo):
+                    raise ContractValidationError("Provided token code doesnt exist")
+
                 # cursor = cur.execute('SELECT token_attributes FROM tokens WHERE tokencode = :tokencode',
                 #                      {'tokencode': query_params[0]})
                 # tokenAttributes = cursor.fetchone()
@@ -246,3 +270,12 @@ class AuthorizeContract(ContractMaster):
         #             {'address': self.address})
         logger.info("Contract delete successful %s" % self.address)
         return trxn
+
+    def token_exists(self,token_code, repo):
+        qparam = {"tokencode": token_code}
+        token = repo.select_count().add_table_name("tokens").where_clause(
+                "tokencode", qparam["tokencode"], 1).execute_query_single_result(qparam)
+        if token is None or token[0] == 0:
+            return False
+        else:
+            return True
