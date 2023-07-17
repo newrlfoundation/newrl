@@ -276,6 +276,6 @@ class AuthorizeContract(ContractMaster):
         token = repo.select_count().add_table_name("tokens").where_clause(
                 "tokencode", qparam["tokencode"], 1).execute_query_single_result(qparam)
         if token is None or token[0] == 0:
-            return True
-        else:
             return False
+        else:
+            return True
