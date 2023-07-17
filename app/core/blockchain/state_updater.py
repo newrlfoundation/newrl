@@ -34,7 +34,6 @@ def update_db_states(cur, block):
     newblockindex = block['index'] if 'index' in block else block['block_index']
     transactions = block['text']['transactions']
 
-    add_tx_to_block(cur, newblockindex, transactions)
 
     if 'creator_wallet' in block and block['creator_wallet'] is not None:
         add_block_reward(cur, block['creator_wallet'], newblockindex)
@@ -47,13 +46,18 @@ def update_db_states(cur, block):
                 handle_sc_transaction(cur,transaction,block['creator_wallet'],newblockindex)
             else:
                 handle_txn(cur, transaction,newblockindex,newblockindex)
+            transaction['status'] = 1     
         except Exception as e:
             txn_code = transaction["transaction"]['trans_code']
             logger.error(f'Error in transaction: {str(txn_code)}')
             logger.error(str(e))
-            logger.error(traceback.format_exc()) 
+            logger.error(traceback.format_exc())
+            transaction['status'] = 2  
+            exec_msg = str(e) if len(str(e)) < 100 else str(e)[:100]
+            transaction['exec_msg'] = exec_msg
     if config_updated:
         Configuration.updateDataFromDB(cur)
+    add_tx_to_block(cur, newblockindex, transactions)
     return True
 
 def handle_txn(cur,transaction,newblockindex, creator_wallet):
