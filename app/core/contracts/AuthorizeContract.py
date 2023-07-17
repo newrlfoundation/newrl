@@ -30,6 +30,21 @@ class AuthorizeContract(ContractMaster):
             wallet = repo.select_Query("wallet_address").add_table_name("wallets").where_clause("wallet_address", recipient_address, 1).execute_query_multiple_result({"wallet_address": recipient_address})
             if len(wallet) == 0:
                 raise Exception("Receipt wallet does not exist")
+        if (method=="modifyTokenAttributes"):
+            if isinstance(callparams['transaction']['transaction']['token_code'], list):
+                for tokenCode in callparams['transaction']['transaction']['token_code']:
+                    token_code = tokenCode
+                    if not self.token_exists(token_code, repo):
+                        raise ContractValidationError("Provided token code doesnt exist")
+            else:
+                token_code = callparams['transaction']['transaction']['token_code']
+                if not self.token_exists(token_code, repo):
+                    raise ContractValidationError("Provided token code doesnt exist")
+            if not self._validate(callparams, repo):
+                raise ContractValidationError("Custodian error or transaction signature didnt match")
+
+
+
 
 
     def validateCustodian(self, transaction, custodian_address, custodian_wallet, transaction_manager):
@@ -257,9 +272,9 @@ class AuthorizeContract(ContractMaster):
         return trxn
 
     def token_exists(self,token_code, repo):
-        qparam = {"token_code": token_code}
+        qparam = {"tokencode": token_code}
         token = repo.select_count().add_table_name("tokens").where_clause(
-                "token_code", qparam["token_code"], 1).execute_query_single_result(qparam)
+                "tokencode", qparam["tokencode"], 1).execute_query_single_result(qparam)
         if token is None or token[0] == 0:
             return True
         else:
