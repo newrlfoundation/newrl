@@ -186,14 +186,13 @@ class Transactionmanager:
             if addvaliditydict[valadd]:
                 validsignspresent += 1
             else:
-                print(
-                    "Either couldn't find signature or found invalid signature for ", valadd)
+                logger.error(f"Either couldn't find signature or found invalid signature for  {valadd}")
             #	valaddsignpresent=valaddsignpresent*0;	#any one signaure not being present will throw an error
         if prodflag and validsignspresent >= len(validadds):
             # print("All provided signatures valid and all required signatures provided")
             return True
         else:
-            print("Either some signatures invalid or some required ones missing")
+            logger.error("Either some signatures invalid or some required ones missing")
             return False
 
     def mempoolpayment(self, sender, tokencode):
@@ -911,11 +910,14 @@ def get_sc_validadds(transaction, cur=None):
     functsignmap = json.loads(signatories[0])
     if funct in functsignmap:  # function is allowed to be called
         # checking if stated signer is in allowed list
-        for signer in (transaction['specific_data']['signers']):
-            if not functsignmap[funct] or signer in functsignmap[funct]:
-                validadds.append(signer)
+        # for signer in (transaction['specific_data']['signers']):
+        #     if not functsignmap[funct] or signer in functsignmap[funct]:
+        #         validadds.append(signer)
             # a function may allow anyone to call or the signer may be present in the dictionary funcsignmap
-        return validadds
+        if functsignmap[funct]:    
+            return functsignmap[funct]
+        else:
+            return transaction['specific_data']['signers']
     else:
         print("Either function is not valid or it cannot be called in a transaction.")
         return [-1]
