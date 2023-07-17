@@ -187,6 +187,11 @@ class sample_template(ContractMaster):
         print("Sample_validate invoked")
         return []
     
+
+    def sample_validate_exp(self, params, fetFetchRepository: FetchRepository):
+        print("sample_validate_exp invoked")
+        raise ContractValidationError("Provided value tokens are incorrect, please provide ot1 tokens only")
+
     def validate(self, txn_data, fetFetchRepository: FetchRepository):
         method = txn_data["function"]
         if(method == "sample_validate"):
