@@ -45,7 +45,7 @@ def update_db_states(cur, block):
             if transaction['transaction']['type']== TRANSACTION_SMART_CONTRACT:
                 handle_sc_transaction(cur,transaction,block['creator_wallet'],newblockindex)
             else:
-                handle_txn(cur, transaction,newblockindex,newblockindex)
+                handle_txn(cur, transaction,newblockindex,block['creator_wallet'])
             transaction['status'] = 1     
         except Exception as e:
             txn_code = transaction["transaction"]['trans_code']
