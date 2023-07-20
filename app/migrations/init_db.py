@@ -312,7 +312,7 @@ def init_db():
                     time_updated TIMESTAMP,
                     status INT,
                     unique_column text not NULL ,
-                    pledge_status text,
+                    pledge_status text
                     )
                     ''')
     cur.execute('''
