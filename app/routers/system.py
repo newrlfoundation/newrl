@@ -118,7 +118,7 @@ def update_software_api(propogate: bool = False):
 
 
 @router.post("/update-and-restart", tags=[p2p_tag])
-def update_and_restart_api(api_key,env):
+def update_and_restart_api(api_key,env = 'mainnet'):
     if calculate_hash(api_key) != '4a01127180cb827a4752abe578b47cbe23ba677037b5bb0cd420549bdb4a274d':
         return {'status': 'INVALID_KEY'}
     update_and_restart(env)
