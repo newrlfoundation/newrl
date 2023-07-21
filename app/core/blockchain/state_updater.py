@@ -45,7 +45,7 @@ def update_db_states(cur, block):
             if transaction['transaction']['type']== TRANSACTION_SMART_CONTRACT:
                 handle_sc_transaction(cur,transaction,block['creator_wallet'],newblockindex)
             else:
-                handle_txn(cur, transaction,newblockindex,newblockindex)
+                handle_txn(cur, transaction,newblockindex,block['creator_wallet'])
             transaction['status'] = 1     
         except Exception as e:
             txn_code = transaction["transaction"]['trans_code']
@@ -79,14 +79,14 @@ def handle_txn(cur,transaction,newblockindex, creator_wallet):
 
         tm = Transactionmanager()
         tm.set_transaction_data(transaction_all)
-        tm.transactioncreator(transaction_all)
+        # tm.transactioncreator(transaction_all)
         if not tm.econvalidator(cur=cur):
             #TODO capture the reason and update as txn status
             return
     else:
         tm = Transactionmanager()
         tm.set_transaction_data(transaction_all)
-        tm.transactioncreator(transaction_all)
+        # tm.transactioncreator(transaction_all)
         if not tm.econvalidator(cur=cur):
             #TODO capture the reason and update as txn status
             return
@@ -462,7 +462,7 @@ def handle_sc_transaction(cur, transaction, creator_wallet, newblockindex):
     
             tm = Transactionmanager()
             tm.set_transaction_data(transaction_all)
-            tm.transactioncreator(transaction_all)
+            # tm.transactioncreator(transaction_all)
             if not tm.econvalidator(cur=cur):
                 logger.error("Econ validation failed for sc txn")
                 cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
