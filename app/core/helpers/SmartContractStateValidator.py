@@ -6,7 +6,14 @@ from app.config.constants import NEWRL_DB
 from app.config.ntypes import *
 
 
-def validate(transaction: Transactionmanager, contract_address: str):
+def validate(cur, transaction: Transactionmanager, contract_address: str):
+    if cur is None:
+        con = sqlite3.connect(NEWRL_DB)
+        cur = con.cursor()
+        cursor_opened = True
+    else:
+        cursor_opened = False
+
     type = transaction.transaction['type']
     if type == TRANSACTION_WALLET_CREATION:
         if transaction.transaction['specific_data']['custodian_wallet'] != contract_address:
@@ -24,8 +31,7 @@ def validate(transaction: Transactionmanager, contract_address: str):
             if contract_address != transaction.transaction['specific_data']['wallet1']:
                 return False
     if type==TRANSACTION_TRUST_SCORE_CHANGE:
-        con = sqlite3.connect(NEWRL_DB)
-        cur = con.cursor()
+
         signatories = cur.execute(
             'SELECT signatories FROM contracts WHERE address=?', (contract_address,)).fetchone()
         con.close()
@@ -39,6 +45,8 @@ def validate(transaction: Transactionmanager, contract_address: str):
             add1_exist=True
         if transaction.transaction['specific_data']['address2'] in functsignmap('update_trust_score',[]):
             add2_exist=False
+        if cursor_opened:
+            con.close()    
         return (add1_exist and add2_exist)
 
 
@@ -48,6 +56,6 @@ def validate(transaction: Transactionmanager, contract_address: str):
         if transaction.transaction['specific_data']['address'] != contract_address:
             return False   
     if type != TRANSACTION_SC_UPDATE:
-        return transaction.econvalidator()['validity']
+        return transaction.econvalidator(cur)['validity']
     
     return True

@@ -280,7 +280,7 @@ def get_non_sc_txns(cur, transaction):
     simplified_child_transactions = []
     for child_transaction in child_transactions:
         logger.info("Processing child transaction" + str(child_transaction))
-        if not validate_sc_child_transaction(child_transaction, transaction['transaction']["specific_data"]["address"]):
+        if not validate_sc_child_transaction(cur, child_transaction, transaction['transaction']["specific_data"]["address"]):
             raise Exception("Sc child txn validation chain failed")
         if(child_transaction.transaction['type'] == TRANSACTION_SMART_CONTRACT):
             non_sc_child_txns = get_non_sc_txns(
@@ -319,7 +319,7 @@ def execute_sc(cur, transaction_main):
     params_for_funct['function_caller'] = transaction_signer
     try:
         fetchRepository = FetchRepository(cur)
-        sc_value_txns = get_value_txns(transaction_signer, transaction_data)
+        sc_value_txns = get_value_txns(cur,transaction_signer, transaction_data)
         value_txns.extend(sc_value_txns)
         child_transactions = funct(params_for_funct, fetchRepository)
         #if value is present then make a child txn 5 based on it (it will be validated as part of child sc validation)
@@ -332,11 +332,11 @@ def execute_sc(cur, transaction_main):
     pass
 
 
-def validate_sc_child_transaction(transaction: Transactionmanager, contract_address):
-    return validate(transaction, contract_address)
+def validate_sc_child_transaction(cur, transaction: Transactionmanager, contract_address):
+    return validate(cur, transaction, contract_address)
 
 
-def get_value_txns(transaction_signer, transaction_data):
+def get_value_txns(cur, transaction_signer, transaction_data):
 
     if 'value' not in transaction_data['params']:
         return []
@@ -361,7 +361,7 @@ def get_value_txns(transaction_signer, transaction_data):
         }
         transfer_proposal = transaction_creator.transaction_type_5(
             transfer_proposal_data)
-        if not transfer_proposal.econvalidator()['validity']:
+        if not transfer_proposal.econvalidator(cur)['validity']:
             logger.error(
                 "SC-value txn economic validation failed for transaction")
             raise Exception("SC-value txn validation failed for transaction")

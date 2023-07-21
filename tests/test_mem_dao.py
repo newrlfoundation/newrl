@@ -8,7 +8,7 @@ import pytest
 from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
 
 def create_wallet():
-    # def test_create_wallet():
+# def test_create_wallet():
     response = requests.get(NODE_URL+"/generate-wallet-address")
     assert response.status_code == 200
     wallet = response.json()
@@ -33,15 +33,14 @@ def create_wallet():
     print(response.text)
     assert response.status_code == 200
     unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
     assert unsigned_transaction['transaction']
     assert len(unsigned_transaction['signatures']) == 0
 
-    unsigned_transaction['transaction']['fee'] = 1000000
-    data = {
+    response = requests.post(NODE_URL+'/sign-transaction', json={
         "wallet_data": WALLET,
         "transaction_data": unsigned_transaction
-    }
-    response = requests.post(NODE_URL+'/sign-transaction', json= data)
+    })
 
     assert response.status_code == 200
     signed_transaction = response.json()
@@ -54,25 +53,72 @@ def create_wallet():
     assert response.status_code == 200
 
     if TEST_ENV == 'local':
+        response = requests.post(NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+    else:
+        print('Waiting to mine block')
+        time.sleep(BLOCK_WAIT_TIME)
+
+    response = requests.get(NODE_URL + '/get-wallet?wallet_address=' + wallet['address'])
+    assert response.status_code == 200
+
+    print("Wallet created with address "+wallet['address'])
+    print('Test passed.')
+    return wallet
+
+def fund_wallet_nwrl(wallet,address,amount):
+    req ={
+        "transfer_type": 5,
+        "asset1_code": "NWRL",
+        "asset2_code": "",
+        "wallet1_address": wallet["address"],
+        "wallet2_address": address,
+        "asset1_qty": amount,
+        "description": "",
+        "additional_data": {}
+    }
+    response = requests.post(NODE_URL+'/add-transfer', json = req)
+
+    assert response.status_code == 200
+    unsigned_transaction = response.json()
+    assert unsigned_transaction['transaction']
+    assert len(unsigned_transaction['signatures']) == 0
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    response = requests.post(NODE_URL+'/sign-transaction', json={
+        "wallet_data": wallet,
+        "transaction_data": unsigned_transaction
+    })
+
+    print("adding token")
+    assert response.status_code == 200
+    signed_transaction = response.json()
+    print("signing tx")
+    assert signed_transaction['transaction']
+    assert signed_transaction['signatures']
+    assert len(signed_transaction['signatures']) == 1
+
+    print("validating tx")
+    response = requests.post(
+        NODE_URL+'/validate-transaction', json=signed_transaction)
+    assert response.status_code == 200
+
+    if TEST_ENV == 'local':
         response = requests.post(
             NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
     else:
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response = requests.get(NODE_URL+'/download-state')
-    assert response.status_code == 200
-    state = response.json()
-
-    wallets = state['wallets']
-    wallet_in_state = next(
-        x for x in wallets if x['wallet_address'] == wallet['address'])
-    assert wallet_in_state
-
-    print("Wallet created with address "+wallet['address'])
-    print('Test passed.')
-    return wallet
-
+    response_token1 = requests.get(NODE_URL+'/get-balances', params={
+        "balance_type": "TOKEN_IN_WALLET",
+        "token_code": "NWRL",
+        "wallet_address": address
+    })
+    assert response_token1.status_code == 200
+    balance_token1_resp = response_token1.json()
+    balance_token1 = balance_token1_resp['balance']
+    assert balance_token1 == amount
+    
 
 def transfer_unilateral(from_wallet, to_wallet, token, amount):
     token_code = token['tokencode']
@@ -178,15 +224,12 @@ def get_dao_details():
     dao_manager_address = "ct9000000000000000000000000000000000000da0"
     dao_name = "dao_mem_"+str(random.randrange(111111, 999999, 5))
 
-    transfer_unilateral(WALLET, wallet_founder1, {"tokencode": "NWRL"}, 10000000)
-    transfer_unilateral(WALLET, wallet_founder2, {
-                        "tokencode": "NWRL"}, 10000000)
+    fund_wallet_nwrl(WALLET, wallet_founder1['address'], 10000000)
+    fund_wallet_nwrl(WALLET,wallet_founder2['address'], 10000000)
 
-    transfer_unilateral(WALLET, wallet_founder2,  {
-                        "tokencode": "NWRL"}, 10000000)
+    fund_wallet_nwrl(WALLET, wallet_founder3['address'],  10000000)
 
-    transfer_unilateral(WALLET, wallet_founder3,  {
-                        "tokencode": "NWRL"}, 10000000)
+    fund_wallet_nwrl(WALLET, wallet_member1['address'], 10000000)
 
     dao_details = {
         'wallet_founder1': wallet_founder1,
@@ -329,19 +372,15 @@ def test_create_mem_dao(request):
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response = requests.get(NODE_URL+'/download-state')
+    params = {
+            'table_name': "contracts",
+            'contract_address':ct_address,
+        }
+    response = requests.get(NODE_URL+"/sc-states", params=params)
     assert response.status_code == 200
-    state = response.json()
-
-    contracts = state['contracts']
-    contracts_in_state = False
-    for x in contracts:
-        c = x['address']
-        d = ct_address
-        if c == d:
-            contracts_in_state = True
-            break
-    assert contracts_in_state
+    response_val = response.json()
+    assert response_val["data"] is not None
+    assert len(response_val["data"]) > 0
     request.config.cache.set('mem_dao_address', ct_address)
 
 def test_initialize_dao(request):
