@@ -234,7 +234,7 @@ class Transactionmanager:
             logger.error("Fee validation failed")
             self.errors.append("Fee validation failed")
             return {
-                "validity" :True,
+                "validity" :False,
                 "reason": self.errors
             }
         fee_token_code = self.transaction['currency']
