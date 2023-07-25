@@ -18,6 +18,7 @@ from app.core.helpers.CustomExceptions import ContractValidationError
 from app.core.helpers.FetchRespository import FetchRepository
 from app.config.Configuration import Configuration
 from app.config.nvalues import CUSTODIAN_DAO_ADDRESS
+from app.core.blockchain.transactionutils import is_redundant_miner_broadcast
 
 
 from app.config.ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_MULTIPLIER, NUSD_TOKEN_CODE, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION,TOKEN_NFT
@@ -612,6 +613,8 @@ class Transactionmanager:
             # No checks for fee in the beginning
             if not is_wallet_valid(self.transaction['specific_data']['wallet_address'], cur=cur, check_sc=False):
                 print("Miner wallet not in chain")
+                self.validity = 0
+            elif is_redundant_miner_broadcast(self.transaction['specific_data']['wallet_address'], cur=cur):
                 self.validity = 0
             else:
                 self.validity = 1
