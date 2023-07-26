@@ -75,27 +75,29 @@ def handle_txn(cur,transaction,newblockindex, creator_wallet):
         if not pay_fee_for_transaction(cur, transaction, creator_wallet):
             logger.error(f'Fee payment failed for transaction {transaction_code}')
             #TODO capture the reason and update as txn status 
-            return
+            raise Exception("Fee payment failure")
 
         tm = Transactionmanager()
         tm.set_transaction_data(transaction_all)
         # tm.transactioncreator(transaction_all)
-        if not tm.econvalidator(cur=cur)['validity']:
-            #TODO capture the reason and update as txn status
-            return
+        econ_validity = tm.econvalidator(cur=cur)
+        if not econ_validity['validity']:
+            #capture the reason and update as txn status
+            reason = ' '.join(map(str, econ_validity['reason']))
+            raise Exception("Economic validation Failed"+reason)
     else:
         tm = Transactionmanager()
         tm.set_transaction_data(transaction_all)
         # tm.transactioncreator(transaction_all)
-        if not tm.econvalidator(cur=cur)['validity']:
-            #TODO capture the reason and update as txn status
-            return
-        
+        econ_validity = tm.econvalidator(cur=cur)
+        if not econ_validity['validity']:
+            #capture the reason and update as txn status
+            reason = ' '.join(map(str, econ_validity['reason']))
+            raise Exception("Economic validation Failed"+reason)
         if not pay_fee_for_transaction(cur, transaction, creator_wallet):
             logger.error(f'Fee payment failed for transaction {transaction_code}')
-                #TODO capture the reason and update as txn status
-            return
-    process_txn(cur, transaction_all,newblockindex)  #TODO capture excpetion reason and update as txn status     
+            raise Exception("Fee payment failed for transaction")
+    process_txn(cur, transaction_all,newblockindex)      
 
 def process_txn(cur, transaction, newblockindex):
     signature = transaction['signatures']
@@ -124,7 +126,7 @@ def process_txn(cur, transaction, newblockindex):
             logger.error(str(e))
             logger.error(traceback.format_exc())
             raise e
-            #TODO capture the reason and update as txn status
+            
 
 
 def update_state_from_transaction(cur, transaction_type, transaction_data, transaction_code, transaction_timestamp,
