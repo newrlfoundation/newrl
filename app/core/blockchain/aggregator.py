@@ -3,7 +3,7 @@ from app.core.blockchain.validator import validate as validate_transaction
 from app.core.p2p.outgoing import propogate_transaction_batch_to_peers
 from app.config.constants import MAX_TRANSACTION_BATCH_SIZE
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def process_transaction_batch(transaction_list, exclude_nodes_broadcast=None):
