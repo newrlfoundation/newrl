@@ -37,7 +37,7 @@ def validate(transaction, propagate=False, validate_economics=True):
     #     }
 
     if transaction_exists_in_mempool(transaction['transaction']['trans_code']):
-        logger.info('Transaction exists in mempool')
+        logger.debug('Transaction exists in mempool')
         return {'valid': True, 'msg': 'Already validated and in mempool', 'new_transaction': False}
     
     if get_transaction(transaction['transaction']['trans_code']) is not None:

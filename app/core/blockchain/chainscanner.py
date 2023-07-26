@@ -99,7 +99,7 @@ def get_block(block_index):
     return chain.get_block(block_index)
 
 def get_transaction(transaction_code):
-    con = sqlite3.connect('file:' + NEWRL_DB + '?mode=ro')
+    con = sqlite3.connect(NEWRL_DB)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
     transaction_cursor = cur.execute(
