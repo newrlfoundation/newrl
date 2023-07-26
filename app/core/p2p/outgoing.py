@@ -31,7 +31,7 @@ def propogate_transaction_to_peers(transaction, exclude_nodes=None):
         'peers_already_broadcasted': get_excluded_node_list(peers, exclude_nodes)
     }
 
-    logger.info(f"Broadcasting transaction to peers {peers}")
+    logger.debug(f"Broadcasting transaction to peers {peers}")
     for peer in peers:
         if is_my_address(peer['address']):
             continue
@@ -59,7 +59,7 @@ def propogate_transaction_batch_to_peers(transactions, exclude_nodes=None):
         'peers_already_broadcasted': get_excluded_node_list(peers, exclude_nodes)
     }
 
-    logger.info(f"Broadcasting transaction to peers {peers}")
+    logger.debug(f"Broadcasting transaction to peers {peers}")
     for peer in peers:
         if is_my_address(peer['address']):
             continue
@@ -132,7 +132,7 @@ def broadcast_block(block_payload, nodes=None, exclude_nodes=None, send_to_archi
     else:
         peers = get_random_peers(exclude_nodes)
 
-    logger.info(f"Broadcasting block to peers {peers}")
+    logger.debug(f"Broadcasting block to peers {peers}")
     peers_i_am_broadcasting = get_excluded_node_list(peers, exclude_nodes)
     my_address = get_my_address()
     if my_address in peers_i_am_broadcasting:

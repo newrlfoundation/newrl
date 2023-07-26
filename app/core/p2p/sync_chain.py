@@ -90,11 +90,11 @@ def receive_block(block):
         return
 
     if blockchain.block_exists(block_index):
-        logger.info('Block alredy exist in chain. Ignoring.')
+        logger.debug('Block alredy exist in chain. Ignoring.')
         return False
     
     # Check block for index for index and hash already in temp. If yes append receipts from local block from to the received block
-    logger.info(f'Received new block: {json.dumps(block)}')
+    logger.info(f'Received new block: {block["index"]}')
 
 
     broadcast_exclude_nodes = block['peers_already_broadcasted'] if 'peers_already_broadcasted' in block else None
@@ -356,7 +356,7 @@ def accept_block(block, hash):
 
 
 def receive_receipt(receipt):
-    logger.info('Recieved receipt: %s', receipt)
+    logger.debug('Recieved receipt: %s', receipt)
 
     receipt_data = receipt['data']
     block_index = receipt_data['block_index']
