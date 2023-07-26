@@ -32,8 +32,8 @@ def sign_transaction(wallet_data, transaction_data):
 
     transaction_manager = Transactionmanager()
     transaction_manager.set_transaction_data(transaction_data)
-    if not check_signing_address(transaction_manager.transaction, address):
-        return False
+    # if not check_signing_address(transaction_manager.transaction, address):
+    #     return False
 
     signtransbytes = transaction_manager.sign_transaction(private_key_bytes, address)
     print("signed msg signature is:", signtransbytes,
