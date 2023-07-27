@@ -116,7 +116,7 @@ def receive_block(block):
 
     consensus = get_committee_consensus(block)
     if consensus == BLOCK_CONSENSUS_VALID:
-        logger.info('Received block is after consensus')
+        logger.debug('Received block is after consensus')
         if not validate_block(block):
             logger.info('Invalid block received after valid consensus. Committee maybe malicious. Ignoring.')
             # if am_i_in_block_committee(block['data']):
@@ -206,7 +206,7 @@ def sync_chain_from_node(url, block_index=None):
         start_block = block_idx
         end_block = 1 + block_idx + block_batch_size
         
-        logger.info(f'Asking block node {url} for blocks from {start_block} to {end_block}')
+        logger.debug(f'Asking node {url} for blocks from {start_block} to {end_block}')
         blocks_data = get_block_from_url_retry(url, start_block, end_block)
 
         if blocks_data is None or len(blocks_data['blocks']) == 0:
@@ -376,7 +376,7 @@ def receive_receipt(receipt):
     last_block = get_last_block_hash()
 
     if not am_i_in_current_committee(last_block):
-        logger.warn('I am not in committee. Cannot process receipt. Ignoring')
+        logger.debug('I am not in committee. Cannot process receipt. Ignoring')
         return False
 
     if block_index != last_block['index'] + 1:
