@@ -285,7 +285,7 @@ def global_internal_clock():
     global SYNC_STATUS
 
     if SYNC_STATUS['IS_SYNCING']:
-        logger.info('Timer tick. Syncing with network. Continuing sync.')
+        logger.debug('Timer tick. Syncing with network. Continuing sync.')
     else:
         try:
             # Check for mining delay

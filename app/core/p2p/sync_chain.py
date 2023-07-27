@@ -81,7 +81,7 @@ def get_last_block_index():
 
 def receive_block(block):
     if SYNC_STATUS['IS_SYNCING']:
-        logger.info('Syncing with network. Ignoring incoming block.')
+        logger.debug('Syncing with network. Ignoring incoming block.')
         return
     block_index = block['index']
     if block_index > get_last_block_index() + 1:
@@ -462,7 +462,7 @@ def get_last_block_hash_from_url_retry(url):
             )
         return response.json()['hash']
     except Exception as err:
-        logger.info(f'Could not get block hash from {url}')
+        logger.debug(f'Could not get block hash from {url}')
 
     return None
 
