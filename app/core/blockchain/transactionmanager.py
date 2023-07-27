@@ -612,10 +612,12 @@ class Transactionmanager:
         if self.transaction['type'] == TRANSACTION_MINER_ADDITION:
             # No checks for fee in the beginning
             if not is_wallet_valid(self.transaction['specific_data']['wallet_address'], cur=cur, check_sc=False):
+                self.errors.append("Miner wallet not in chain")
                 print("Miner wallet not in chain")
                 self.validity = 0
             elif is_redundant_miner_broadcast(self.transaction['specific_data']['wallet_address'], cur=cur):
                 self.validity = 0
+                self.errors.append("Redundant miner broadcast")
             else:
                 self.validity = 1
         if self.transaction['type'] == TRANSACTION_SC_UPDATE:
