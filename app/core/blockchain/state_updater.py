@@ -279,7 +279,7 @@ def get_non_sc_txns(cur, transaction):
     child_transactions = execute_sc(cur, transaction)
     simplified_child_transactions = []
     for child_transaction in child_transactions:
-        logger.info("Processing child transaction" + str(child_transaction))
+        logger.debug("Processing child transaction" + str(child_transaction.transaction))
         if not validate_sc_child_transaction(cur, child_transaction, transaction['transaction']["specific_data"]["address"]):
             raise Exception("Sc child txn validation chain failed")
         if(child_transaction.transaction['type'] == TRANSACTION_SMART_CONTRACT):

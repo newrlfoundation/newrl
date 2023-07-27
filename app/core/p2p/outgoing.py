@@ -97,7 +97,7 @@ def send(payload):
 
 
 def broadcast_receipt(receipt, nodes):
-    logger.info('Broadcasting receipt to nodes %s', str(receipt))
+    logger.debug('Broadcasting receipt to nodes %s', str(receipt))
     if IS_TEST:
         return
 
@@ -107,7 +107,7 @@ def broadcast_receipt(receipt, nodes):
         if is_my_address(node['network_address']):
             continue
         url = 'http://' + node['network_address'] + ':' + str(NEWRL_PORT)
-        logger.info(f"Sending receipt to node {url}")
+        logger.debug(f"Sending receipt to node {url}")
         payload = {'receipt': receipt}
         try:
             thread = Thread(target=send_request, args=(url + '/receive-receipt', payload))

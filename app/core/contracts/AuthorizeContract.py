@@ -130,7 +130,7 @@ class AuthorizeContract(ContractMaster):
                         "unique_value": query_params[0]
                     }
                     trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
-                    logger.info("Modification transaction successful %s" % query_params[0])
+                    logger.debug("Modification transaction successful %s" % query_params[0])
                     count = count + 1
                 return trxn
             else:
@@ -170,7 +170,7 @@ class AuthorizeContract(ContractMaster):
                     "unique_value": query_params[0]
                 }
                 trxn.append(transaction_creator.transaction_type_8(sc_state_proposal1_data))
-                logger.info("Modification transaction successful %s" % query_params[0])
+                logger.debug("Modification transaction successful %s" % query_params[0])
                 return trxn
         else:
             return "Invalid Transaction: Error in custodian signature"
