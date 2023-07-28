@@ -67,8 +67,8 @@ class AuthorizeContract(ContractMaster):
         callparams = input_to_dict(callparamsip)
         cspecs = input_to_dict(self.contractparams['contractspecs'])
         custodian_address = cspecs['custodian_address']
-        custodian_wallet = bytes.fromhex(
-            get_public_key_from_address(custodian_address))
+        custodian_public = self.get_public_key_from_address_repo(custodian_address,repo)
+        custodian_wallet = bytes.fromhex(custodian_public)
 
         transaction_manager = Transactionmanager()
         transaction_manager.set_transaction_data(callparams["transaction"])
@@ -279,3 +279,11 @@ class AuthorizeContract(ContractMaster):
             return False
         else:
             return True
+
+    def get_public_key_from_address_repo(self, wallet_address,repo):
+        qparam = {"wallet_address": wallet_address}
+        public = repo.select_Query("wallet_public").add_table_name("wallets").where_clause(
+                "wallet_address", qparam["wallet_address"], 1).execute_query_single_result(qparam)    
+        if len(public) == 0:
+                raise Exception("Alias does not exist to modify/update")
+        return public[0]
