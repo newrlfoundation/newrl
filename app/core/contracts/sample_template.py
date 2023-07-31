@@ -153,10 +153,44 @@ class sample_template(ContractMaster):
         sc_proposal1 = transaction_creator.transaction_type_3(
             sc_proposal1_data)
         return [sc_proposal1]
+    
+    def sample_sc_call_sc(self, params, fetFetchRepository: FetchRepository):
+        nested_sc_address = params['nested_sc_address']
+        name = params["name"]
+        '''txn type 3 (sc call) sample proposal'''
+        transaction_creator = TransactionCreator()
+        sc_proposal1_params = {
+            "name": name,
+            "wallet_address": self.address,
+            "value":[
+                {
+                    "token_code": "NWRL",
+                    "amount":41080000000
+                }
+            ]
+        }
+        sc_proposal1_data = {
+            "address": nested_sc_address,
+            "function": 'create_entry',
+            "signers": [self.address],
+            "params": sc_proposal1_params
+        }
+        sc_proposal1 = transaction_creator.transaction_type_3(
+            sc_proposal1_data)
+        return [sc_proposal1]
 
     def sample_validate(self, params, fetFetchRepository: FetchRepository):
         print("Sample_validate invoked")
         return []
+    
+    def sample_validate_test(self, params, fetFetchRepository: FetchRepository):
+        print("Sample_validate invoked")
+        return []
+    
+
+    def sample_validate_exp(self, params, fetFetchRepository: FetchRepository):
+        print("sample_validate_exp invoked")
+        raise ContractValidationError("Provided value tokens are incorrect, please provide ot1 tokens only")
 
     def validate(self, txn_data, fetFetchRepository: FetchRepository):
         method = txn_data["function"]
@@ -164,7 +198,7 @@ class sample_template(ContractMaster):
             value = txn_data["params"]["value"]
             token_1 = value[0]
             token_1_code = token_1["token_code"]
-            if token_1_code != "OT1":
+            if token_1_code != 'NWRL':
                 raise ContractValidationError("Provided value tokens are incorrect, please provide ot1 tokens only")
         pass
                             

@@ -346,19 +346,15 @@ def test_create_token_dao(request):
         print('Waiting to mine block')
         time.sleep(BLOCK_WAIT_TIME)
 
-    response = requests.get(NODE_URL+'/download-state')
+    params = {
+            'table_name': "contracts",
+            'contract_address':ct_address,
+        }
+    response = requests.get(NODE_URL+"/sc-states", params=params)
     assert response.status_code == 200
-    state = response.json()
-
-    contracts = state['contracts']
-    contracts_in_state = False
-    for x in contracts:
-        c = x['address']
-        d = ct_address
-        if c == d:
-            contracts_in_state = True
-            break
-    assert contracts_in_state
+    response_val = response.json()
+    assert response_val["data"] is not None
+    assert len(response_val["data"]) > 0
     request.config.cache.set('token_dao_address', ct_address)
 
 def test_issue_dao_tokens(request):

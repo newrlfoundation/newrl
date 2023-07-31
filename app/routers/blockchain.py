@@ -36,7 +36,7 @@ from app.core.contracts.contract_master import create_contract_address
 from app.config.Configuration import Configuration
 from app.core.clock.timers import SYNC_STATUS
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -80,13 +80,17 @@ def get_token_api(token_code: str):
     return wallet
 
 @router.get("/get-balances", tags=[query_tag])
-def get_balances_api(balance_type: BalanceType, token_code: str = "", wallet_address: str = ""):
+def get_balances_api(
+        balance_type: BalanceType, 
+        token_code: str = "", 
+        wallet_address: str = "", 
+        token_type: str = None):
     chain_scanner = Chainscanner()
     if balance_type == BalanceType.TOKEN_IN_WALLET:
         balance = chain_scanner.getbaladdtoken(
             wallet_address, str(token_code))
     elif balance_type == BalanceType.ALL_TOKENS_IN_WALLET:
-        balance = chain_scanner.getbalancesbyaddress(wallet_address)
+        balance = chain_scanner.getbalancesbyaddress(wallet_address, token_type)
     elif balance_type == BalanceType.ALL_WALLETS_FOR_TOKEN:
         balance = chain_scanner.getbalancesbytoken(str(token_code))
     return {'balance': balance}

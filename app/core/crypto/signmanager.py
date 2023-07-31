@@ -1,22 +1,24 @@
 """Sign and validate signatures"""
 import json
 import base64
+import logging
 import ecdsa
 
 from app.core.blockchain.transactionmanager import Transactionmanager, get_valid_addresses
 
+logger = logging.getLogger(__name__)
 
-def check_signing_address(transaction, address):
-    """Check if an address is allowed to sign a transaction"""
-    allowed_signing_addresses = get_valid_addresses(transaction, address = address)
-    if address in allowed_signing_addresses:
-        print(f"{address} is authorised to sign this transaction.")
-        return True
-    if 'fee_payer' in transaction and transaction['fee_payer'] == address:
-        print(f"{address} is the fee payer for this transaction.")
-        return True
-    print(f"{address} is NOT authorised to sign this transaction.")
-    return False
+# def check_signing_address(transaction, address):
+#     """Check if an address is allowed to sign a transaction"""
+#     allowed_signing_addresses = get_valid_addresses(transaction, address = address)
+#     if address in allowed_signing_addresses:
+#         logger.info(f"{address} is authorised to sign this transaction.")
+#         return True
+#     if 'fee_payer' in transaction and transaction['fee_payer'] == address:
+#         print(f"{address} is the fee payer for this transaction.")
+#         return True
+#     logger.warn(f"{address} is NOT part of allowed signatories to sign this transaction.")
+#     return False
 
 
 def sign_transaction(wallet_data, transaction_data):
@@ -30,8 +32,8 @@ def sign_transaction(wallet_data, transaction_data):
 
     transaction_manager = Transactionmanager()
     transaction_manager.set_transaction_data(transaction_data)
-    if not check_signing_address(transaction_manager.transaction, address):
-        return False
+    # if not check_signing_address(transaction_manager.transaction, address):
+    #     return False
 
     signtransbytes = transaction_manager.sign_transaction(private_key_bytes, address)
     print("signed msg signature is:", signtransbytes,

@@ -37,11 +37,11 @@ def validate(transaction, propagate=False, validate_economics=True):
     #     }
 
     if transaction_exists_in_mempool(transaction['transaction']['trans_code']):
-        logger.info('Transaction exists in mempool')
+        logger.debug('Transaction exists in mempool')
         return {'valid': True, 'msg': 'Already validated and in mempool', 'new_transaction': False}
     
     if get_transaction(transaction['transaction']['trans_code']) is not None:
-        logger.info('Transaction exists in state')
+        logger.debug('Transaction exists in state')
         return {'valid': True, 'msg': 'Transaction exists in chain', 'new_transaction': False}
 
     if transaction['transaction']['type'] != TRANSACTION_MINER_ADDITION and transaction['transaction']['fee'] < 1000000:
@@ -62,8 +62,8 @@ def validate(transaction, propagate=False, validate_economics=True):
             cur = con.cursor()
             economics_valid = transaction_manager.econvalidator(cur=cur)
             con.close()
-            if not economics_valid:
-                msg = "Transaction economic validation failed"
+            if not economics_valid["validity"]:
+                msg = economics_valid["reason"]
                 valid = False
             else:
                 msg = "Transaction economic validation successful"

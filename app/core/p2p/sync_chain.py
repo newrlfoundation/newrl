@@ -81,7 +81,7 @@ def get_last_block_index():
 
 def receive_block(block):
     if SYNC_STATUS['IS_SYNCING']:
-        logger.info('Syncing with network. Ignoring incoming block.')
+        logger.debug('Syncing with network. Ignoring incoming block.')
         return
     block_index = block['index']
     if block_index > get_last_block_index() + 1:
@@ -90,11 +90,11 @@ def receive_block(block):
         return
 
     if blockchain.block_exists(block_index):
-        logger.info('Block alredy exist in chain. Ignoring.')
+        logger.debug('Block alredy exist in chain. Ignoring.')
         return False
     
     # Check block for index for index and hash already in temp. If yes append receipts from local block from to the received block
-    logger.info(f'Received new block: {json.dumps(block)}')
+    logger.info(f'Received new block: {block["index"]}')
 
 
     broadcast_exclude_nodes = block['peers_already_broadcasted'] if 'peers_already_broadcasted' in block else None
@@ -116,7 +116,7 @@ def receive_block(block):
 
     consensus = get_committee_consensus(block)
     if consensus == BLOCK_CONSENSUS_VALID:
-        logger.info('Received block is after consensus')
+        logger.debug('Received block is after consensus')
         if not validate_block(block):
             logger.info('Invalid block received after valid consensus. Committee maybe malicious. Ignoring.')
             # if am_i_in_block_committee(block['data']):
@@ -206,7 +206,7 @@ def sync_chain_from_node(url, block_index=None):
         start_block = block_idx
         end_block = 1 + block_idx + block_batch_size
         
-        logger.info(f'Asking block node {url} for blocks from {start_block} to {end_block}')
+        logger.debug(f'Asking node {url} for blocks from {start_block} to {end_block}')
         blocks_data = get_block_from_url_retry(url, start_block, end_block)
 
         if blocks_data is None or len(blocks_data['blocks']) == 0:
@@ -356,7 +356,7 @@ def accept_block(block, hash):
 
 
 def receive_receipt(receipt):
-    logger.info('Recieved receipt: %s', receipt)
+    logger.debug('Recieved receipt: %s', receipt)
 
     receipt_data = receipt['data']
     block_index = receipt_data['block_index']
@@ -376,7 +376,7 @@ def receive_receipt(receipt):
     last_block = get_last_block_hash()
 
     if not am_i_in_current_committee(last_block):
-        logger.warn('I am not in committee. Cannot process receipt. Ignoring')
+        logger.debug('I am not in committee. Cannot process receipt. Ignoring')
         return False
 
     if block_index != last_block['index'] + 1:
@@ -462,7 +462,7 @@ def get_last_block_hash_from_url_retry(url):
             )
         return response.json()['hash']
     except Exception as err:
-        logger.info(f'Could not get block hash from {url}')
+        logger.debug(f'Could not get block hash from {url}')
 
     return None
 

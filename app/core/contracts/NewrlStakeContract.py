@@ -95,6 +95,9 @@ class NewrlStakeContract(ContractMaster):
                     trxn.append(txtype1)
                 else:
                     self.logger.info("Initial Stake wallet does not match the signer wallet.")
+        else:
+            logger.error("Value provided isnt matching required value")
+            raise Exception("Value provided isnt matching required value")
         return trxn
 
     def unstake_tokens(self, callparamsip, repo: FetchRepository):

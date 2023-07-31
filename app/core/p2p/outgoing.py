@@ -31,7 +31,7 @@ def propogate_transaction_to_peers(transaction, exclude_nodes=None):
         'peers_already_broadcasted': get_excluded_node_list(peers, exclude_nodes)
     }
 
-    logger.info(f"Broadcasting transaction to peers {peers}")
+    logger.debug(f"Broadcasting transaction to peers {peers}")
     for peer in peers:
         if is_my_address(peer['address']):
             continue
@@ -59,7 +59,7 @@ def propogate_transaction_batch_to_peers(transactions, exclude_nodes=None):
         'peers_already_broadcasted': get_excluded_node_list(peers, exclude_nodes)
     }
 
-    logger.info(f"Broadcasting transaction to peers {peers}")
+    logger.debug(f"Broadcasting transaction to peers {peers}")
     for peer in peers:
         if is_my_address(peer['address']):
             continue
@@ -97,7 +97,7 @@ def send(payload):
 
 
 def broadcast_receipt(receipt, nodes):
-    logger.info('Broadcasting receipt to nodes %s', str(receipt))
+    logger.debug('Broadcasting receipt to nodes %s', str(receipt))
     if IS_TEST:
         return
 
@@ -107,7 +107,7 @@ def broadcast_receipt(receipt, nodes):
         if is_my_address(node['network_address']):
             continue
         url = 'http://' + node['network_address'] + ':' + str(NEWRL_PORT)
-        logger.info(f"Sending receipt to node {url}")
+        logger.debug(f"Sending receipt to node {url}")
         payload = {'receipt': receipt}
         try:
             thread = Thread(target=send_request, args=(url + '/receive-receipt', payload))
@@ -132,7 +132,7 @@ def broadcast_block(block_payload, nodes=None, exclude_nodes=None, send_to_archi
     else:
         peers = get_random_peers(exclude_nodes)
 
-    logger.info(f"Broadcasting block to peers {peers}")
+    logger.debug(f"Broadcasting block to peers {peers}")
     peers_i_am_broadcasting = get_excluded_node_list(peers, exclude_nodes)
     my_address = get_my_address()
     if my_address in peers_i_am_broadcasting:

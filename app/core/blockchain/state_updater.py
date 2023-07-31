@@ -33,99 +33,83 @@ value_txns = []
 def update_db_states(cur, block):
     newblockindex = block['index'] if 'index' in block else block['block_index']
     transactions = block['text']['transactions']
-    # last_block_cursor = cur.execute(
-    #     f'''SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1''')
-    # last_block = last_block_cursor.fetchone()
-    # if newblockindex != last_block[0]:
-    #     print("The latest block index does not match given previous index")
-    #     return False
-    #    latest_index = cur.execute('SELECT MAX(block_index) FROM blocks')
-    add_tx_to_block(cur, newblockindex, transactions)
+
 
     if 'creator_wallet' in block and block['creator_wallet'] is not None:
         add_block_reward(cur, block['creator_wallet'], newblockindex)
 
-    collated_txns = simplify_transactions(cur, transactions)
-    global simplified_transactions
-    simplified_transactions = []
     global config_updated
     config_updated = False
+    for transaction in transactions:
+        try:
+            if transaction['transaction']['type']== TRANSACTION_SMART_CONTRACT:
+                handle_sc_transaction(cur,transaction,block['creator_wallet'],newblockindex)
+            else:
+                handle_txn(cur, transaction,newblockindex,block['creator_wallet'])
+            transaction['status'] = 1     
+        except Exception as e:
+            txn_code = transaction["transaction"]['trans_code']
+            logger.error(f'Error in transaction: {str(txn_code)}')
+            logger.error(str(e))
+            logger.error(traceback.format_exc())
+            transaction['status'] = 2  
+            exec_msg = str(e) if len(str(e)) < 100 else str(e)[:100]
+            transaction['exec_msg'] = exec_msg
+    if config_updated:
+        Configuration.updateDataFromDB(cur)
+    add_tx_to_block(cur, newblockindex, transactions)
+    return True
 
-    sc_nesting = 0  # Denotes the level of nesting of smart contract call. 1 for a normal sc call. 2 for sc calling sc. 
-    sc_in_failed_state = False  # Used to flag a sc execution failure for flushing out all future child transactions
-    for transaction in collated_txns:
-        if sc_in_failed_state:  # If any transaction in SC fails, keep flushing future transactions till all parent SCs end
-            if transaction == 'SC_END':
-                sc_nesting -= 1
-                if sc_nesting == 0:
-                    sc_in_failed_state = False
-            continue
-                
-        if transaction == 'SC_START':
-            if sc_nesting == 0:  # One savepoint for complete nested SC
-                cur.execute(f'SAVEPOINT sc_start')
-            sc_nesting += 1
-            continue
-        elif transaction == 'SC_END':
-            sc_nesting -= 1
-            if sc_nesting == 0:
-                cur.execute(f'RELEASE SAVEPOINT sc_start')
-            continue
+def handle_txn(cur,transaction,newblockindex, creator_wallet):
+    transaction_all = transaction
+    transaction = transaction['transaction']
+    transaction_data = transaction['specific_data']
+    while isinstance(transaction_data, str):
+        transaction_data = json.loads(transaction_data)
+        transaction['specific_data']=transaction_data
 
-        if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
-            if sc_nesting > 1:  # Not to charge fee for child sc transactions
-                continue
-            if not pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
-                sc_in_failed_state = True
-                cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
-                continue
+    transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
+        'trans_code']
+    
+    if newblockindex > 60000:  # prior to this block, the account balance could've been negative
+        if not pay_fee_for_transaction(cur, transaction, creator_wallet):
+            logger.error(f'Fee payment failed for transaction {transaction_code}')
+            #TODO capture the reason and update as txn status 
+            return
+
+        tm = Transactionmanager()
+        tm.set_transaction_data(transaction_all)
+        # tm.transactioncreator(transaction_all)
+        if not tm.econvalidator(cur=cur)['validity']:
+            #TODO capture the reason and update as txn status
+            return
+    else:
+        tm = Transactionmanager()
+        tm.set_transaction_data(transaction_all)
+        # tm.transactioncreator(transaction_all)
+        if not tm.econvalidator(cur=cur)['validity']:
+            #TODO capture the reason and update as txn status
+            return
         
-        transaction_all = transaction
-        signature = transaction['signatures']
-        transaction = transaction['transaction']
-        transaction_data = transaction['specific_data']
-        while isinstance(transaction_data, str):
+        if not pay_fee_for_transaction(cur, transaction, creator_wallet):
+            logger.error(f'Fee payment failed for transaction {transaction_code}')
+                #TODO capture the reason and update as txn status
+            return
+    process_txn(cur, transaction_all,newblockindex)  #TODO capture excpetion reason and update as txn status     
+
+def process_txn(cur, transaction, newblockindex):
+    signature = transaction['signatures']
+    transaction = transaction['transaction']
+    transaction_data = transaction['specific_data']
+    while isinstance(transaction_data, str):
             transaction_data = json.loads(transaction_data)
             transaction['specific_data']=transaction_data
 
-        transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
+    transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
             'trans_code']
-        
-        if newblockindex > 60000:  # prior to this block, the account balance could've been negative
-            if sc_nesting == 0 and not pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
-                logger.error(f'Fee payment failed for transaction {transaction_code}')
-                if sc_nesting > 0:
-                    sc_in_failed_state = True
-                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
-                continue
 
-            tm = Transactionmanager()
-            tm.set_transaction_data(transaction_all)
-            tm.transactioncreator(transaction_all)
-            if not tm.econvalidator(cur=cur):
-                if sc_nesting > 0:
-                    sc_in_failed_state = True
-                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
-                continue
-        else:
-            tm = Transactionmanager()
-            tm.set_transaction_data(transaction_all)
-            tm.transactioncreator(transaction_all)
-            if not tm.econvalidator(cur=cur):
-                if sc_nesting > 0:
-                    sc_in_failed_state = True
-                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
-                continue
-            
-            if sc_nesting == 0 and not pay_fee_for_transaction(cur, transaction, block['creator_wallet']):
-                logger.error(f'Fee payment failed for transaction {transaction_code}')
-                if sc_nesting > 0:
-                    sc_in_failed_state = True
-                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
-                continue
-
-        try:
-            update_state_from_transaction(
+    try:
+        update_state_from_transaction(
                 cur,
                 transaction['type'],
                 transaction_data,
@@ -135,13 +119,12 @@ def update_db_states(cur, block):
                 newblockindex,
                 transaction
             )
-        except Exception as e:
+    except Exception as e:
             logger.error(f'Error in transaction: {str(transaction)}')
             logger.error(str(e))
             logger.error(traceback.format_exc())
-    if config_updated:
-        Configuration.updateDataFromDB(cur)
-    return True
+            raise e
+            #TODO capture the reason and update as txn status
 
 
 def update_state_from_transaction(cur, transaction_type, transaction_data, transaction_code, transaction_timestamp,
@@ -198,28 +181,6 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
         tstamp = transaction_timestamp
         update_trust_score(cur, personid1, personid2, new_score, tstamp)
 
-    # if transaction_type == TRANSACTION_SMART_CONTRACT:  # smart contract transaction
-    #     funct = transaction_data['function']
-    #     if funct == "setup":  # sc is being set up
-    #         contract = dict(transaction_data['params'])
-    #         transaction_data['params']['parent'] = transaction_code
-    #     else:
-    #         contract = get_contract_from_address(
-    #             cur, transaction_data['address'])
-    #     module = importlib.import_module(
-    #         ".codes.contracts." + contract['name'], package="app")
-    #     sc_class = getattr(module, contract['name'])
-    #     sc_instance = sc_class(transaction_data['address'])
-    #     #    sc_instance = nusd1(transaction['specific_data']['address'])
-    #     funct = getattr(sc_instance, funct)
-    #     params_for_funct = transaction_data['params']
-    #     # adding singers address to the dict
-    #     params_for_funct['function_caller'] = transaction_signer
-    #     try:
-    #         funct(cur, params_for_funct)
-    #     except Exception as e:
-    #         print('Exception durint smart contract function run', e)
-    #         # logger.log(e)
 
     if transaction_type == TRANSACTION_MINER_ADDITION:
         add_miner(
@@ -293,38 +254,33 @@ def update_miners(cur, block):
         logger.info('Removing miner %s due to timeout', block['expected_miner'])
         cur.execute('DELETE FROM miners WHERE wallet_address = ?', (block['expected_miner'], ))
 
-def simplify_transactions(cur, transactions):
+def simplify_transactions_sc(cur, transaction):
   global value_txns
   simplified_transactions = []
-  for transaction in transactions:
-    if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
-      non_sc_txns = []
-      #recursive method that iterates till there is no sc txn
-      try:
-        non_sc_txns = get_non_sc_txns(cur, transaction)
-      except Exception:
-        value_txns = []
-        logger.error(
-            f"Exception during sc txn execution for txn : {transaction}")
-        logger.error(traceback.format_exc())
-      print(f"Value transactions are {value_txns}")
-      simplified_transactions.append('SC_START')
-      simplified_transactions.append(transaction)
-      simplified_transactions.extend(value_txns)
-      simplified_transactions.extend(non_sc_txns)
-      simplified_transactions.append('SC_END')
-      value_txns = []
-    else:
-      simplified_transactions.append(transaction)
-  return simplified_transactions
+  simplified_transactions.append('SC_START')
+  simplified_transactions.append(transaction)
+
+  try:
+    non_sc_txns = get_non_sc_txns(cur, transaction)
+    simplified_transactions.extend(value_txns)
+    simplified_transactions.extend(non_sc_txns)
+  except Exception as e:
+    value_txns = []
+    logger.error(f"Exception during sc txn execution for txn : {transaction}")
+    logger.error(traceback.format_exc())  
+    raise e
+  
+  simplified_transactions.append('SC_END')
+  value_txns = []
+  return simplified_transactions  
 
 
 def get_non_sc_txns(cur, transaction):
     child_transactions = execute_sc(cur, transaction)
     simplified_child_transactions = []
     for child_transaction in child_transactions:
-        logger.info("Processing child transaction" + str(child_transaction))
-        if not validate_sc_child_transaction(child_transaction, transaction['transaction']["specific_data"]["address"]):
+        logger.debug("Processing child transaction" + str(child_transaction.transaction))
+        if not validate_sc_child_transaction(cur, child_transaction, transaction['transaction']["specific_data"]["address"]):
             raise Exception("Sc child txn validation chain failed")
         if(child_transaction.transaction['type'] == TRANSACTION_SMART_CONTRACT):
             non_sc_child_txns = get_non_sc_txns(
@@ -363,7 +319,7 @@ def execute_sc(cur, transaction_main):
     params_for_funct['function_caller'] = transaction_signer
     try:
         fetchRepository = FetchRepository(cur)
-        sc_value_txns = get_value_txns(transaction_signer, transaction_data)
+        sc_value_txns = get_value_txns(cur,transaction_signer, transaction_data)
         value_txns.extend(sc_value_txns)
         child_transactions = funct(params_for_funct, fetchRepository)
         #if value is present then make a child txn 5 based on it (it will be validated as part of child sc validation)
@@ -376,11 +332,11 @@ def execute_sc(cur, transaction_main):
     pass
 
 
-def validate_sc_child_transaction(transaction: Transactionmanager, contract_address):
-    return validate(transaction, contract_address)
+def validate_sc_child_transaction(cur, transaction: Transactionmanager, contract_address):
+    return validate(cur, transaction, contract_address)
 
 
-def get_value_txns(transaction_signer, transaction_data):
+def get_value_txns(cur, transaction_signer, transaction_data):
 
     if 'value' not in transaction_data['params']:
         return []
@@ -405,7 +361,7 @@ def get_value_txns(transaction_signer, transaction_data):
         }
         transfer_proposal = transaction_creator.transaction_type_5(
             transfer_proposal_data)
-        if not transfer_proposal.econvalidator():
+        if not transfer_proposal.econvalidator(cur)['validity']:
             logger.error(
                 "SC-value txn economic validation failed for transaction")
             raise Exception("SC-value txn validation failed for transaction")
@@ -468,7 +424,54 @@ def pay_fee_for_transaction(cur, transaction, creator):
         )
     return True
 
+def handle_sc_transaction(cur, transaction, creator_wallet, newblockindex):
+    
+    transaction_all = transaction
+    transaction = transaction['transaction']
+    transaction_data = transaction['specific_data']
+    while isinstance(transaction_data, str):
+            transaction_data = json.loads(transaction_data)
+            transaction['specific_data']=transaction_data
 
+    transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction[
+            'trans_code']
+    
+    sc_txns_simplified = simplify_transactions_sc(cur = cur, transaction= transaction_all)
+    for transaction in sc_txns_simplified:
+
+        if transaction == 'SC_START':
+            cur.execute(f'SAVEPOINT sc_start')
+        elif transaction == 'SC_END':
+            cur.execute(f'RELEASE SAVEPOINT sc_start')
+        else:
+        #use root txn and pay for fee. If fee cant be paid, break
+            if transaction['transaction']['type'] == TRANSACTION_SMART_CONTRACT:
+                if not pay_fee_for_transaction(cur, transaction, creator_wallet):
+                    cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
+                    break    
+                continue
+
+            transaction_all = transaction
+            transaction = transaction['transaction']
+            transaction_data = transaction['specific_data']
+            while isinstance(transaction_data, str):
+                transaction_data = json.loads(transaction_data)
+                transaction['specific_data']=transaction_data
+
+            transaction_code = transaction['transaction_code'] if 'transaction_code' in transaction else transaction['trans_code']    
+    
+            tm = Transactionmanager()
+            tm.set_transaction_data(transaction_all)
+            # tm.transactioncreator(transaction_all)
+            if not tm.econvalidator(cur=cur)['validity']:
+                logger.error("Econ validation failed for sc txn")
+                cur.execute(f'ROLLBACK to SAVEPOINT sc_start')
+                break
+            process_txn(cur,transaction_all,newblockindex)   
+ 
+
+ 
+    
 def state_cleanup(cur, block):
     return False  # Do not clean blocks
     # Delete old blocks as well. Not useful to keep them on light nodes.

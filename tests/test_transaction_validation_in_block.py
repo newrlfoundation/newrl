@@ -12,7 +12,7 @@ def test_conflicting_transactions_in_block():
     amount = 110
     token = add_token(from_wallet['address'], amount)
 
-    transfer_unilateral(WALLET, from_wallet, 'NWRL', 2 * MIN_NEWRL_FEE)
+    transfer_unilateral(WALLET, from_wallet, 'NWRL', 10 * MIN_NEWRL_FEE)
 
     token_code = token['tokencode']
     req ={

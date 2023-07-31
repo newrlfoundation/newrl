@@ -132,7 +132,10 @@ def init_db():
                     CREATE TABLE IF NOT EXISTS transactions
                     (
                     transaction_code text PRIMARY KEY,
-                    block_index integer)
+                    block_index integer,
+                    status integer,
+                    exec_msg text
+                 )
                     ''')
 
     cur.execute('''
@@ -308,7 +311,7 @@ def init_db():
                     token_code text not NULL,
                     time_updated TIMESTAMP,
                     status INT,
-                    unique_column text not NULL 
+                    unique_column text not NULL
                     )
                     ''')
     cur.execute('''
@@ -320,7 +323,20 @@ def init_db():
                     PRIMARY KEY (identifier, wallet_address)
                     )
     ''')
-
+    cur.execute('''
+                    CREATE TABLE IF NOT EXISTS verification 
+                    (
+                    address text NOT NULL,
+                    asset_id text NOT NULL,
+                    asset_type text NOT NULL, 
+                    verifier_address text NOT NULL,
+                    outcome INT Not NULL, 
+                    doc_hash_list text, 
+                    doc_link_list text, 
+                    remarks text,
+                    deletable_after INT
+                    )
+                    ''')
     con.commit()
     con.close()
 
