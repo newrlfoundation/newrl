@@ -110,9 +110,8 @@ def get_config_api():
     
 
 @router.post("/update-software", tags=[p2p_tag])
-def update_software_api(propogate: bool = False):
-    # update_software(propogate)
-    timer = threading.Timer(randint(30, 120), update_software, [propogate])
+def update_software_api():
+    timer = threading.Timer(randint(30, 120), update_software)
     timer.start()
     return {'status': 'SUCCESS'}
 
@@ -132,8 +131,8 @@ async def run(request: Request):
 
 
 @router.get('/get-old-logs',tags=[p2p_tag], response_class=PlainTextResponse)
-async def get_old_logs_api():
-    return get_past_log_content()
+async def get_old_logs_api(page=None):
+    return get_past_log_content(page)
 
 
 @router.get("/get-status", tags=[p2p_tag])
@@ -191,12 +190,10 @@ def broadcast_miner_update_api():
 
 
 @router.post("/revert-chain", tags=[p2p_tag])
-def revert_chain_api(api_key, block_index: int, propogate: bool = False):
+def revert_chain_api(api_key, block_index: int):
     if calculate_hash(api_key) != '4a01127180cb827a4752abe578b47cbe23ba677037b5bb0cd420549bdb4a274d':
         return {'status': 'INVALID_KEY'}
     revert_chain(block_index)
-    if propogate:
-        call_api_on_peers(f'/revert-chain?block_index={block_index}')
     return {'status': 'SUCCESS'}
 
 @router.post("/make-state-from-archive", tags=[p2p_tag])

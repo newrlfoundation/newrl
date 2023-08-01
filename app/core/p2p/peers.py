@@ -178,12 +178,7 @@ def update_my_address():
     MY_ADDRESS = get_my_address()
     return True
 
-def update_software(propogate):
-    "Update the client software from repo"
-    if propogate is True:
-        logger.info('Propogaring update request to network')
-        update_peers()
-
+def update_software():
     logger.info('Getting latest code from repo')
     subprocess.call(["sh", "scripts/install.sh"])
     init_newrl()

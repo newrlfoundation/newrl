@@ -191,14 +191,6 @@ def validate_block_data(block):
     return True
 
 
-def validate_block_transactions(block):
-    for transaction in block['text']['transactions']:
-        validation_result = validate(transaction, propagate=False, validate_economics=True)
-        if not validation_result['valid']:
-            return False
-    return True
-
-
 def validate_transaction_structure(signed_transaction):
     schema = {
         "type": "object",
