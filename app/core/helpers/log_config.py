@@ -65,8 +65,15 @@ async def logGenerator(request):
         time.sleep(0.9)
 
 
-def get_past_log_content(filename=filename):
-    # if filename is None:
+def get_past_log_content(page):
     logFile = f"{path}{filename}"
+    if page is not None:
+        logFile = f"{path}{filename}.{page}"
     with open(logFile) as f:
-        return f.read()
+        logs = f.readlines()
+
+    # Reverse the list of logs
+    logs.reverse()
+
+    # Join the logs back into a single string and return
+    return "".join(logs)

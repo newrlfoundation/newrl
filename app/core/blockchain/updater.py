@@ -226,7 +226,6 @@ def start_empty_block_mining_clock(block_timestamp):
 
 def mine(add_to_chain=False):
     if should_i_mine() or add_to_chain:
-        logger.info('I am the miner for this block.')
         return run_updater(add_to_chain)
     # elif am_i_in_current_committee():
     #     start_empty_block_mining_clock()

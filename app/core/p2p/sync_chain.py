@@ -22,7 +22,7 @@ from app.core.consensus.receiptmanager import check_receipt_exists_in_db, valida
 from app.config.constants import COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NETWORK_TRUSTED_ARCHIVE_NODES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
 from app.core.p2p.peers import get_peers
 
-from app.core.blockchain.validator import validate_block, validate_block_data, validate_block_transactions, validate_receipt_signature
+from app.core.blockchain.validator import validate_block, validate_block_data
 from app.core.clock.timers import TIMERS
 from app.core.fs.temp_manager import append_receipt_to_block_in_storage, check_receipt_exists_in_temp, get_blocks_for_index_from_storage, store_block_to_temp, store_receipt_to_temp
 from app.core.consensus.consensus import get_committee_consensus, validate_empty_block, validate_block_miner_committee, generate_block_receipt, \
