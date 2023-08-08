@@ -285,7 +285,14 @@ class Transactionmanager:
             custvalidity = False
 
             is_token_update = self.transaction['specific_data'].get('token_update', False)
-            if not is_token_update:
+            is_token_add_update = self.transaction['specific_data'].get('token_add_update', False)
+
+            if is_token_add_update and is_token_add_update:
+                 return {
+                "validity" :False,
+                "reason": ["Type two cant be of both token update and token add update at a time"]
+              }
+            if not is_token_update or is_token_add_update:
                 if firstowner:
                     if is_wallet_valid(firstowner, cur=cur):
                         # print("Valid first owner")

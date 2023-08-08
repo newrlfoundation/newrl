@@ -135,11 +135,14 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
     if transaction_type == TRANSACTION_TOKEN_CREATION:  # this is a token creation or addition transaction
         
         edit_transaction =  transaction_data.get('token_update', False)
-
-        if not edit_transaction:
-            add_token(cur, transaction_data, transaction_code)
-        else:
+        edit_add_token_transaction = transaction_data.get('token_add_update', False)
+        if edit_transaction:
             update_token(cur, transaction_data,transaction_code)    
+        elif edit_add_token_transaction:
+            add_token(cur, transaction_data, transaction_code)
+            update_token(cur, transaction_data,transaction_code)    
+        else:
+            add_token(cur, transaction_data, transaction_code)
 
     if transaction_type == TRANSACTION_TWO_WAY_TRANSFER:  # this is a transfer tx
         sender1 = transaction_data['wallet1']

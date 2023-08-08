@@ -202,6 +202,7 @@ def add_token(
         "first_owner": request.first_owner,
         "custodian": request.custodian,
         "token_update":request.token_update,
+        "token_add_update": request.token_add_update,
         "legaldochash": request.legal_doc,
         "amount_created": request.amount_created,
         "tokendecimal": request.tokendecimal,
