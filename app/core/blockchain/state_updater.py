@@ -138,7 +138,7 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
         
         if txn_type == 1: #add token
             add_token(cur, transaction_data, transaction_code)
-        elif txn_type == 2: #update token
+        elif txn_type == 2: #update token attributes
             update_token(cur, transaction_data,transaction_code)    
         elif txn_type == 3: #add and update token
             add_token(cur, transaction_data, transaction_code)

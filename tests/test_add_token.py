@@ -20,7 +20,7 @@ def test_modify_token_attributes(request,custodian_wallet=WALLET):
     "token_code": token_code,
     "custodian": custodian_wallet['address'],
     "token_attributes": token_attributes_updated,
-    "token_update":True
+    "token_update_type":2
     }
 
     response = requests.post(NODE_URL + '/add-token', json=add_token_request)
@@ -73,7 +73,7 @@ def test_add_modify_token_attributes(request,custodian_wallet=WALLET):
     "disallowed_regions": [],
     "is_smart_contract_token": False,
     "token_attributes": token_attributes_updated,
-    "token_add_update" : True
+    "token_update_type":2
     }
 
    
@@ -119,7 +119,7 @@ def test_modify_token_attributes_with_false_is_edit(request,custodian_wallet=WAL
     "token_code": token_code,
     "custodian": custodian_wallet['address'],
     "token_attributes": token_attributes_updated,
-    "token_update":True
+    "token_update_type":2
     }
 
     response = requests.post(NODE_URL + '/add-token', json=add_token_request)
@@ -152,7 +152,7 @@ def test_modify_token_attributes_with_is_edit_not_present(request,custodian_wall
     "token_code": token_code,
     "custodian": custodian_wallet['address'],
     "token_attributes": token_attributes_updated,
-    "token_update":True
+    "token_update_type":2
     }
 
     response = requests.post(NODE_URL + '/add-token', json=add_token_request)

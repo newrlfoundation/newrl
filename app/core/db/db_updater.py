@@ -207,12 +207,7 @@ def delete_token_attributes(cur, token, txcode=None):
             if tid:  # tokencode exists, more of an existing token is being added to the first_owner
                 tid = tid[0]
                 existingflag = True
-            else:
-                # if provided code does not exist, it is considered new token addition
-                tid = str(token['tokencode'])
-                existingflag = False
         else:   # mistakenly entered tokencode value as "" or "0" or 0
-            tcodenewflag = True
             existingflag = False
     if not existingflag:    # new token , cant be updated
         raise Exception("Token is not present")
