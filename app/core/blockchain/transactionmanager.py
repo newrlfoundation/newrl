@@ -890,6 +890,10 @@ def get_miner_count_person_id(person_id, cur=None):
 
 
 def get_sc_validadds(transaction, cur=None):
+    ''' 
+    return valid signatories for an sc
+    Process : Anyone can sign the sc txn, provided atleast one of signatories signed.
+    '''
     validadds = []
     funct = transaction['specific_data']['function']
     address = transaction['specific_data']['address']
@@ -913,24 +917,34 @@ def get_sc_validadds(transaction, cur=None):
         print("Contract does not exist.")
         return [-1]
     functsignmap = json.loads(signatories[0])
-    if funct in functsignmap:  # function is allowed to be called
-        # checking if stated signer is in allowed list
-        # for signer in (transaction['specific_data']['signers']):
-        #     if not functsignmap[funct] or signer in functsignmap[funct]:
-        #         validadds.append(signer)
-            # a function may allow anyone to call or the signer may be present in the dictionary funcsignmap
-        if functsignmap[funct]:    
-            if isinstance(functsignmap[funct], list):
-                return functsignmap[funct]
+    # if this function is present in signatories
+    if funct in functsignmap:  
+        # if that signatory value is not None (If None, then anyone can sign, so return all signers as valid)
+        if functsignmap[funct]:
+            #get an instersection of signers and signatories. 
+            #if signatory is a list. (Some contracts have it as a signle string)    
+            if isinstance(functsignmap[funct], list): 
+                eligible_signers = get_signs_signatory_intersection(functsignmap[funct],transaction['specific_data']['signers'])
             else:
-                return [functsignmap[funct]]
+                eligible_signers =  get_signs_signatory_intersection([functsignmap[funct]],transaction['specific_data']['signers'])
             
+            #if no internsection then not atleast only signatory signed, so return -1
+            if len(eligible_signers) == 0:
+                return [-1]
+            else:
+                return eligible_signers 
         else:
-            return transaction['specific_data']['signers']
+            return transaction['specific_data']['signers'] 
     else:
         print("Either function is not valid or it cannot be called in a transaction.")
         return [-1]
 
+def get_signs_signatory_intersection(signatories, signers):
+    inter = []
+    for signer in signers:
+            if signer in signatories:
+                inter.append(signer)
+    return inter            
 
 def get_valid_addresses(transaction, address = None, cur=None):
     """Get valid signature addresses for a transaction"""
