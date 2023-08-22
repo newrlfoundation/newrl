@@ -892,7 +892,7 @@ def get_miner_count_person_id(person_id, cur=None):
 def get_sc_validadds(transaction, cur=None):
     ''' 
     return valid signatories for an sc
-    Process : Anyone can sign the sc, provided atleast one of signatories signed.
+    Process : Anyone can sign the sc txn, provided atleast one of signatories signed.
     '''
     validadds = []
     funct = transaction['specific_data']['function']
@@ -934,7 +934,7 @@ def get_sc_validadds(transaction, cur=None):
             else:
                 return eligible_signers 
         else:
-            return transaction['specific_data']['signers']
+            return transaction['specific_data']['signers'] 
     else:
         print("Either function is not valid or it cannot be called in a transaction.")
         return [-1]
