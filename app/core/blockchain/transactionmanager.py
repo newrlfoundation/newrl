@@ -284,10 +284,8 @@ class Transactionmanager:
             fovalidity = False
             custvalidity = False
 
-            is_token_update = self.transaction['specific_data'].get('token_update', False)
-            is_token_add_update = self.transaction['specific_data'].get('token_add_update', False)
-
             txn_type =  self.transaction['specific_data'].get('token_update_type', 1)
+            tcode = self.transaction['specific_data']['tokencode']
 
             if txn_type == 1:
                 #add token txn. Either new token or add amount
@@ -300,7 +298,6 @@ class Transactionmanager:
                 # token code validation
                 # token exists validation
                 # if new token, amount should be non zero
-                # custodian signature
 
                 if firstowner:
                     if is_wallet_valid(firstowner, cur=cur):
@@ -343,12 +340,13 @@ class Transactionmanager:
                           }
                 
                 tcode = self.transaction['specific_data']['tokencode']
-                if tcode or tcode == "0" or tcode == "" or tcode == "string":
+                if (not tcode) or tcode == "0" or tcode == "" or tcode == "string":
                     self.errors.append("Token code format invalid")
                     return {
                          "validity" :False,
                          "reason": self.errors
                           }
+                
                 
                 #if token is present already check for nft and custodian sig
                 if is_token_valid(self.transaction['specific_data']['tokencode'], cur=cur):
@@ -390,8 +388,10 @@ class Transactionmanager:
             elif txn_type == 2:
                 #update token attributes
 
+                #custodian validation
+
                 # fetch token and token exists
-                if not is_token_valid(value['token_code'], cur=cur):
+                if not is_token_valid(tcode, cur=cur):
                         self.validity = 0
                         self.errors.append("Token doesnt exist")
                         return {
@@ -411,6 +411,20 @@ class Transactionmanager:
                          "reason": self.errors
                         }    
                 
+                existing_custodian = get_custodian_from_token(
+                        self.transaction['specific_data']['tokencode'],cur = cur)
+                if custodian == existing_custodian:
+                    self.validity = 1  # tokencode exists and is run by the given custodian
+                else:
+                    logger.error(
+                        "The custodian for that token is someone else.")
+                    self.validity = 0
+                    self.errors.append("The custodian for that token is someone else.")
+                    return {
+                        "validity" :False,
+                        "reason": self.errors
+                    } 
+                
                 return {
                     "validity": True,
                     "reason": self.errors
@@ -427,6 +441,21 @@ class Transactionmanager:
                         "reason": ["Token provided doesnt exist"]
                     } 
                 
+                #custodian validation
+                existing_custodian = get_custodian_from_token(
+                        self.transaction['specific_data']['tokencode'],cur = cur)
+                if custodian == existing_custodian:
+                    self.validity = 1  # tokencode exists and is run by the given custodian
+                else:
+                    logger.error(
+                        "The custodian for that token is someone else.")
+                    self.validity = 0
+                    self.errors.append("The custodian for that token is someone else.")
+                    return {
+                        "validity" :False,
+                        "reason": self.errors
+                    } 
+
                 #is editable
                 token_attributes_dump = fetch_token(tcode,cur = cur)
                 token_attributes = json.loads(token_attributes_dump)
@@ -449,7 +478,7 @@ class Transactionmanager:
                     }
                 
                 # fovalidity
-                if is_wallet_valid(firstowner, cur=cur):
+                if not is_wallet_valid(firstowner, cur=cur):
                     logger.error("Invalid first owner")
                     self.errors.append("Invalid first owner")
                     return {
@@ -466,141 +495,61 @@ class Transactionmanager:
                 #delete token
 
                 #check if token exist
-                if not tcode or tcode == "0" or tcode == "" or tcode == "string":
+                if (not tcode) or tcode == "0" or tcode == "" or tcode == "string":
                     self.validity = 0
-                    self.errors.append("Invalid custodian wallet")    
+                    self.errors.append("Invalid token code")    
                     return {
                          "validity" :False,
                          "reason": self.errors
                           } 
                 
-                if not is_token_valid(value['token_code'], cur=cur):
+                if not is_token_valid(tcode, cur=cur):
                         self.validity = 0
-                        self.errors.append("Invalid token name")
+                        self.errors.append("Invalid doesnt exist")
                         return {
                          "validity" :False,
                          "reason": self.errors
                           }                 
-                #check for custodian signature
+                #custodian validation
                 existing_custodian = get_custodian_from_token(
-                                    self.transaction['specific_data']['tokencode'],cur = cur)
-                if self.transaction['specific_data']['signers'] != existing_custodian:
-                        self.validity = 0
-                        self.errors.append("Only Custodian can delete token attributes ")
-                        return {
-                         "validity" :False,
-                         "reason": self.errors
-                          } 
-                return {
-                         "validity" :True,
-                         "reason": self.errors
-                          } 
+                        self.transaction['specific_data']['tokencode'],cur = cur)
+                if custodian == existing_custodian:
+                    self.validity = 1  # tokencode exists and is run by the given custodian
+                else:
+                    logger.error(
+                        "The custodian for that token is someone else.")
+                    self.validity = 0
+                    self.errors.append("The custodian for that token is someone else.")
+                    return {
+                        "validity" :False,
+                        "reason": self.errors
+                    } 
+                # #check for custodian signature
+                # existing_custodian = get_custodian_from_token(
+                #                     self.transaction['specific_data']['tokencode'],cur = cur)
+                # if self.transaction['specific_data']['signers'] != existing_custodian:
+                #         self.validity = 0
+                #         self.errors.append("Only Custodian can delete token attributes ")
+                #         return {
+                #          "validity" :False,
+                #          "reason": self.errors
+                #           } 
+                # return {
+                #          "validity" :True,
+                #          "reason": self.errors
+                #           } 
             
-
-
-            if not is_token_update or is_token_add_update:
-                if firstowner:
-                    if is_wallet_valid(firstowner, cur=cur):
-                        # print("Valid first owner")
-                        fovalidity = True
-                    else:
-                        fovalidity = False
-                else:   # there is no first owner, transaction to create token only
-                    if self.transaction['specific_data']['amount_created']:
-                        print(
-                            "Amount created cannot be non-zero if there is no first owner.")
-                        fovalidity = False  # amount cannot be non-zero if no first owner
-                    else:
-                        fovalidity = True
-                if is_wallet_valid(custodian, cur=cur):
-                    # print("Valid custodian")
-                    custvalidity = True
-                if not fovalidity:
-                    logger.error("No first owner address found")
-                    self.errors.append("No first owner address found")
-
-                #	self.transaction['valid']=0
+                #balance should be 0
+                data =cur.execute(f'''SELECT SUM(balance) FROM balances where tokencode = ?''',(self.transaction['specific_data']['tokencode'],)).fetchone()
+                if data[0] != 0:
+                    logger.error(
+                        "Token balances sum is not zero to destory the attributes")
                     self.validity = 0
-                if not custvalidity:
-                    print("No custodian address found")
-                    self.validity = 0
-                    self.errors.append("Invalid custodian wallet")
-          
-                if fovalidity and custvalidity:
-            # print("Valid first owner and custodian")
-            #	self.transaction['valid']=1
-            #   now checking for instances where more tokens are added for an existing tokencode
-                    self.validity = 1
-                    if 'tokencode' in self.transaction['specific_data']:
-                        tcode = self.transaction['specific_data']['tokencode']
-                        if tcode and tcode != "0" and tcode != "" and tcode != "string":
-                            if is_token_valid(self.transaction['specific_data']['tokencode'], cur=cur):
-                                if is_nft(tcode,cur):
-                                    logger.error("this is an nft, cant be created further")
-                                    self.errors.append("This is an nft, cant be created further")
-                                    return {
-                                        "validity" :False,
-                                        "reason": self.errors
-                                    } 
-                                existing_custodian = get_custodian_from_token(
-                                    self.transaction['specific_data']['tokencode'],cur = cur)
-                                if custodian == existing_custodian:
-                                    self.validity = 1  # tokencode exists and is run by the given custodian
-                                else:
-                                    print(
-                                        "The custodian for that token is someone else.")
-                                    self.validity = 0
-                                    self.errors.append("The custodian for that token is someone else.")
-                            else:
-
-                                # print(
-                                #     "Tokencode provided does not exist. Will append as new one.")
-                                #if nft then amount cant be more than one
-                                if self.transaction['specific_data']['tokentype'] == TOKEN_NFT and self.transaction['specific_data']['amount_created'] > 1:
-                                    logger.error("This is an nft token type, Amount cant be grater than one")
-                                    self.errors.append("This is an nft token type, Amount cant be grater than one")
-                                    return {
-                                        "validity" :False,
-                                        "reason": self.errors
-                                     } 
-                                self.validity = 1  # tokencode is provided by user
-                        else:
-                            # print(
-                            #     "Tokencode provided does not exist. Will append as new one.")
-                            self.validity = 1  # tokencode is provided by user
-            else: 
-            
-                if is_wallet_valid(custodian, cur=cur):
-                    custvalidity = True 
-                if not custvalidity:
-                    print("No custodian address found")
-                    self.validity = 0
-                    self.errors.append("Invalid custodian wallet")
-                if 'tokencode' in self.transaction['specific_data']:
-                    tcode = self.transaction['specific_data']['tokencode']
-                    if tcode and tcode != "0" and tcode != "" and tcode != "string":
-                        token_attributes_dump = fetch_token(tcode,cur = cur)
-                        token_attributes = json.loads(token_attributes_dump)
-                        is_editable = token_attributes.get("editable",False)
-                        if not is_editable:
-                            self.validity = 0
-                            self.errors.append("This token is not editable")
-                        else:
-                            if is_token_valid(self.transaction['specific_data']['tokencode'], cur=cur):
-                                existing_custodian = get_custodian_from_token(
-                                    self.transaction['specific_data']['tokencode'],cur = cur)
-                                if custodian == existing_custodian:
-                                    self.validity = 1  # tokencode exists and is run by the given custodian
-                                else:
-                                    print(
-                                        "The custodian for that token is someone else.")
-                                    self.validity = 0
-                                    self.errors.append("The custodian for that token is someone else.")
-                            else:
-                                # print(
-                                #     "Tokencode provided does not exist. Will append as new one.")
-                                self.validity = 1 
-                        
+                    self.errors.append("Token balances sum is not zero to destory the attributes")
+                    return {
+                        "validity" :False,
+                        "reason": self.errors
+                    }           
 
         if self.transaction['type'] == TRANSACTION_SMART_CONTRACT:
             self.validity = 1
