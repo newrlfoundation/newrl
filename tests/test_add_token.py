@@ -4,14 +4,63 @@ import time
 import requests
 import json
 
-from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV
-from app.config.nvalues import ZERO_ADDRESS
+from setup import NODE_URL, WALLET, BLOCK_WAIT_TIME, TEST_ENV, ZERO_ADDRESS
 
-def test_add_token(request):
+def test_add_token_type_1(request):
     token = add_token()
     request.config.cache.set('token_code', token['tokencode'])
 
-def test_modify_token_attributes(request,custodian_wallet=WALLET):
+def test_add_token_type_1_more_tokens(request):
+    initial_amount = 100
+    token = add_token(amount=initial_amount)
+    token_code = request.config.cache.get('token_code', None)
+    more_amount = 20
+    add_token_request = {
+    "token_name": token_code,
+    "token_code": token_code,
+    "token_type": "1",
+    "first_owner": WALLET["address"],
+    "custodian": WALLET['address'],
+    "legal_doc": "",
+    "amount_created": 20,
+    "tokendecimal": 2,
+    "disallowed_regions": [],
+    "is_smart_contract_token": False,
+    "token_attributes": {}
+    }
+
+
+    response = requests.post(NODE_URL + '/add-token', json=add_token_request)
+    unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    response = requests.post(NODE_URL + '/sign-transaction', json={
+        "wallet_data": WALLET,
+        "transaction_data": unsigned_transaction
+    })
+
+    signed_transaction = response.json()
+
+    print('signed_transaction', signed_transaction)
+    response = requests.post(NODE_URL + '/validate-transaction', json=signed_transaction)
+    print(response.text)
+    assert response.status_code == 200
+
+    if TEST_ENV == 'local':
+        response = requests.post(NODE_URL + '/run-updater?add_to_chain_before_consensus=true')
+    else:
+        print('Waiting to mine block')
+        time.sleep(BLOCK_WAIT_TIME)
+
+    response = requests.get(NODE_URL + '/get-token?token_code=' + token_code)
+    assert response.status_code == 200
+
+    token = response.json()
+
+    assert token['amount_created'] == initial_amount + more_amount
+    print('Test passed.')
+
+def test_add_token_type2_modify_token_attributes(request,custodian_wallet=WALLET):
     token_code = request.config.cache.get('token_code', None)
     token_attributes_updated = {
         "tat1":"tat1valueUpdated",
@@ -56,7 +105,7 @@ def test_modify_token_attributes(request,custodian_wallet=WALLET):
     print('Test passed.')
 
 
-def test_modify_token_attributes_with_false_is_edit(request,custodian_wallet=WALLET):
+def test_add_token_type2_modify_token_attributes_with_false_is_edit(request,custodian_wallet=WALLET):
     token_code = request.config.cache.get('token_code', None)
     token_attributes_updated = {
         "tat1":"tat1valueUpdated",
@@ -88,7 +137,7 @@ def test_modify_token_attributes_with_false_is_edit(request,custodian_wallet=WAL
     response_json = response.json()
     assert response_json['response']['valid'] == False
 
-def test_modify_token_attributes_with_is_edit_not_present(request,custodian_wallet=WALLET):
+def test_add_token_type2_modify_token_attributes_with_is_edit_not_present(request,custodian_wallet=WALLET):
     token = add_token(is_editable=False)
     token_code = token['tokencode']
     token_attributes_updated = {
@@ -375,14 +424,52 @@ def test_add_token_type3_add_modify(request,custodian_wallet=WALLET):
     print('Test passed.')
 
 
-
-def test_add_token_type4_delete_attributes_fail_balances_available(request,custodian_wallet=WALLET):
+def test_add_token_type3_add_wrong_signer(request,custodian_wallet=WALLET):
     token = add_token()
+    wallet = create_wallet()
+    fund_wallet_nwrl(WALLET,wallet['address'],10000000)
     token_code = token['tokencode']
     token_attributes_updated = {
         "tat1":"tat1valueUpdated",
         "editable":False
     }
+
+    add_token_request = {
+    "token_name": token_code,
+    "token_code": token_code,
+    "token_type": "1",
+    "first_owner": wallet['address'],
+    "custodian": wallet['address'],
+    "legal_doc": "",
+    "amount_created": 20,
+    "tokendecimal": 2,
+    "disallowed_regions": [],
+    "is_smart_contract_token": False,
+    "token_attributes": token_attributes_updated,
+    "token_update_type":3
+    }
+
+   
+    response = requests.post(NODE_URL + '/add-token', json=add_token_request)
+    unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    response = requests.post(NODE_URL + '/sign-transaction', json={
+        "wallet_data": wallet,
+        "transaction_data": unsigned_transaction
+    })
+
+    signed_transaction = response.json()
+
+    print('signed_transaction', signed_transaction)
+    response = requests.post(NODE_URL + '/validate-transaction', json=signed_transaction)
+    print(response.text)
+    assert response.status_code == 200
+    assert response.json()["response"]["valid"] == False
+
+def test_add_token_type4_delete_attributes_fail_balances_available(request,custodian_wallet=WALLET):
+    token = add_token()
+    token_code = token['tokencode']
 
     add_token_request = {
     "token_code": token_code,
@@ -457,6 +544,44 @@ def test_add_token_type4_delete_attributes(request,custodian_wallet=WALLET):
     token_attributes  = token['token_attributes']
     assert token_attributes == None
     print('Test passed.')
+
+
+
+def test_add_token_type4_delete_attributes_wrong_signer(request,custodian_wallet=WALLET):
+    token = add_token(amount= 100)
+    
+    wallet = create_wallet()
+    fund_wallet_nwrl(WALLET,wallet['address'],10000000)
+
+    token_code = token['tokencode']
+    #burn tokens for attribute delete
+    transfer_tokens(WALLET,ZERO_ADDRESS, 100, token_code)
+
+    add_token_request = {
+    "token_code": token_code,
+    "token_attributes": {},
+    "token_update_type":4,
+    "custodian": wallet["address"]
+    }
+   
+    response = requests.post(NODE_URL + '/add-token', json=add_token_request)
+    unsigned_transaction = response.json()
+    unsigned_transaction['transaction']['fee'] = 1000000
+
+    response = requests.post(NODE_URL + '/sign-transaction', json={
+        "wallet_data": wallet,
+        "transaction_data": unsigned_transaction
+    })
+
+    signed_transaction = response.json()
+
+    print('signed_transaction', signed_transaction)
+    response = requests.post(NODE_URL + '/validate-transaction', json=signed_transaction)
+    print(response.text)
+    assert response.status_code == 200
+    assert response.json()["response"]["valid"] == False
+
+ 
 
 def create_wallet():
     # def test_create_wallet():

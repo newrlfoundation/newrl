@@ -622,7 +622,7 @@ class Transactionmanager:
                 print("Invalid sender1 wallet")
             #	self.transaction['valid']=0
                 self.validity = 0
-                self.errors.append("Invalid sender2 wallet")
+                self.errors.append("Invalid sender1 wallet")
             #	return False
             if not sender2valid:
                 print("Invalid sender2 wallet")

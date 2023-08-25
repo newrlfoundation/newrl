@@ -336,7 +336,6 @@ def execute_sc(cur, transaction_main):
             f"Exception during smart contract function execution for transaction {transaction_code} + {e}")
         logger.error(e)
         raise Exception(e)
-    pass
 
 
 def validate_sc_child_transaction(cur, transaction: Transactionmanager, contract_address):
