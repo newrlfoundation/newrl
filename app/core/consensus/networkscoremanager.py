@@ -101,8 +101,7 @@ def update_network_trust_score_from_receipt(cur, receipt):
                     logger.info('Block proposer is not matching creator_wallet for block %d. Slashing proposer %s',
                             actual_block['block_index'], wallet_address)
                     if actual_block['block_index'] < FORK_BLOCK_INDEX_DISABLE_SLASHING_1_6_0:
-                        if actual_block['block_index'] < FORK_BLOCK_INDEX_DISABLE_TRUST_SCORE_DEGRADATION_1_7_2:
-                            slashing_tokens(cur, wallet_address, True)
+                        slashing_tokens(cur, wallet_address, True)
         else:
             committee = get_committee_for_block(actual_block)
             if actual_block['proof'] == 42:  # Empty block check
@@ -130,8 +129,7 @@ def update_network_trust_score_from_receipt(cur, receipt):
                         logger.info('Committee member voted negative for valid block %d. Slashing voter %s',
                             actual_block['block_index'], wallet_address)
                         if actual_block['block_index'] < FORK_BLOCK_INDEX_DISABLE_SLASHING_1_6_0:
-                            if actual_block['block_index'] < FORK_BLOCK_INDEX_DISABLE_TRUST_SCORE_DEGRADATION_1_7_2:
-                                slashing_tokens(cur, wallet_address, False)
+                            slashing_tokens(cur, wallet_address, False)
             if wallet_address not in committee:
                 if actual_block['block_index'] < FORK_BLOCK_INDEX_DISABLE_TRUST_SCORE_DEGRADATION_1_7_2:
                     score = get_invalid_receipt_score(existing_score)
