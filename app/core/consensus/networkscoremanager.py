@@ -4,7 +4,7 @@ import json
 from math import sqrt
 
 from app.config.Configuration import Configuration
-from app.config.forks import FORK_BLOCK_INDEX_DISABLE_SLASHING_1_6_0
+from app.config.forks import FORK_BLOCK_INDEX_DISABLE_SLASHING_1_6_0, FORK_BLOCK_INDEX_DISABLE_TRUST_SCORE_DEGRADATION_1_7_2
 from app.core.clock.global_time import get_corrected_time_ms
 from app.core.db.db_updater import get_block_from_cursor, get_pid_from_wallet, update_trust_score
 from app.core.blockchain.state_updater import slashing_tokens
@@ -76,10 +76,12 @@ def update_network_trust_score_from_receipt(cur, receipt):
         if actual_block is None:
             return
         actual_block_hash = actual_block['hash']
+        score = existing_score
         if vote == BLOCK_VOTE_MINER:
             if actual_block['proof'] == 42:  # Empty block check
                 if actual_block['status'] == BLOCK_STATUS_INVALID_MINED:
-                    score = get_invalid_block_creation_score(existing_score)
+                    if actual_block['block_index'] < FORK_BLOCK_INDEX_DISABLE_TRUST_SCORE_DEGRADATION_1_7_2:
+                        score = get_invalid_block_creation_score(existing_score)
                 else:
                     score = existing_score
             else:
@@ -87,13 +89,15 @@ def update_network_trust_score_from_receipt(cur, receipt):
                     if actual_block_hash == target_block_hash:
                         score = get_valid_block_creation_score(existing_score)
                     else:
-                        score = get_invalid_block_creation_score(existing_score)
+                        if actual_block['block_index'] < FORK_BLOCK_INDEX_DISABLE_TRUST_SCORE_DEGRADATION_1_7_2:
+                            score = get_invalid_block_creation_score(existing_score)
                         logger.info('Actual block hash is not matching proposed block for %d. Slashing proposer %s',
                             actual_block['block_index'], wallet_address)
                         if actual_block['block_index'] < FORK_BLOCK_INDEX_DISABLE_SLASHING_1_6_0:
                             slashing_tokens(cur, wallet_address, True)
                 else:
-                    score = get_invalid_block_creation_score(existing_score)
+                    if actual_block['block_index'] < FORK_BLOCK_INDEX_DISABLE_TRUST_SCORE_DEGRADATION_1_7_2:
+                        score = get_invalid_block_creation_score(existing_score)
                     logger.info('Block proposer is not matching creator_wallet for block %d. Slashing proposer %s',
                             actual_block['block_index'], wallet_address)
                     if actual_block['block_index'] < FORK_BLOCK_INDEX_DISABLE_SLASHING_1_6_0:
@@ -103,7 +107,8 @@ def update_network_trust_score_from_receipt(cur, receipt):
             if actual_block['proof'] == 42:  # Empty block check
                 if actual_block['status'] == BLOCK_STATUS_INVALID_MINED:
                     if vote == BLOCK_VOTE_VALID:
-                        score = get_invalid_receipt_score(existing_score)
+                        if actual_block['block_index'] < FORK_BLOCK_INDEX_DISABLE_TRUST_SCORE_DEGRADATION_1_7_2:
+                            score = get_invalid_receipt_score(existing_score)
                         logger.info('Committee member voted positive for invalid block %d. Slashing voter %s',
                             actual_block['block_index'], wallet_address)
                         # slashing_tokens(cur, wallet_address, False)
@@ -119,13 +124,15 @@ def update_network_trust_score_from_receipt(cur, receipt):
                     if vote == BLOCK_VOTE_VALID:
                         score = get_valid_receipt_score(existing_score)
                     else:
-                        score = get_invalid_receipt_score(existing_score)
+                        if actual_block['block_index'] < FORK_BLOCK_INDEX_DISABLE_TRUST_SCORE_DEGRADATION_1_7_2:
+                            score = get_invalid_receipt_score(existing_score)
                         logger.info('Committee member voted negative for valid block %d. Slashing voter %s',
                             actual_block['block_index'], wallet_address)
                         if actual_block['block_index'] < FORK_BLOCK_INDEX_DISABLE_SLASHING_1_6_0:
                             slashing_tokens(cur, wallet_address, False)
             if wallet_address not in committee:
-                score = get_invalid_receipt_score(existing_score)
+                if actual_block['block_index'] < FORK_BLOCK_INDEX_DISABLE_TRUST_SCORE_DEGRADATION_1_7_2:
+                    score = get_invalid_receipt_score(existing_score)
                 # slashing_tokens(cur, wallet_address, False)
                 logger.warn('Non-committee member voted for block %d. Slashing voter %s',
                             actual_block['block_index'], wallet_address)
