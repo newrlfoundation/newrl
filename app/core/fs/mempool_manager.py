@@ -6,7 +6,10 @@ import os
 
 from app.config.constants import MEMPOOL_PATH, MEMPOOL_TRANSACTION_LIFETIME_SECONDS, TMP_PATH
 from ..clock.global_time import get_corrected_time_ms
+import logging
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 def get_receipts_from_storage(block_index, folder=TMP_PATH):
     """Returns a list of receipts matching a block index from mempool"""
     blocks = []
@@ -84,6 +87,7 @@ def clear_temp():
 
 
 def mempool_cleanup():
+    logger.info("running mempool cleanup")
     transaction_files = glob.glob(f'{MEMPOOL_PATH}transaction-*.json')
 
     for transaction_file in transaction_files:

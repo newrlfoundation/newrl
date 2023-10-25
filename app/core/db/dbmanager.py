@@ -74,6 +74,7 @@ def create_block_snapshot(block_index):
 
 
 def check_and_create_snapshot_in_thread(block_index):
+    logger.info("Checking for snapshot snapshot_creation_in_progress")
     if snapshot_schedule['snapshot_creation_in_progress']:
         logger.info("snapshot schedule in process, aborting")
         return False
