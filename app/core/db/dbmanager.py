@@ -40,21 +40,25 @@ def revert_to_last_snapshot():
 
 def create_block_snapshot(block_index):
     global snapshot_schedule
+    logger.info("Checking for snapshot schedule")
     if (
         snapshot_schedule['next_snapshot'] == -1 or 
         block_index >= snapshot_schedule['next_snapshot']):
+        logger.info("Creating snapshot as schedule arrived")
         try:
             snapshot_last_block = get_last_block_index(NEWRL_DB + '.snapshot')
         except Exception as e:
-            # logger.error('Error getting snapshot block size %s', str(e))
+            logger.error('Error getting snapshot block size %s', str(e))
             snapshot_last_block = 0
         db_last_block = get_last_block_index(NEWRL_DB)
-
+        diff=db_last_block - snapshot_last_block
         if db_last_block - snapshot_last_block < 500:
+            logger.info(f"Diff of db and snapshot last block is <500, {diff}")
             return
 
         snapshot_schedule['snapshot_creation_in_progress'] = True
         try:
+            logger.info("Creating snapshot")
             create_db_snapshot(f'.snapshot')
             snapshot_schedule['next_snapshot'] = block_index + random.randint(500, 1000)
             logger.info('Next snapshot creation scheduled for block %d', snapshot_schedule['next_snapshot'])
@@ -62,12 +66,16 @@ def create_block_snapshot(block_index):
             logger.error('Error during snapshot creation' + str(e))
         snapshot_schedule['snapshot_creation_in_progress'] = False
         return True
+    else:
+        logger.info("Snapshot schedule not arrived")
+        return False
     # Set the next_snapshot schedule variable based on block size
     # Next snapshot increase ~ block size
 
 
 def check_and_create_snapshot_in_thread(block_index):
     if snapshot_schedule['snapshot_creation_in_progress']:
+        logger.info("snapshot schedule in process, aborting")
         return False
     # thread = threading.Thread(target=create_block_snapshot,
     #     args = (block_index, ))

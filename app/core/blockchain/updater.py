@@ -282,7 +282,7 @@ def global_internal_clock():
     """Reccuring clock for all node level activities"""
     global TIMERS
     global SYNC_STATUS
-
+    logger.info("Global internal clock running")
     if SYNC_STATUS['IS_SYNCING']:
         logger.debug('Timer tick. Syncing with network. Continuing sync.')
     else:
@@ -323,12 +323,13 @@ def global_internal_clock():
                         # Sentinel node empty mining is the last resort. 
                         logger.info('I am sentitnel node. Mining empty block')
                         sentitnel_node_mine_empty()
-
+                logger.info("Global tick process is done")
                 snapshot_done = check_and_create_snapshot_in_thread(last_block['index'])
+                logger.info(f"Snapshot is {snapshot_done}")
                 # Snapshot is done periodically in random intervals for each node.
                 # After snapshot is done, we can clean up the mempool, peers and archive
                 if snapshot_done:
-                    logger.info('Running node cleanup...')
+                    logger.info('********Snapshot is done , Running node cleanup...********')
                     mempool_cleanup()
                     remove_dead_peers()
                     init_bootstrap_nodes()
@@ -346,6 +347,7 @@ def global_internal_clock():
     timer = threading.Timer(GLOBAL_INTERNAL_CLOCK_SECONDS, global_internal_clock)
     TIMERS['global_timer'] = timer
     timer.start()
+
 
 
 def am_i_sentinel_node():

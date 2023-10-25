@@ -25,17 +25,36 @@ def clear_peer_db():
     con.close()
 
 def init_peer_db():
-    con = sqlite3.connect(NEWRL_P2P_DB)
-    cur = con.cursor()
-    cur.execute('''
-                    CREATE TABLE IF NOT EXISTS peers
-                    (id text NOT NULL PRIMARY KEY,
-                    address text NOT NULL 
-                    )
-                    ''')
-    # Todo - link node to a person and add record in the node db
-    con.commit()
-    con.close()
+    try:
+        # Connect to the database
+        con = sqlite3.connect(NEWRL_P2P_DB)
+        logger.info("Connected to the database")
+        
+        cur = con.cursor()
+
+        # Create the 'peers' table if it doesn't exist
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS peers
+            (id text NOT NULL PRIMARY KEY,
+            address text NOT NULL)
+        ''')
+        logger.info("Table 'peers' creation SQL executed")
+
+        # Commit the transaction
+        con.commit()
+        logger.info("Committed the transaction")
+
+        # Close the connection
+        con.close()
+        logger.info("Closed the database connection")
+
+        logger.info("Table 'peers' created successfully in the database.")
+    except sqlite3.Error as e:
+        logger.error("SQLite error:", e)
+    except Exception as e:
+        logger.error("An error occurred:", e)
+    logger.info("Peer table created")
+
 
 
 def get_peers():
@@ -70,6 +89,7 @@ def add_peer(peer_address):
 
 
 def remove_peer(peer_id):
+    logger.info(f"Removing peer {peer_id}")
     con = sqlite3.connect(NEWRL_P2P_DB)
     cur = con.cursor()
     try:
@@ -238,6 +258,7 @@ def remove_dead_peers():
     my_address = get_my_address()
 
     threads = []
+    logger.info("checking for dead peer")
 
     for peer in my_peers:
         thread = Thread(target=remove_dead_peer, args=(peer, my_address))
