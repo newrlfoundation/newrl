@@ -47,7 +47,7 @@ def check_snapshot_schedule(block_index):
         except Exception as e:
             snapshot_last_block = 0
         db_last_block = get_last_block_index(NEWRL_DB)
-        if db_last_block - snapshot_last_block < 500:
+        if db_last_block - snapshot_last_block < 10000:
             return False
 
     return True    
@@ -58,7 +58,7 @@ def create_block_snapshot(block_index):
     snapshot_schedule['snapshot_creation_in_progress'] = True
     try:
         create_db_snapshot(f'.snapshot')
-        snapshot_schedule['next_snapshot'] = block_index + random.randint(500, 1000)
+        snapshot_schedule['next_snapshot'] = block_index + random.randint(9500, 10000)
         logger.info('Next snapshot creation scheduled for block %d', snapshot_schedule['next_snapshot'])
     except Exception as e:
         logger.error('Error during snapshot creation' + str(e))
