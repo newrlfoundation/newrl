@@ -282,7 +282,7 @@ def global_internal_clock():
     """Reccuring clock for all node level activities"""
     global TIMERS
     global SYNC_STATUS
-
+    logger.info("Global internal clock running")
     if SYNC_STATUS['IS_SYNCING']:
         logger.debug('Timer tick. Syncing with network. Continuing sync.')
     else:
