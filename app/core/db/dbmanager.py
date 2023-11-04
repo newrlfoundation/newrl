@@ -70,7 +70,7 @@ def create_block_snapshot(block_index):
 
 
 def check_and_create_snapshot_in_thread(block_index):
-    if check_snapshot(block_index):
+    if not check_snapshot(block_index):
         logger.info("Snapshot creation check is False, will be checked again later")
         return False
     # thread = threading.Thread(target=create_block_snapshot,
