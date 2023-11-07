@@ -102,7 +102,6 @@ def app_startup():
         else:
             logger.info('Not participating in mining')
 
-
         global_internal_clock()
     
 

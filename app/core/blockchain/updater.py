@@ -327,11 +327,11 @@ def global_internal_clock():
                 snapshot_done = check_and_create_snapshot_in_thread(last_block['index'])
                 # Snapshot is done periodically in random intervals for each node.
                 # After snapshot is done, we can clean up the mempool, peers and archive
-                logger.info(last_block)
+                logger.info(last_block["index"])
                 logger.info(TIMERS['last_cleanup_block'])
                 logger.info(CLEANUP_BLOCKS)
 
-                if last_block-TIMERS['last_cleanup_block'] > CLEANUP_BLOCKS:
+                if last_block['index']-int(TIMERS['last_cleanup_block']) > CLEANUP_BLOCKS:
                     node_cleanup(last_block['index'])
                 
                 # elif am_i_in_current_committee(last_block):
@@ -359,6 +359,7 @@ def node_cleanup(last_block):
     init_bootstrap_nodes()
     if not Configuration.conf['FULL_NODE']:
         cleanup_old_archive_blocks(last_block)
+    TIMERS['last_cleanup_block'] = last_block
 
 def sentitnel_node_mine_empty():
     previous_block = get_last_block()

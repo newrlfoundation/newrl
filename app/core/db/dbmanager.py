@@ -71,7 +71,6 @@ def create_block_snapshot(block_index):
 
 def check_and_create_snapshot_in_thread(block_index):
     if not check_snapshot(block_index):
-        logger.info("Snapshot creation check is False, will be checked again later")
         return False
     # thread = threading.Thread(target=create_block_snapshot,
     #     args = (block_index, ))
@@ -80,7 +79,7 @@ def check_and_create_snapshot_in_thread(block_index):
     return create_block_snapshot(block_index)
 
 def check_snapshot(block_index):
-    logger.info("Checking if snapshot can be created now")
+    logger.debug("Checking if snapshot can be created now")
     if snapshot_schedule['snapshot_creation_in_progress']:
         return False
     if not check_snapshot_schedule(block_index):
