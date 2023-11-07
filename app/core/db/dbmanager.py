@@ -5,7 +5,7 @@ import glob
 import subprocess
 import threading
 import logging
-from app.config.nvalues import SNAPSHOT_BLOCKS
+from app.config.constants import SNAPSHOT_BLOCKS
 
 from app.core.blockchain.blockchain import get_last_block_index
 
