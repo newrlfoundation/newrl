@@ -327,9 +327,6 @@ def global_internal_clock():
                 snapshot_done = check_and_create_snapshot_in_thread(last_block['index'])
                 # Snapshot is done periodically in random intervals for each node.
                 # After snapshot is done, we can clean up the mempool, peers and archive
-                logger.info(last_block["index"])
-                logger.info(TIMERS['last_cleanup_block'])
-                logger.info(CLEANUP_BLOCKS)
 
                 if last_block['index']-int(TIMERS['last_cleanup_block']) > CLEANUP_BLOCKS:
                     node_cleanup(last_block['index'])
@@ -353,7 +350,7 @@ def am_i_sentinel_node():
     return my_wallet['address'] == Configuration.config("SENTINEL_NODE_WALLET")
 
 def node_cleanup(last_block):
-    logger.info('Running node cleanup...')
+    logger.debug('Running node cleanup...')
     mempool_cleanup()
     remove_dead_peers()
     init_bootstrap_nodes()
