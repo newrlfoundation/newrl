@@ -512,7 +512,7 @@ class Transactionmanager:
                 token1_balance_validity = False
                 # If fee_payer is present, fee is deducted before from fee_payer
                 if 'fee_payer' in self.transaction:
-                    token1_balance_validity = token1amt < startingbalance1
+                    token1_balance_validity = token1amt <= startingbalance1
                 else:
                     #if token being transfered and fee token is same, calculate together
                     if tokencode1 == fee_token_code:

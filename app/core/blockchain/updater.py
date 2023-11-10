@@ -22,7 +22,7 @@ from ..fs.temp_manager import get_all_receipts_from_storage, get_blocks_for_inde
 from ..consensus.minermanager import am_i_in_current_committee, broadcast_miner_update, get_committee_for_current_block, get_miner_for_current_block, should_i_mine
 from app.config.Configuration import Configuration
 from app.config.nvalues import SENTINEL_NODE_WALLET, TREASURY_WALLET_ADDRESS
-from app.config.constants import ALLOWED_FEE_PAYMENT_TOKENS, BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, GLOBAL_INTERNAL_CLOCK_SECONDS, IS_TEST, MIN_SYNC_INTERVAL_MS, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, NEWRL_PORT, NO_BLOCK_TIMEOUT, NO_RECEIPT_COMMITTEE_TIMEOUT, REQUEST_TIMEOUT, MEMPOOL_PATH, SOFTWARE_VERSION, TIME_BETWEEN_BLOCKS_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS
+from app.config.constants import ALLOWED_FEE_PAYMENT_TOKENS, BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, CLEANUP_BLOCKS, COMMITTEE_SIZE, GLOBAL_INTERNAL_CLOCK_SECONDS, IS_TEST, MIN_SYNC_INTERVAL_MS, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, NEWRL_PORT, NO_BLOCK_TIMEOUT, NO_RECEIPT_COMMITTEE_TIMEOUT, REQUEST_TIMEOUT, MEMPOOL_PATH, SOFTWARE_VERSION, TIME_BETWEEN_BLOCKS_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS
 from ..p2p.peers import get_peers, init_bootstrap_nodes, remove_dead_peers
 from ..p2p.utils import is_my_address
 from ..helpers.utils import BufferedLog, get_time_ms
@@ -282,7 +282,7 @@ def global_internal_clock():
     """Reccuring clock for all node level activities"""
     global TIMERS
     global SYNC_STATUS
-
+    logger.debug("Global internal clock running")
     if SYNC_STATUS['IS_SYNCING']:
         logger.debug('Timer tick. Syncing with network. Continuing sync.')
     else:
@@ -327,13 +327,10 @@ def global_internal_clock():
                 snapshot_done = check_and_create_snapshot_in_thread(last_block['index'])
                 # Snapshot is done periodically in random intervals for each node.
                 # After snapshot is done, we can clean up the mempool, peers and archive
-                if snapshot_done:
-                    logger.info('Running node cleanup...')
-                    mempool_cleanup()
-                    remove_dead_peers()
-                    init_bootstrap_nodes()
-                    if not Configuration.conf['FULL_NODE']:
-                        cleanup_old_archive_blocks(last_block['index'])
+
+                if last_block['index']-int(TIMERS['last_cleanup_block']) > CLEANUP_BLOCKS:
+                    node_cleanup(last_block['index'])
+                
                 # elif am_i_in_current_committee(last_block):
                 #     if TIMERS['block_receive_timeout'] is None or not TIMERS['block_receive_timeout'].is_alive():
                 #         start_empty_block_mining_clock(last_block_ts)
@@ -352,6 +349,14 @@ def am_i_sentinel_node():
     my_wallet = get_wallet()
     return my_wallet['address'] == Configuration.config("SENTINEL_NODE_WALLET")
 
+def node_cleanup(last_block):
+    logger.debug('Running node cleanup...')
+    mempool_cleanup()
+    remove_dead_peers()
+    init_bootstrap_nodes()
+    if not Configuration.conf['FULL_NODE']:
+        cleanup_old_archive_blocks(last_block)
+    TIMERS['last_cleanup_block'] = last_block
 
 def sentitnel_node_mine_empty():
     previous_block = get_last_block()
