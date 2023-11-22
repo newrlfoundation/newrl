@@ -19,7 +19,7 @@ from app.core.consensus.minermanager import am_i_in_block_committee, am_i_in_cur
 from app.core.p2p.outgoing import broadcast_receipt, broadcast_block
 from app.core.consensus.receiptmanager import check_receipt_exists_in_db, validate_receipt
 # from app.codes.utils import store_block_proposal
-from app.config.constants import COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NETWORK_TRUSTED_ARCHIVE_NODES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB
+from app.config.constants import COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NETWORK_TRUSTED_ARCHIVE_NODES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB, SNAPSHOT_BLOCKS
 from app.core.p2p.peers import get_peers
 
 from app.core.blockchain.validator import validate_block, validate_block_data
@@ -197,7 +197,7 @@ def sync_chain_from_node(url, block_index=None):
         logger.info('I am in sync with the node. Aborting sync.')
         return True
 
-    if my_last_block < their_last_block_index - 1000 or my_last_block == 0:
+    if my_last_block < their_last_block_index - SNAPSHOT_BLOCKS or my_last_block == 0:
         quick_sync(url + '/get-newrl-db')
         return True
     block_idx = my_last_block + 1
