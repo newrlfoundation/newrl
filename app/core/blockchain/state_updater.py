@@ -134,13 +134,20 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
 
     if transaction_type == TRANSACTION_TOKEN_CREATION:  # this is a token creation or addition transaction
         
-        edit_transaction =  transaction_data.get('token_update', False)
-
-        if not edit_transaction:
+        txn_type =  transaction_data.get('token_update_type', 1)
+        
+        if txn_type == 1: #add token
             add_token(cur, transaction_data, transaction_code)
-        else:
+        elif txn_type == 2: #update token attributes
             update_token(cur, transaction_data,transaction_code)    
-
+        elif txn_type == 3: #add and update token
+            add_token(cur, transaction_data, transaction_code)
+            update_token(cur, transaction_data,transaction_code)    
+        elif txn_type == 4: #delete token attributes
+            delete_token_attributes(cur, transaction_data,transaction_code)       
+        else: #default add token
+            add_token(cur, transaction_data, transaction_code)
+        
     if transaction_type == TRANSACTION_TWO_WAY_TRANSFER:  # this is a transfer tx
         sender1 = transaction_data['wallet1']
 
@@ -329,7 +336,6 @@ def execute_sc(cur, transaction_main):
             f"Exception during smart contract function execution for transaction {transaction_code} + {e}")
         logger.error(e)
         raise Exception(e)
-    pass
 
 
 def validate_sc_child_transaction(cur, transaction: Transactionmanager, contract_address):
