@@ -81,7 +81,7 @@ except Exception as e:
         'createsnapshot': False
     }
 Configuration.conf['FULL_NODE'] = args["fullnode"]
-Configuration.conf['CREATESNAPSHOT']= argparse["createsnapshot"]
+Configuration.conf['CREATESNAPSHOT']= args["createsnapshot"]
 
 
 @app.on_event('startup')

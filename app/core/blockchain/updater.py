@@ -283,6 +283,8 @@ def global_internal_clock():
     global TIMERS
     global SYNC_STATUS
     logger.debug("Global internal clock running")
+    if Configuration.conf['CREATESNAPSHOT']:
+            logger.info("Create snapshot arg is present, Checking if ss can be created")
     if SYNC_STATUS['IS_SYNCING']:
         logger.debug('Timer tick. Syncing with network. Continuing sync.')
     else:

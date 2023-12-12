@@ -28,6 +28,7 @@ elif NEWRL_ENV == 'test':
     NETWORK_TRUSTED_ARCHIVE_NODES = ['localhost']
     NEWRL_PORT = 4018
     DATA_PATH = 'data_test/'
+    NETWORK_SNAPSHOT = ''
     print('Using test constants')
 elif NEWRL_ENV == 'devnet':
     BOOTSTRAP_NODES = ['bootstrap1-lakeshore.newrl.net']
@@ -42,7 +43,7 @@ else:  # default ot devnet
     NEWRL_PORT = 8420
     DATA_PATH = 'data_devnet/'
     print('Using devnet constants')
-    NETWORK_SNAPSHOT = 'https://lakeshore-snapshot.s3.ap-south-1.amazonaws.com/newrl.db.snapshot'
+    NETWORK_SNAPSHOT = ''
 
 DATA_PATH = 'data_test/' if IS_TEST else DATA_PATH
 LOG_FILE_PATH = DATA_PATH + 'logs/'
