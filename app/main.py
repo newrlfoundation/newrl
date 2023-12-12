@@ -55,6 +55,7 @@ def initialze_params():
     parser.add_argument("--disablebootstrap", help="run the node without bootstrapping", action="store_true")
     parser.add_argument("--fullnode", help="run a full/archive node", action="store_true")
     parser.add_argument("--noreload", help="no auto-reload from code", action="store_true")
+    parser.add_argument("--createsnapshot", help="will create snapshots periodically", action="store_true")
     _args, unknown = parser.parse_known_args()
     args = {
         'disablenetwork': _args.disablenetwork,
@@ -62,6 +63,7 @@ def initialze_params():
         'disablebootstrap': _args.disablebootstrap,
         'fullnode': _args.fullnode,
         'noreload': _args.noreload,
+        'createsnapshot': _args.createsnapshot
     }
     return args
 
@@ -76,8 +78,10 @@ except Exception as e:
         'disablebootstrap': False,
         'fullnode': False,
         'noreload': False,
+        'createsnapshot': False
     }
 Configuration.conf['FULL_NODE'] = args["fullnode"]
+Configuration.conf['CREATESNAPSHOT']= argparse["createsnapshot"]
 
 
 @app.on_event('startup')
