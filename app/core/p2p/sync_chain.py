@@ -572,7 +572,7 @@ def find_forking_block(node_url):
 
 def quick_sync(db_url):
     """Copies the entire newrl.db from a peer. Unsecured."""
-
+    logger.info("Syncing using quick-sync")
     if NETWORK_SNAPSHOT:
         logger.info("Using trusted NETWORK_SNAPSHOT")
         db_url = NETWORK_SNAPSHOT
