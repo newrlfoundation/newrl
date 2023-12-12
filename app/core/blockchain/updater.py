@@ -324,7 +324,10 @@ def global_internal_clock():
                         logger.info('I am sentitnel node. Mining empty block')
                         sentitnel_node_mine_empty()
 
-                snapshot_done = check_and_create_snapshot_in_thread(last_block['index'])
+                # snapshot creation is limited to full nodes
+                if Configuration.conf['CREATESNAPSHOT']:
+                    logger.info("Create snapshot arg is present, Checking if ss can be created")
+                    snapshot_done = check_and_create_snapshot_in_thread(last_block['index'])
                 # Snapshot is done periodically in random intervals for each node.
                 # After snapshot is done, we can clean up the mempool, peers and archive
 
