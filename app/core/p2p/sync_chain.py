@@ -20,6 +20,7 @@ from app.core.p2p.outgoing import broadcast_receipt, broadcast_block
 from app.core.consensus.receiptmanager import check_receipt_exists_in_db, validate_receipt
 # from app.codes.utils import store_block_proposal
 from app.config.constants import COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NETWORK_SNAPSHOT, NETWORK_TRUSTED_ARCHIVE_NODES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB, SNAPSHOT_BLOCKS
+
 from app.core.p2p.peers import get_peers
 
 from app.core.blockchain.validator import validate_block, validate_block_data
