@@ -19,7 +19,8 @@ from app.core.consensus.minermanager import am_i_in_block_committee, am_i_in_cur
 from app.core.p2p.outgoing import broadcast_receipt, broadcast_block
 from app.core.consensus.receiptmanager import check_receipt_exists_in_db, validate_receipt
 # from app.codes.utils import store_block_proposal
-from app.config.constants import COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NETWORK_TRUSTED_ARCHIVE_NODES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB, SNAPSHOT_BLOCKS
+from app.config.constants import COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NETWORK_SNAPSHOT, NETWORK_TRUSTED_ARCHIVE_NODES, NEWRL_PORT, REQUEST_TIMEOUT, NEWRL_DB, SNAPSHOT_BLOCKS
+
 from app.core.p2p.peers import get_peers
 
 from app.core.blockchain.validator import validate_block, validate_block_data
@@ -572,6 +573,10 @@ def find_forking_block(node_url):
 
 def quick_sync(db_url):
     """Copies the entire newrl.db from a peer. Unsecured."""
+    logger.info("Syncing using quick-sync")
+    if NETWORK_SNAPSHOT:
+        logger.info("Using trusted NETWORK_SNAPSHOT")
+        db_url = NETWORK_SNAPSHOT
     downloaded_db_path = NEWRL_DB + ".DOWNLOADED"
     subprocess.call(["curl", "-o", downloaded_db_path, db_url])
     try:
@@ -583,7 +588,6 @@ def quick_sync(db_url):
     except Exception as e:
         logger.info('Could not parse the downloaded DB' + str(e))
         return False
-
     try:
         con = sqlite3.connect(NEWRL_DB)
         cur = con.cursor()
