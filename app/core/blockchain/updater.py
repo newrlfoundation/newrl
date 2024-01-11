@@ -10,7 +10,7 @@ import threading
 from app.core.db.dbmanager import check_and_create_snapshot_in_thread
 from app.core.fs.archivemanager import cleanup_old_archive_blocks
 from app.core.fs.temp_manager import store_receipt_to_temp
-from app.core.p2p.sync_chain import sync_chain_from_peers
+from app.core.p2p.sync_chain import get_last_block_hash_from_url_retry, get_majority_random_node, sync_chain_from_peers
 from app.core.consensus.receiptmanager import get_receipt_in_temp_not_in_chain
 from app.core.clock.timers import SYNC_STATUS
 
@@ -22,7 +22,7 @@ from ..fs.temp_manager import get_all_receipts_from_storage, get_blocks_for_inde
 from ..consensus.minermanager import am_i_in_current_committee, broadcast_miner_update, get_committee_for_current_block, get_miner_for_current_block, should_i_mine
 from app.config.Configuration import Configuration
 from app.config.nvalues import SENTINEL_NODE_WALLET, TREASURY_WALLET_ADDRESS
-from app.config.constants import ALLOWED_FEE_PAYMENT_TOKENS, BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, CLEANUP_BLOCKS, COMMITTEE_SIZE, GLOBAL_INTERNAL_CLOCK_SECONDS, IS_TEST, MIN_SYNC_INTERVAL_MS, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, NEWRL_PORT, NO_BLOCK_TIMEOUT, NO_RECEIPT_COMMITTEE_TIMEOUT, REQUEST_TIMEOUT, MEMPOOL_PATH, SOFTWARE_VERSION, TIME_BETWEEN_BLOCKS_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS
+from app.config.constants import ALLOWED_FEE_PAYMENT_TOKENS, BLOCK_RECEIVE_TIMEOUT_SECONDS, BLOCK_TIME_INTERVAL_SECONDS, CLEANUP_BLOCKS, COMMITTEE_SIZE, GLOBAL_INTERNAL_CLOCK_SECONDS, IS_TEST, MIN_SYNC_INTERVAL_MS, MINER_HEALTH_BLOCKS, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, NEWRL_PORT, NO_BLOCK_TIMEOUT, NO_RECEIPT_COMMITTEE_TIMEOUT, REQUEST_TIMEOUT, MEMPOOL_PATH, SOFTWARE_VERSION, TIME_BETWEEN_BLOCKS_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS
 from ..p2p.peers import get_peers, init_bootstrap_nodes, remove_dead_peers
 from ..p2p.utils import is_my_address
 from ..helpers.utils import BufferedLog, get_time_ms
@@ -253,7 +253,10 @@ def start_mining_clock(block_timestamp):
 def start_miner_broadcast_clock():
     logger.info('Broadcasting miner update')
     try:
-        broadcast_miner_update()
+        if check_if_node_healthy():
+            broadcast_miner_update()
+        else:
+            logger.error("Not broadcasting miner update as miner eligibility health check failed")
     except Exception as e:
         logger.info(f'Could not broadcast miner update {e}')
     random_wait_seconds = randint(TIME_MINER_BROADCAST_INTERVAL_SECONDS, TIME_MINER_BROADCAST_INTERVAL_SECONDS * 2)
@@ -277,7 +280,7 @@ def should_include_transaction(transaction, my_last_block_index=0):
         return False
     return True
 
-
+    
 def global_internal_clock():
     """Reccuring clock for all node level activities"""
     global TIMERS
@@ -431,3 +434,15 @@ def get_timers():
         'is_mining': TIMERS['mining_timer'] is not None and TIMERS['mining_timer'].is_alive(),
         'is_waiting_block_timeout': TIMERS['block_receive_timeout'] is not None and TIMERS['block_receive_timeout'].is_alive(),
     }
+
+def check_if_node_healthy(cur=None):
+    #lastest block maj
+    logger.info("Checking if node is healthy to broadcast type 7")
+    rand_maj_url = get_majority_random_node()
+    maj_hash=get_last_block_hash_from_url_retry(rand_maj_url)
+    my_latest_hash = get_last_block(cur)
+
+    if not my_latest_hash >= maj_hash-MINER_HEALTH_BLOCKS:
+        logger.info("Im not in sync with network, not broadcasting miner update")
+        return False
+    
