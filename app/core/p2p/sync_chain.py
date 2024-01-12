@@ -512,6 +512,40 @@ def get_majority_random_node(return_many=False):
     # logger.warn('Could not find a majority chain and enough peers responded with hash.')
     # return None
 
+def get_majority_hash(return_many=False):
+    """Return a random node from the majority fork"""
+    logger.info('Finding a majority node')
+    peers = get_peers()
+    hash_url_map = {}
+    valid_peers = 0
+    queried_peers = 0
+    
+    random.seed(get_corrected_time_ms())
+
+    while len(hash_url_map) < COMMITTEE_SIZE and len(peers) > 0:
+        peer_idx = random.choice(range(len(peers)))
+        url = 'http://' + peers[peer_idx]['address'] + ':' + str(NEWRL_PORT)
+        del peers[peer_idx]
+        hash = get_last_block_hash_from_url_retry(url)
+        if hash:
+            valid_peers += 1
+            if hash in hash_url_map:
+                hash_url_map[hash].append(url)
+                if len(hash_url_map[hash]) > COMMITTEE_SIZE * 0.6:
+                    if return_many:
+                        return hash_url_map[hash]
+                    return hash
+            else:
+                hash_url_map[hash] = [url]
+        queried_peers += 1
+        if valid_peers < COMMITTEE_SIZE and queried_peers > COMMITTEE_SIZE * 4:
+            break    
+    # if valid_peers < COMMITTEE_SIZE:
+    trusted_node = random.choice(NETWORK_TRUSTED_ARCHIVE_NODES)
+    hash = get_last_block_hash_from_url_retry(trusted_node)
+    logger.info('Could not find a majority chain. Using archive node hash %s', url)
+    return hash
+
 
 # def get_majority_random_node_parallel():  # TODO - Need to fix for memory leakage
 #     """Return a random node from the majority fork"""

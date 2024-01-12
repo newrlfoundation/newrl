@@ -10,7 +10,7 @@ import threading
 from app.core.db.dbmanager import check_and_create_snapshot_in_thread
 from app.core.fs.archivemanager import cleanup_old_archive_blocks
 from app.core.fs.temp_manager import store_receipt_to_temp
-from app.core.p2p.sync_chain import get_last_block_hash_from_url_retry, get_majority_random_node, sync_chain_from_peers
+from app.core.p2p.sync_chain import get_last_block_hash_from_url_retry, get_majority_hash, get_majority_random_node, sync_chain_from_peers
 from app.core.consensus.receiptmanager import get_receipt_in_temp_not_in_chain
 from app.core.clock.timers import SYNC_STATUS
 
@@ -254,6 +254,7 @@ def start_miner_broadcast_clock():
     logger.info('Broadcasting miner update')
     try:
         if check_if_node_healthy():
+            logger.info("Broadcasting miner update")
             broadcast_miner_update()
         else:
             logger.error("Not broadcasting miner update as miner eligibility health check failed")
@@ -438,11 +439,13 @@ def get_timers():
 def check_if_node_healthy(cur=None):
     #lastest block maj
     logger.info("Checking if node is healthy to broadcast type 7")
-    rand_maj_url = get_majority_random_node()
-    maj_hash=get_last_block_hash_from_url_retry(rand_maj_url)
+    # rand_maj_url = get_majority_random_node()
+    maj_hash=get_majority_hash()
     my_latest_hash = get_last_block(cur)
 
     if not my_latest_hash >= maj_hash-MINER_HEALTH_BLOCKS:
         logger.info("Im not in sync with network, not broadcasting miner update")
         return False
+    
+    return True
     
