@@ -467,6 +467,23 @@ def get_last_block_hash_from_url_retry(url):
 
     return None
 
+def get_last_block_hash_from_node_info(url):
+    response = None
+    try:
+        response = requests.get(
+                url + '/get-node-info',
+                timeout=2
+            )
+        if response.status_code == 200:
+            return response.json()['last_block']['hash']
+        else:
+            logger.debug(f'Node is corrupt {url}')
+            return None
+    except Exception as err:
+        logger.debug(f'Could not get block hash from {url}')
+
+    return None
+
 
 def get_hash(peer):
         url = 'http://' + peer['address'] + ':' + str(NEWRL_PORT)
@@ -487,7 +504,7 @@ def get_majority_random_node(return_many=False):
         peer_idx = random.choice(range(len(peers)))
         url = 'http://' + peers[peer_idx]['address'] + ':' + str(NEWRL_PORT)
         del peers[peer_idx]
-        hash = get_last_block_hash_from_url_retry(url)
+        hash = get_last_block_hash_from_node_info(url)
         if hash:
             valid_peers += 1
             if hash in hash_url_map:
