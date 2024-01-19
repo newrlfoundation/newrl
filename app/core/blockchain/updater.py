@@ -16,6 +16,7 @@ from app.core.clock.timers import SYNC_STATUS
 
 # from app.codes.receiptmanager import get_receipts_for_block_from_db
 from app.config.ntypes import BLOCK_STATUS_CONSENSUS_TIMEOUT, BLOCK_STATUS_MINING_TIMEOUT, BLOCK_VOTE_MINER, TRANSACTION_MINER_ADDITION
+from app.routers.system import get_node_info
 
 from ..clock.global_time import get_corrected_time_ms, get_time_difference
 from ..fs.temp_manager import get_all_receipts_from_storage, get_blocks_for_index_from_storage, remove_block_from_temp, store_block_to_temp
@@ -447,5 +448,9 @@ def check_if_node_healthy(cur=None):
         logger.info("Im not in sync with network, not broadcasting miner update")
         return False
     
+    #check for db corruption
+    node_info = get_node_info()
+    if node_info is None:
+        return False
     return True
     

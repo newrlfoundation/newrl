@@ -62,6 +62,28 @@ async def get_node_info():
     }
     return node_info
 
+def get_node_info():
+    last_block = get_last_block_hash()
+    if last_block is None:
+        last_block_index = 0
+    else:
+        last_block_index = last_block['index']
+    node_info = {
+        'software_version': SOFTWARE_VERSION,
+        'wallet': get_node_wallet_public(),
+        'time': get_time_stats(),
+        'last_block': last_block,
+        'timers': get_timers(),
+        'snapshot': {
+            'snapshot_schedule': snapshot_schedule,
+            'snapshot_last_block': get_snapshot_last_block_index()
+        },
+        'miners': get_miner_info(),
+        'peers': get_peers(),
+        # 'recent_blocks': get_blocks(list(range(last_block_index - 5, last_block_index))),
+        'mempool_transactions': list_mempool_transactions()[-10:],
+    }
+    return node_info
 
 @router.get("/download-chain", tags=[p2p_tag])
 def download_chain_api():
