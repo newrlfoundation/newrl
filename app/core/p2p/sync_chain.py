@@ -141,14 +141,16 @@ def receive_block(block):
         store_block_to_temp(block)
         if am_i_in_current_committee():
             if validate_block(block):
-                my_receipt = add_my_receipt_to_block(block, vote=BLOCK_VOTE_VALID)
+                # Block might be mutated post validate_block call/accept_block call. Hence using original_block
+                my_receipt = add_my_receipt_to_block(original_block, vote=BLOCK_VOTE_VALID)
                 if my_receipt:
-                    consensus_adding_my_receipt = get_committee_consensus(block)
+                    consensus_adding_my_receipt = get_committee_consensus(original_block)
                     if consensus_adding_my_receipt == BLOCK_CONSENSUS_VALID:
-                        logger.info('Block satisfies valid consensus after adding my receipt. Accepting and broadcasting.')
-                        consensus_achieved_block = append_receipt_to_block(original_block, my_receipt)
-                        if accept_block(consensus_achieved_block, block['hash']):
-                            broadcast_block(consensus_achieved_block)
+                        logger.info('Block satisfies valid consensus after adding my receipt. Broadcasting to network.')
+                        # if accept_block(consensus_achieved_block, block['hash']):
+                        # get_committee_consensus will add the current node's receipt to the block
+                        # Broadcasting consensus achieved block
+                        broadcast_block(original_block)
                     elif consensus_adding_my_receipt == BLOCK_CONSENSUS_NA:
                         committee = get_committee_for_current_block()
                         broadcast_receipt(my_receipt, nodes=committee)
