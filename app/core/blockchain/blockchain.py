@@ -209,7 +209,7 @@ def add_block(cur, block, hash=None, is_state_reconstruction=False):
     if not is_state_reconstruction:
         last_block = get_last_block(cur)
         if last_block is not None and last_block['hash'] != block['previous_hash']:
-            print('Previous block hash does not match current block data')
+            logger.warn('Previous block hash does not match current block data')
             return False
     # Needed for backward compatibility of blocks
     block_index = block['block_index'] if 'block_index' in block else block['index']
