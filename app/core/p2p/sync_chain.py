@@ -25,7 +25,7 @@ from app.core.p2p.peers import get_peers
 
 from app.core.blockchain.validator import validate_block, validate_block_data
 from app.core.clock.timers import TIMERS
-from app.core.fs.temp_manager import append_receipt_to_block_in_storage, check_receipt_exists_in_temp, get_blocks_for_index_from_storage, store_block_to_temp, store_receipt_to_temp
+from app.core.fs.temp_manager import append_receipt_to_block, append_receipt_to_block_in_storage, check_receipt_exists_in_temp, get_blocks_for_index_from_storage, store_block_to_temp, store_receipt_to_temp
 from app.core.consensus.consensus import get_committee_consensus, validate_empty_block, validate_block_miner_committee, generate_block_receipt, \
     add_my_receipt_to_block, validate_receipt_for_committee
 from app.migrations.init_db import revert_chain, revert_chain_quick
@@ -146,8 +146,9 @@ def receive_block(block):
                     consensus_adding_my_receipt = get_committee_consensus(block)
                     if consensus_adding_my_receipt == BLOCK_CONSENSUS_VALID:
                         logger.info('Block satisfies valid consensus after adding my receipt. Accepting and broadcasting.')
-                        if accept_block(original_block, block['hash']):
-                            broadcast_block(original_block)
+                        consensus_achieved_block = append_receipt_to_block(original_block, my_receipt)
+                        if accept_block(consensus_achieved_block, block['hash']):
+                            broadcast_block(consensus_achieved_block)
                     elif consensus_adding_my_receipt == BLOCK_CONSENSUS_NA:
                         committee = get_committee_for_current_block()
                         broadcast_receipt(my_receipt, nodes=committee)
@@ -263,18 +264,18 @@ def sync_chain_from_peers(force_sync=False):
             logger.info(f'Syncing from peer {url}')
             sync_success = sync_chain_from_node(url, block_index)
             # sync_success can be True, False or None(indeterminate)
-            if sync_success == False:
-                forking_block = find_forking_block(url)
-                if forking_block is None:
-                    logger.info('Chains are not forking')
-                else:
-                    logger.info(f'Chains forking from block {forking_block}. Need to revert.')
-                    snapshot_last_block = get_snapshot_last_block_index()
-                    logger.info('Last snapshot block is %s and forking from %s.', snapshot_last_block, forking_block)
-                    if snapshot_last_block is not None and snapshot_last_block < forking_block:
-                        revert_chain_quick(revert_to_snapshot=True)
-                    else:
-                        revert_chain_quick(revert_to_snapshot=False)
+            # if sync_success == False:
+            #     forking_block = find_forking_block(url)
+            #     if forking_block is None:
+            #         logger.info('Chains are not forking')
+            #     else:
+            #         logger.info(f'Chains forking from block {forking_block}. Need to revert.')
+            #         snapshot_last_block = get_snapshot_last_block_index()
+            #         logger.info('Last snapshot block is %s and forking from %s.', snapshot_last_block, forking_block)
+            #         if snapshot_last_block is not None and snapshot_last_block < forking_block:
+            #             revert_chain_quick(revert_to_snapshot=True)
+            #         else:
+            #             revert_chain_quick(revert_to_snapshot=False)
 
         else:
             logger.info('No node available to sync')

@@ -50,6 +50,7 @@ def add_my_receipt_to_block(block, vote=BLOCK_VOTE_VALID):
     for receipt in block['receipts']:
         if receipt['public_key'] == my_receipt['public_key']:
             my_receipt_already_added = True
+            break
     if not my_receipt_already_added:
         block['receipts'].append(my_receipt)
         return my_receipt
