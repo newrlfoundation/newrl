@@ -71,7 +71,7 @@ def store_receipt_to_temp(receipt, folder=TMP_PATH):
     return new_file_name
 
 
-def append_receipt_to_block(block, new_receipt):
+def append_receipt_to_block(block, new_receipt) -> dict or None:
     receipt_already_exists = False
     for receipt in block['receipts']:
         if receipt['public_key'] == new_receipt['public_key']:
@@ -80,9 +80,9 @@ def append_receipt_to_block(block, new_receipt):
     
     if not receipt_already_exists:
         block['receipts'].append(new_receipt)
-        return True
+        return block
     
-    return False
+    return None
 
 
 def append_receipt_to_block_in_storage(receipt):
