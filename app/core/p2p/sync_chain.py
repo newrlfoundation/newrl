@@ -600,7 +600,9 @@ def quick_sync(db_url):
 
         # Only copy if the downloaded db has more blocks than local
         if blocks[0] > existing_block[0]:
-            subprocess.call(["mv", downloaded_db_path, NEWRL_DB])
+            snapshot_file = NEWRL_DB + '.snapshot'
+            subprocess.call(["mv", downloaded_db_path, snapshot_file])
+            subprocess.call(["cp", snapshot_file, NEWRL_DB])
     except Exception as e:
         logger.info('Removing local db and using downloaded db')
         subprocess.call(["mv", downloaded_db_path, NEWRL_DB])
