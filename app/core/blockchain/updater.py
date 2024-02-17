@@ -438,5 +438,6 @@ def trigger_sentinel():
     last_block = get_last_block()
     last_block_ts = int(last_block['timestamp'])
     time_elapsed_seconds = (current_ts - last_block_ts) / 1000
-    if time_elapsed_seconds > 600:  # 10 minutes
+    logger.info(f"Triggering sentinel. Time since last block: {time_elapsed_seconds} seconds")
+    if time_elapsed_seconds > 120:  # 2 minutes
         sentitnel_node_mine_empty()
