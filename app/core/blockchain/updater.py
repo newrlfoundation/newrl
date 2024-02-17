@@ -316,7 +316,7 @@ def global_internal_clock():
                 #     and time_elapsed_seconds < BLOCK_TIME_INTERVAL_SECONDS * 8
                 #     ):
                 #     committee_mine_empty()
-                elif am_i_sentinel_node():
+                elif False and am_i_sentinel_node():  # This is disabled. Sentinel is called externally
                     if should_i_mine(last_block):
                         start_mining_clock(last_block_ts)
                     elif time_elapsed_seconds > BLOCK_TIME_INTERVAL_SECONDS * 8:
@@ -371,7 +371,7 @@ def sentitnel_node_mine_empty():
     
     if len(existing_block_proposals) != 0:
         if (existing_block_proposals[0]['data']['timestamp'] < 
-            get_corrected_time_ms() - BLOCK_TIME_INTERVAL_SECONDS * 16 * 1000):
+            get_corrected_time_ms() - BLOCK_TIME_INTERVAL_SECONDS * 60 * 1000):
             logger.info(f"Deleting stale block proposal with index {new_block_index}")
             remove_block_from_temp(new_block_index)
         else:
@@ -431,3 +431,12 @@ def get_timers():
         'is_mining': TIMERS['mining_timer'] is not None and TIMERS['mining_timer'].is_alive(),
         'is_waiting_block_timeout': TIMERS['block_receive_timeout'] is not None and TIMERS['block_receive_timeout'].is_alive(),
     }
+
+
+def trigger_sentinel():
+    current_ts = get_corrected_time_ms()
+    last_block = get_last_block()
+    last_block_ts = int(last_block['timestamp'])
+    time_elapsed_seconds = (current_ts - last_block_ts) / 1000
+    if time_elapsed_seconds > 600:  # 10 minutes
+        sentitnel_node_mine_empty()

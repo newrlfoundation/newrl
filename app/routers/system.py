@@ -19,7 +19,7 @@ from app.core.p2p.peers import add_peer, clear_peers, get_peers, init_bootstrap_
 from app.core.p2p.sync_chain import get_blocks, get_last_block_index, quick_sync, sync_chain_from_node, sync_chain_from_peers
 from app.core.p2p.sync_mempool import list_mempool_transactions, sync_mempool_transactions
 from app.core.clock.timers import SYNC_STATUS
-from app.core.blockchain.updater import TIMERS, get_timers
+from app.core.blockchain.updater import TIMERS, get_timers, trigger_sentinel
 from app.core.helpers.utils import get_last_block_hash
 from app.config.constants import SOFTWARE_VERSION
 from app.migrations.init_db import clear_state_and_make_from_archive, revert_chain
@@ -194,6 +194,13 @@ def revert_chain_api(api_key, block_index: int):
     if calculate_hash(api_key) != '4a01127180cb827a4752abe578b47cbe23ba677037b5bb0cd420549bdb4a274d':
         return {'status': 'INVALID_KEY'}
     revert_chain(block_index)
+    return {'status': 'SUCCESS'}
+
+@router.post("/trigger-sentinel", tags=[p2p_tag])
+def trigger_sentinel_api(api_key):
+    if calculate_hash(api_key) != '4a01127180cb827a4752abe578b47cbe23ba677037b5bb0cd420549bdb4a274d':
+        return {'status': 'INVALID_KEY'}
+    trigger_sentinel()
     return {'status': 'SUCCESS'}
 
 @router.post("/make-state-from-archive", tags=[p2p_tag])
