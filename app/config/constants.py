@@ -4,7 +4,7 @@ import os
 from app.config.ntypes import NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE
 
 
-SOFTWARE_VERSION = "1.7.8"
+SOFTWARE_VERSION = "1.7.9"
 
 
 NEWRL_ENV = os.environ.get('NEWRL_ENV')
@@ -22,7 +22,7 @@ elif NEWRL_ENV == 'mainnet':
     NETWORK_TRUSTED_ARCHIVE_NODES = ['archive1-mainnet.newrl.net']
     NEWRL_PORT = 8456
     DATA_PATH = 'data_mainnet/'
-    NETWORK_SNAPSHOT = 'https://mainnet-snapshot-main.s3.ap-south-1.amazonaws.com/newrl.db.snapshot'
+    NETWORK_SNAPSHOT = 'https://link.storjshare.io/s/ju2jpled57kammyidcjrn2xu6nqa/newrl-mainnet-snapshot%2Fnewrl.db.snapshot?download=1'
     print('Using mainnet constants')
 elif NEWRL_ENV == 'test':
     BOOTSTRAP_NODES = ['localhost']
