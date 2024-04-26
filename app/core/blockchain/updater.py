@@ -27,8 +27,8 @@ from ..p2p.peers import get_peers, init_bootstrap_nodes, remove_dead_peers
 from ..p2p.utils import is_my_address
 from ..helpers.utils import BufferedLog, get_time_ms
 from .blockchain import Blockchain, get_last_block, get_last_block_index
-from app.core.blockchain.transactionmanager import Transactionmanager, get_valid_addresses
-from app.core.blockchain.state_updater import pay_fee_for_transaction, update_db_states
+from app.core.blockchain.transactionmanager import Transactionmanager, get_valid_addresses, validate_transaction_fee
+from app.core.blockchain.state_updater import pay_fee_for_transaction, update_db_states, validate_pay_fee_for_transaction
 from ..crypto.crypto import calculate_hash, sign_object, _private, _public
 from ..consensus.consensus import generate_block_receipt
 from ..db.db_updater import transfer_tokens_and_update_balances, get_wallet_token_balance
@@ -98,7 +98,8 @@ def run_updater(add_to_chain=False):
         #     os.remove(file)
         #     continue
         # Pay fee for transaction. If payee doesn't have enough funds, remove transaction
-        if transaction['type'] != TRANSACTION_MINER_ADDITION and not pay_fee_for_transaction(cur, transaction, get_wallet()['address']):
+        if transaction['type'] != TRANSACTION_MINER_ADDITION and not validate_pay_fee_for_transaction(cur, transaction, get_wallet()['address']):
+            logger.info("Removing txn as fee validation failed")
             os.remove(file)
             continue
         econ_result = tmtemp.econvalidator(cur)
