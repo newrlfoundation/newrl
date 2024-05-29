@@ -374,7 +374,40 @@ def get_fees_for_transaction(transaction):
     else:
         return 0
 
+def validate_pay_fee_for_transaction(cur, transaction, creator):
+    if 'transaction' in transaction:
+        transaction = transaction['transaction']
 
+    if transaction['type'] in [TRANSACTION_MINER_ADDITION, TRANSACTION_SC_UPDATE]:
+        return True
+
+    fee = get_fees_for_transaction(transaction)
+
+    if fee < 0:
+        return False
+
+    currency = transaction['currency']
+
+    if currency == NEWRL_TOKEN_CODE:
+        if fee < NEWRL_TOKEN_MULTIPLIER:
+            return False
+    elif currency == NUSD_TOKEN_CODE:
+        if fee < NUSD_TOKEN_MULTIPLIER:
+            return False
+    else:
+        return False
+
+    if 'fee_payer' in transaction:
+        payers = [transaction['fee_payer']]
+    else:
+        payers = get_valid_addresses(transaction, cur=cur)
+
+    for payee in payers:
+        balance = get_wallet_token_balance(cur, payee, currency)
+        fee_to_charge = math.ceil(fee / len(payers))
+        if balance < fee_to_charge:  # TODO - This should also account for payout/values in the transaction
+            return False
+    return True
 def pay_fee_for_transaction(cur, transaction, creator):
     if 'transaction' in transaction:
         transaction = transaction['transaction']
