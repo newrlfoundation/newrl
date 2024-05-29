@@ -230,7 +230,7 @@ class Transactionmanager:
         # from mempool only include transactions that reduce balance and not those that increase
         # check if the sender has enough balance to spend
         self.validity = 0
-
+        
         if not validate_transaction_fee(self.transaction, self.signatures, cur=cur):
             logger.error("Fee validation failed")
             self.errors.append("Fee validation failed")
