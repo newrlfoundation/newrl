@@ -124,3 +124,13 @@ def add_miners_as_peers():
         add_peer(miner['network_address'])
 
 
+def get_combined_score():
+    pass
+
+def normalise_stake_scores(scores):
+    pass
+
+def normalise_trust_scores(scores):
+    pass
+
+
