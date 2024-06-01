@@ -581,7 +581,7 @@ def quick_sync(db_url):
         logger.info("Using trusted NETWORK_SNAPSHOT")
         db_url = NETWORK_SNAPSHOT
     downloaded_db_path = NEWRL_DB + ".DOWNLOADED"
-    subprocess.call(["curl", "-o", downloaded_db_path, db_url])
+    subprocess.call(["curl", "-L","-o", downloaded_db_path, db_url])
     try:
         con = sqlite3.connect(downloaded_db_path)
         cur = con.cursor()
