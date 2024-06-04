@@ -7,8 +7,8 @@ from app.config.nvalues import MIN_STAKE_AMOUNT, SENTINEL_NODE_WALLET, NETWORK_T
 from app.config.constants import BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
 from app.config.forks import FORK_BLOCK_INDEX_FIX_VALIDATOR_SELECTION_1_5_0
 from ..clock.global_time import get_corrected_time_ms
-from ..helpers.utils import get_last_block_hash
-from app.core.trustnet.scoremanager import get_scores_for_wallets
+from ..helpers.utils import get_block_details,  get_last_block_hash
+from app.core.trustnet.scoremanager import get_combined_scores, get_score_data_full, get_scores_for_wallets
 
 
 logging.basicConfig(level=logging.INFO)
@@ -238,6 +238,33 @@ def get_committee_for_current_block(last_block=None):
     committee = sorted(committee, key=lambda d: d['wallet_address']) 
     return committee
 
+def get_committee_for_block(block_number=None):
+    print("b")
+    print(block_number)
+    block = get_block_details(block_number)
+    print("got block details")
+    miners = get_eligible_miners_with_data()
+    print("got miner details")
+
+    if len(miners) < MINIMUM_ACCEPTANCE_VOTES:
+        logger.info("Current committee cannot form consensus. Using sentinel node.")
+        return [{'wallet_address': SENTINEL_NODE_WALLET}]
+
+    committee_size = min(COMMITTEE_SIZE, len(miners))
+    # committee = random.sample(miners, k=committee_size)
+    scores_full = get_score_data_full(miners)
+    weights = [item['combined_score'] for item in scores_full ]
+    print("got combined details")
+
+    committee = weighted_random_choices(
+        scores_full,
+        weights,
+        committee_size,
+        get_number_from_hash(block))
+    print("got comm details")
+
+    committee = sorted(committee, key=lambda d: d['wallet_address']) 
+    return {"commitee":committee}
 
 def is_miner_committee_cached(last_block_hash):
     return False  # For testing
@@ -252,3 +279,7 @@ def is_miner_committee_cached(last_block_hash):
 
 def get_committee_wallet_list_for_current_block():
     return list(map(lambda c: c['wallet_address'], get_committee_for_current_block()))
+
+def get_score_data():
+    data = get_eligible_miners_with_data()
+    return get_score_data_full(data)

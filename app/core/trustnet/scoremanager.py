@@ -1,5 +1,6 @@
 """Code for managing trust scores between two persons"""
 import sqlite3
+import numpy as np
 from app.core.trustnet.kycwallet import get_person_id_for_wallet_from_db
 
 from app.config.constants import INITIAL_NETWORK_TRUST_SCORE, NEWRL_DB
@@ -75,3 +76,32 @@ def get_outgoing_trust_scores(source_wallet_id):
     con.close()
 
     return trust_score_cursor
+
+
+def get_combined_scores(data):
+    tscores = [item['score'] for item in data]
+    stakes = [item['amount'] for item in data]
+    normalised_tscores = normalise_scores(tscores)
+    normalise_stake_scores = normalise_scores(stakes)
+    return np.add(normalised_tscores,normalise_stake_scores)
+
+def get_score_data_full(data):
+    tscores = [item['score'] for item in data]
+    stakes = [item['amount'] for item in data]
+    normalised_tscores = normalise_scores(tscores)
+    normalise_stake_scores = normalise_scores(stakes)
+    combined = np.add(normalised_tscores,normalise_stake_scores)
+    for i, item in enumerate(data):
+      item['nrml_trust_score'] = normalised_tscores[i]
+      item['nrml_stake_score'] = normalise_stake_scores[i]
+      item['combined_score'] = combined[i]
+    return data
+
+def normalise_scores(scores):
+    return log_normalize(scores)
+
+def square_root_normalize(values):
+    return np.sqrt(np.array(values))
+
+def log_normalize(values):
+    return np.log(np.array(values) + 1)  # Adding 1 to avoid log(0)

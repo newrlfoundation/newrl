@@ -14,7 +14,7 @@ from app.config.ntypes import TRANSACTION_MINER_ADDITION
 from ..helpers.utils import get_time_ms
 from app.core.blockchain.transactionmanager import Transactionmanager
 from ..blockchain.validator import validate
-from .committeemanager import get_eligible_miners, get_miner_for_current_block, get_committee_for_current_block
+from .committeemanager import get_eligible_miners, get_eligible_miners_with_data, get_miner_for_current_block, get_committee_for_current_block
 
 
 logging.basicConfig(level=logging.INFO)
@@ -122,15 +122,5 @@ def add_miners_as_peers():
 
     for miner in miners:
         add_peer(miner['network_address'])
-
-
-def get_combined_score():
-    pass
-
-def normalise_stake_scores(scores):
-    pass
-
-def normalise_trust_scores(scores):
-    pass
 
 
