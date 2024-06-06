@@ -82,7 +82,7 @@ def get_combined_scores(data):
     tscores = [item['score'] for item in data]
     stakes = [item['amount'] for item in data]
     normalised_tscores = normalise_scores(tscores)
-    normalise_stake_scores = normalise_scores(stakes)
+    normalise_stake_scores = normalise_scores([stake/10**6 for stake in stakes])
     return [x + y for x, y in zip(normalise_stake_scores, normalised_tscores)]
 
 def get_score_data_full(data):
