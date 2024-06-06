@@ -239,12 +239,9 @@ def get_committee_for_current_block(last_block=None):
     return committee
 
 def get_committee_for_block(block_number=None):
-    print("b")
     print(block_number)
     block = get_block_details(block_number)
-    print("got block details")
     miners = get_eligible_miners_with_data()
-    print("got miner details")
 
     if len(miners) < MINIMUM_ACCEPTANCE_VOTES:
         logger.info("Current committee cannot form consensus. Using sentinel node.")
@@ -261,7 +258,6 @@ def get_committee_for_block(block_number=None):
         weights,
         committee_size,
         get_number_from_hash(block))
-    print("got comm details")
 
     committee = sorted(committee, key=lambda d: d['wallet_address']) 
     return {"commitee":committee}
