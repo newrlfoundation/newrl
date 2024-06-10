@@ -60,7 +60,6 @@ def get_last_block_hash():
         return None
 
 def get_block_details(block_number):
-    print("cpi")
     print(block_number)
     print(block_number)
     con = sqlite3.connect(NEWRL_DB)
@@ -74,8 +73,6 @@ def get_block_details(block_number):
 
     if last_block is not None:
         block_index, block_hash, timestamp = last_block[0]
-        print(block_hash)
-        print("Returning")
         return {
             'index': block_index,
             'hash': block_hash,

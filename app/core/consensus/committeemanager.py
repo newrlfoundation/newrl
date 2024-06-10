@@ -153,18 +153,6 @@ def get_eligible_miners():
 
 def get_eligible_miners_with_data():
     last_block = get_last_block_hash()
-    # last_block_epoch = 0
-    # try:
-    #     # Need try catch to support older block timestamps
-    #     last_block_epoch = int(last_block['timestamp'])
-    # except:
-    #     pass
-    # if last_block:
-    #     cutfoff_epoch = last_block_epoch - TIME_MINER_BROADCAST_INTERVAL
-    # else:
-    #     cutfoff_epoch = 0
-    # last_block_epoch = int(last_block['timestamp'])
-    # cutfoff_epoch = get_corrected_time_ms() - TIME_MINER_BROADCAST_INTERVAL_SECONDS * 2 * 1000
     cutfoff_block = last_block['index'] - 1000
 
     con = sqlite3.connect(NEWRL_DB)
