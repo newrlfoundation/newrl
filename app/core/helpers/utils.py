@@ -59,6 +59,27 @@ def get_last_block_hash():
     else:
         return None
 
+def get_block_details(block_number):
+    print(block_number)
+    print(block_number)
+    con = sqlite3.connect(NEWRL_DB)
+    cur = con.cursor()
+    last_block_cursor = cur.execute(
+        'SELECT block_index, hash, timestamp FROM blocks WHERE block_index = ?', (block_number,))
+
+    last_block = last_block_cursor.fetchall()
+
+    con.close()
+
+    if last_block is not None:
+        block_index, block_hash, timestamp = last_block[0]
+        return {
+            'index': block_index,
+            'hash': block_hash,
+            'timestamp': timestamp
+        }
+    else:
+        return None
 
 # def store_block_proposal(block):
 #     # TODO - Do this in temp file system instead of db
