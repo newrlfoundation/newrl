@@ -1,4 +1,5 @@
 """Code for managing trust scores between two persons"""
+import math
 import sqlite3
 from app.core.trustnet.kycwallet import get_person_id_for_wallet_from_db
 
@@ -75,3 +76,34 @@ def get_outgoing_trust_scores(source_wallet_id):
     con.close()
 
     return trust_score_cursor
+
+
+def get_combined_scores(data):
+    tscores = [item['score'] for item in data]
+    stakes = [item['amount'] for item in data]
+    normalised_tscores = normalise_scores(tscores)
+    normalise_stake_scores = normalise_scores([stake/10**6 for stake in stakes])
+    return [x + y for x, y in zip(normalise_stake_scores, normalised_tscores)]
+
+def get_score_data_full(data):
+    tscores = [item['score'] for item in data]
+    stakes = [item['amount'] for item in data]
+    normalised_tscores = normalise_scores(tscores)
+    normalise_stake_scores = normalise_scores([stake/10**6 for stake in stakes])
+    combined = [x + y for x, y in zip(normalise_stake_scores, normalised_tscores)]
+    for i, item in enumerate(data):
+      item['nrml_trust_score'] = normalised_tscores[i]
+      item['nrml_stake_score'] = normalise_stake_scores[i]
+      item['combined_score'] = combined[i]
+    return data
+
+def normalise_scores(scores):
+    return log_normalize(scores)
+
+
+def log_normalize(values):
+    log_normalized_values = [math.log(value + 1) for value in values]
+    return log_normalized_values
+
+def sq_normalise(values):
+    return [math.sqrt(x) for x in values]

@@ -13,6 +13,7 @@ from starlette.responses import FileResponse
 from starlette.requests import Request
 import traceback
 
+from app.core.consensus.committeemanager import get_committee_for_block, get_eligible_miners_with_data, get_score_data
 from app.core.helpers.limiter import limiter
 from app.core.helpers.FetchRespository import FetchRepository
 from app.core.p2p.sync_chain import find_forking_block, get_block_hashes, get_blocks
@@ -491,3 +492,20 @@ def get_block_tree_api(start_index: int, end_index: int):
 @router.get("/find-forking-block", tags=[query_tag], include_in_schema=False)
 def get_fork_block(url: str):
     return find_forking_block(url)
+
+
+@router.get("/get-eligible-miner-data", tags=[query_tag], include_in_schema=False)
+def get_miner():
+    return get_eligible_miners_with_data()
+
+
+@router.get("/get-score-data", tags=[query_tag], include_in_schema=False)
+def get_miner():
+    return get_score_data()
+
+
+@router.get("/get-commitee", tags=[query_tag], include_in_schema=False)
+def get_miner(block_number: int):
+    print("api")
+    print(block_number)
+    return get_committee_for_block(block_number)
