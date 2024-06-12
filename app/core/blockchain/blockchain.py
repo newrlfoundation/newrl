@@ -214,7 +214,7 @@ def add_block(cur, block, hash=None, is_state_reconstruction=False):
             # If the previous block is for mininig timeout, revert it
             if last_block['status'] == BLOCK_STATUS_MINING_TIMEOUT:
                 logger.warn('Reverting last block as it is empty')
-                revert_last_empty_block(cur, last_block)
+                revert_last_empty_block(last_block, cur)
             return False
     # Needed for backward compatibility of blocks
     block_index = block['block_index'] if 'block_index' in block else block['index']
