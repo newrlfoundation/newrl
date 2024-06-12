@@ -503,7 +503,12 @@ def handle_sc_transaction(cur, transaction, creator_wallet, newblockindex):
             process_txn(cur,transaction_all,newblockindex)   
  
 
-def revert_last_empty_block(cur, last_block):
+def revert_last_empty_block(last_block, cur=None):
+    cursor_opened = False
+    if not cur:
+        con = sqlite3.connect(NEWRL_DB, timeout=10)
+        cur = con.cursor()
+        cursor_opened = True
     add_miner(
         cur,
         last_block['expected_miner'],
@@ -512,6 +517,10 @@ def revert_last_empty_block(cur, last_block):
         last_block['index']  # TODO - This is a hack. Need to fix this.
     )
     cur.execute('DELETE FROM blocks where block_index = ?', (last_block['index'],))
+
+    if cursor_opened:
+        con.commit()
+        con.close()
  
     
 def state_cleanup(cur, block):
