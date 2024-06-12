@@ -503,6 +503,15 @@ def handle_sc_transaction(cur, transaction, creator_wallet, newblockindex):
             process_txn(cur,transaction_all,newblockindex)   
  
 
+def revert_last_empty_block(cur, last_block):
+    add_miner(
+        cur,
+        last_block['expected_miner'],
+        '1.1.1.1',
+        get_corrected_time_ms(),
+        last_block['index']  # TODO - This is a hack. Need to fix this.
+    )
+    cur.execute('DELETE FROM blocks where block_index = ?', (last_block['index'],))
  
     
 def state_cleanup(cur, block):
