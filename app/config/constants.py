@@ -4,7 +4,7 @@ import os
 from app.config.ntypes import NEWRL_TOKEN_CODE, NUSD_TOKEN_CODE
 
 
-SOFTWARE_VERSION = "1.8.1"
+SOFTWARE_VERSION = "1.8.2"
 
 
 NEWRL_ENV = os.environ.get('NEWRL_ENV')
