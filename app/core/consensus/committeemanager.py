@@ -5,7 +5,7 @@ import json
 
 from app.config.nvalues import MIN_STAKE_AMOUNT, SENTINEL_NODE_WALLET, NETWORK_TRUST_MANAGER_PID
 from app.config.constants import BLOCK_TIME_INTERVAL_SECONDS, COMMITTEE_SIZE, MINIMUM_ACCEPTANCE_VOTES, NEWRL_DB, TIME_MINER_BROADCAST_INTERVAL_SECONDS
-from app.config.forks import FORK_BLOCK_INDEX_FIX_VALIDATOR_SELECTION_1_5_0
+from app.config.forks import FORK_BLOCK_INDEX_FIX_VALIDATOR_SELECTION_1_5_0, FORK_COMMITTEE_SELECTION_SCORE_BASED
 from ..clock.global_time import get_corrected_time_ms
 from ..helpers.utils import get_block_details,  get_last_block_hash
 from app.core.trustnet.scoremanager import get_combined_scores, get_score_data_full, get_scores_for_wallets
@@ -201,23 +201,30 @@ def get_committee_for_current_block(last_block=None):
     global miner_committee_cache
     if last_block is None:
         last_block = get_last_block_hash()
-
     if not last_block:
         return [{'wallet_address': SENTINEL_NODE_WALLET}]
 
     if is_miner_committee_cached(last_block['hash']):
         return miner_committee_cache['current_committee']
 
-    miners = get_eligible_miners()
-
-    if len(miners) < MINIMUM_ACCEPTANCE_VOTES:
-        logger.info("Current committee cannot form consensus. Using sentinel node.")
-        return [{'wallet_address': SENTINEL_NODE_WALLET}]
+    cutfoff_block = last_block['index'] - 1000
+    if cutfoff_block > FORK_COMMITTEE_SELECTION_SCORE_BASED:
+        # use combined stake + trust scores as weights
+        miners = get_eligible_miners_with_data()  
+        if len(miners) < MINIMUM_ACCEPTANCE_VOTES:
+            logger.info("Current committee cannot form consensus. Using sentinel node.")
+            return [{'wallet_address': SENTINEL_NODE_WALLET}]
+        weights = get_combined_scores(miners)
+    else:    
+        miners = get_eligible_miners()
+        if len(miners) < MINIMUM_ACCEPTANCE_VOTES:
+            logger.info("Current committee cannot form consensus. Using sentinel node.")
+            return [{'wallet_address': SENTINEL_NODE_WALLET}]
+        miner_wallets = list(map(lambda m: m['wallet_address'], miners))
+        weights = get_scores_for_wallets(miner_wallets)
 
     committee_size = min(COMMITTEE_SIZE, len(miners))
-    # committee = random.sample(miners, k=committee_size)
-    miner_wallets = list(map(lambda m: m['wallet_address'], miners))
-    weights = get_scores_for_wallets(miner_wallets)
+
     committee = weighted_random_choices(
         miners,
         weights,
