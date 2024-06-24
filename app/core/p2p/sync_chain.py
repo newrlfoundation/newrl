@@ -9,10 +9,11 @@ import copy
 import multiprocessing
 
 from app.core.blockchain import blockchain
+from app.core.blockchain.state_updater import revert_last_empty_block
 from app.core.db.dbmanager import get_snapshot_last_block_index
 from app.core.fs.archivemanager import get_block_from_archive
 from app.core.helpers.utils import get_last_block_hash
-from app.config.ntypes import BLOCK_CONSENSUS_INVALID, BLOCK_CONSENSUS_NA, BLOCK_CONSENSUS_VALID, BLOCK_STATUS_INVALID_MINED, BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID
+from app.config.ntypes import BLOCK_CONSENSUS_INVALID, BLOCK_CONSENSUS_NA, BLOCK_CONSENSUS_VALID, BLOCK_STATUS_INVALID_MINED, BLOCK_STATUS_MINING_TIMEOUT, BLOCK_VOTE_INVALID, BLOCK_VOTE_VALID
 from ..clock.global_time import get_corrected_time_ms
 from app.core.crypto.crypto import calculate_hash
 from app.core.consensus.minermanager import am_i_in_block_committee, am_i_in_current_committee, get_committee_for_current_block
@@ -232,7 +233,11 @@ def sync_chain_from_node(url, block_index=None):
                 logger.warn(f"Cannot add block {block['index']}")
                 return None
             elif block_validation_result == False: # validation_result is False for fork
-                logger.warn('Invalid block. Aborting sync.')
+                logger.warn('Invalid block')
+                last_block = blockchain.get_last_block()
+                if last_block['status'] == BLOCK_STATUS_MINING_TIMEOUT:
+                    logger.warn('Reverting last block as it is empty')
+                    revert_last_empty_block(last_block)
                 return False
             else:
                 logger.info('Adding block %d', block['index'])
@@ -581,7 +586,7 @@ def quick_sync(db_url):
         logger.info("Using trusted NETWORK_SNAPSHOT")
         db_url = NETWORK_SNAPSHOT
     downloaded_db_path = NEWRL_DB + ".DOWNLOADED"
-    subprocess.call(["curl", "-o", downloaded_db_path, db_url])
+    subprocess.call(["curl", "-L","-o", downloaded_db_path, db_url])
     try:
         con = sqlite3.connect(downloaded_db_path)
         cur = con.cursor()

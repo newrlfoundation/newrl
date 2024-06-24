@@ -374,7 +374,40 @@ def get_fees_for_transaction(transaction):
     else:
         return 0
 
+def validate_pay_fee_for_transaction(cur, transaction, creator):
+    if 'transaction' in transaction:
+        transaction = transaction['transaction']
 
+    if transaction['type'] in [TRANSACTION_MINER_ADDITION, TRANSACTION_SC_UPDATE]:
+        return True
+
+    fee = get_fees_for_transaction(transaction)
+
+    if fee < 0:
+        return False
+
+    currency = transaction['currency']
+
+    if currency == NEWRL_TOKEN_CODE:
+        if fee < NEWRL_TOKEN_MULTIPLIER:
+            return False
+    elif currency == NUSD_TOKEN_CODE:
+        if fee < NUSD_TOKEN_MULTIPLIER:
+            return False
+    else:
+        return False
+
+    if 'fee_payer' in transaction:
+        payers = [transaction['fee_payer']]
+    else:
+        payers = get_valid_addresses(transaction, cur=cur)
+
+    for payee in payers:
+        balance = get_wallet_token_balance(cur, payee, currency)
+        fee_to_charge = math.ceil(fee / len(payers))
+        if balance < fee_to_charge:  # TODO - This should also account for payout/values in the transaction
+            return False
+    return True
 def pay_fee_for_transaction(cur, transaction, creator):
     if 'transaction' in transaction:
         transaction = transaction['transaction']
@@ -470,6 +503,24 @@ def handle_sc_transaction(cur, transaction, creator_wallet, newblockindex):
             process_txn(cur,transaction_all,newblockindex)   
  
 
+def revert_last_empty_block(last_block, cur=None):
+    cursor_opened = False
+    if not cur:
+        con = sqlite3.connect(NEWRL_DB, timeout=10)
+        cur = con.cursor()
+        cursor_opened = True
+    add_miner(
+        cur,
+        last_block['expected_miner'],
+        '1.1.1.1',
+        get_corrected_time_ms(),
+        last_block['index']  # TODO - This is a hack. Need to fix this.
+    )
+    cur.execute('DELETE FROM blocks where block_index = ?', (last_block['index'],))
+
+    if cursor_opened:
+        con.commit()
+        con.close()
  
     
 def state_cleanup(cur, block):

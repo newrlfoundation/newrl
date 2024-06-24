@@ -14,7 +14,7 @@ from app.config.ntypes import TRANSACTION_MINER_ADDITION
 from ..helpers.utils import get_time_ms
 from app.core.blockchain.transactionmanager import Transactionmanager
 from ..blockchain.validator import validate
-from .committeemanager import get_eligible_miners, get_miner_for_current_block, get_committee_for_current_block
+from .committeemanager import get_eligible_miners, get_eligible_miners_with_data, get_miner_for_current_block, get_committee_for_current_block
 
 
 logging.basicConfig(level=logging.INFO)

@@ -215,13 +215,36 @@ def get_kyc_doc_hash_json(kyc_docs, kyc_doc_hashes):
     return json.dumps(doc_list)
 
 
-def get_wallet_token_balance(cur, wallet_address, token_code):
-    balance_cursor = cur.execute('SELECT balance FROM balances WHERE wallet_address = :address AND tokencode = :tokencode', {
-        'address': wallet_address, 'tokencode': token_code})
-    balance_row = balance_cursor.fetchone()
-    balance = balance_row[0] if balance_row is not None else 0
-    return balance
+# def get_wallet_token_balance(cur, wallet_address, token_code):
 
+#     balance_cursor = cur.execute('SELECT balance FROM balances WHERE wallet_address = :address AND tokencode = :tokencode', {
+#         'address': wallet_address, 'tokencode': token_code})
+#     balance_row = balance_cursor.fetchone()
+#     #    balance = balance_row[0] if balance_row is not None else 0
+#     logger.info(f"{balance_row} for {wallet_address} {token_code}" )
+#     if balance_row is not None:
+#         balance = balance_row[0] 
+#     else:
+#         logger.error("None 0")
+#         balance = 0
+
+#     return balance
+
+def get_wallet_token_balance(cur, wallet_address, token_code):
+    try:
+        balance_cursor = cur.execute('SELECT balance FROM balances WHERE wallet_address = :address AND tokencode = :tokencode', {
+            'address': wallet_address, 'tokencode': token_code})
+        balance_row = balance_cursor.fetchone()
+        if balance_row:
+            balance = balance_row[0]
+            logging.info(f"Retrieved balance: {balance} for wallet: {wallet_address} token: {token_code}")
+        else:
+            balance = 0
+            logging.warning(f"No balance record found for wallet: {wallet_address}, token: {token_code}. Defaulting to 0.")
+    except Exception as e:
+        logging.error(f"Error retrieving balance for wallet: {wallet_address}, token: {token_code}. Error: {e}")
+        balance = 0
+    return balance
 
 def add_tx_to_block(cur, block_index, transactions):
     for transaction_signature in transactions:

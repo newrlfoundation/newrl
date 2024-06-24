@@ -18,7 +18,7 @@ from ..fs.temp_manager import remove_block_from_temp
 from ...config.constants import BLOCK_TIME_INTERVAL_SECONDS, NEWRL_DB, NO_BLOCK_TIMEOUT
 from ..helpers.utils import get_time_ms
 from ..crypto.crypto import calculate_hash
-from .state_updater import state_cleanup, update_db_states, update_miners, update_trust_scores
+from .state_updater import revert_last_empty_block, state_cleanup, update_db_states, update_miners, update_trust_scores
 from ..helpers.utils import get_time_ms
 from ..auth.auth import get_node_wallet_address
 from ..fs.mempool_manager import remove_transaction_from_mempool
@@ -210,6 +210,11 @@ def add_block(cur, block, hash=None, is_state_reconstruction=False):
         last_block = get_last_block(cur)
         if last_block is not None and last_block['hash'] != block['previous_hash']:
             logger.warn('Previous block hash does not match current block data')
+            
+            # If the previous block is for mininig timeout, revert it
+            if last_block['status'] == BLOCK_STATUS_MINING_TIMEOUT:
+                logger.warn('Reverting last block as it is empty')
+                revert_last_empty_block(last_block, cur)
             return False
     # Needed for backward compatibility of blocks
     block_index = block['block_index'] if 'block_index' in block else block['index']
@@ -279,7 +284,7 @@ def get_last_block(cur=None):
             cur = con.cursor()
             cursor_opened_inside = True
         last_block_cursor = cur.execute(
-            'SELECT block_index, hash, timestamp FROM blocks ORDER BY block_index DESC LIMIT 1'
+            'SELECT block_index, hash, timestamp, status, expected_miner FROM blocks ORDER BY block_index DESC LIMIT 1'
         )
         last_block = last_block_cursor.fetchone()
 
@@ -293,7 +298,9 @@ def get_last_block(cur=None):
         return {
             'index': last_block[0],
             'hash': last_block[1],
-            'timestamp': last_block[2]
+            'timestamp': last_block[2],
+            'status': last_block[3],
+            'expected_miner': last_block[4]
         }
     else:
         return None
