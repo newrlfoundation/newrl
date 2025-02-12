@@ -215,19 +215,21 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
         #get tokens, delete balances
         tokens = transaction_data["tokens"]
         for token in tokens:
-            delete_token_balances(cur, token)
-            #TODO delete token   
-            delete_token(cur, token) 
+            delete_token_balances(cur, tokens)
+            #delete token   
+            delete_tokens(cur, tokens) 
 
-def delete_token_balances(cur, token):
-    query = "DELETE FROM balances WHERE tokencode = ?"
-    # Execute the query with the token as a parameter
-    cur.execute(query, (token,))
+def delete_token_balances(cur, tokens):
+    placeholders = ','.join(['?'] * len(tokens))
+    query = f"DELETE FROM balances WHERE tokencode IN ({placeholders})"
+    cur.execute(query, tokens)
 
-def delete_token(cur, token):
-    query = "DELETE FROM tokens WHERE tokencode = ?"
-    # Execute the query with the token as a parameter
-    cur.execute(query, (token,))
+
+def delete_tokens(cur, tokens):
+    placeholders = ','.join(['?'] * len(tokens))
+    query = f"DELETE FROM tokens WHERE tokencode IN ({placeholders})"
+    cur.execute(query, tokens)
+
     
 def add_block_reward(cur, creator, blockindex):
     """Reward the minder by chaning their NWRL balance"""
