@@ -214,10 +214,9 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
     if transaction_type == TRANSACTION_CLEAN_UP:
         #get tokens, delete balances
         tokens = transaction_data["tokens"]
-        for token in tokens:
-            delete_token_balances(cur, tokens)
-            #delete token   
-            delete_tokens(cur, tokens) 
+        delete_token_balances(cur, tokens)
+        #delete token   
+        delete_tokens(cur, tokens) 
 
 def delete_token_balances(cur, tokens):
     placeholders = ','.join(['?'] * len(tokens))
