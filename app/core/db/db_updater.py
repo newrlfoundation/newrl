@@ -189,21 +189,39 @@ def update_token(cur, token, txcode=None):
             if tid:  # tokencode exists, more of an existing token is being added to the first_owner
                 tid = tid[0]
                 existingflag = True
-            else:
-                # if provided code does not exist, it is considered new token addition
-                tid = str(token['tokencode'])
-                existingflag = False
         else:   # mistakenly entered tokencode value as "" or "0" or 0
-            tcodenewflag = True
             existingflag = False
-
-
     if not existingflag:    # new token , cant be updated
         return False
     else:
         update_token_attributes(cur,tid,token['tokenattributes'])
 
     return True
+
+def delete_token_attributes(cur, token, txcode=None):
+    existingflag = False
+    if 'tokencode' in token:  # creating more of an existing token or tokencode provided by user
+        if token['tokencode'] and token['tokencode'] != "0" and token['tokencode'] != "":
+            tid = cur.execute(
+                'SELECT tokencode FROM tokens WHERE tokencode=?', (token['tokencode'], )).fetchone()
+            if tid:  # tokencode exists, more of an existing token is being added to the first_owner
+                tid = tid[0]
+                existingflag = True
+        else:   # mistakenly entered tokencode value as "" or "0" or 0
+            existingflag = False
+    if not existingflag:    # new token , cant be updated
+        raise Exception("Token is not present")
+    elif not is_token_balance_empty(cur,token['tokencode']):
+        raise Exception("Token balances sum is not zero to destory the attributes")
+    else:
+        token_code = token['tokencode']
+        cur.execute(f'''UPDATE tokens SET token_attributes=? where tokencode = ?''', (None, token_code))
+  
+
+def is_token_balance_empty(cur, token_code):
+    data =cur.execute(f'''SELECT SUM(balance) FROM balances where tokencode = ?''',(token_code,)).fetchone()
+    return data[0] == 0
+    
 
 def get_kyc_doc_hash_json(kyc_docs, kyc_doc_hashes):
     doc_list = []
