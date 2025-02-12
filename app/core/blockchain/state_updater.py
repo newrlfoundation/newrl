@@ -23,7 +23,7 @@ from app.config.nvalues import NETWORK_TRUST_MANAGER_PID, TREASURY_WALLET_ADDRES
 from app.config.nvalues import NETWORK_TRUST_MANAGER_PID, MIN_STAKE_AMOUNT, STAKE_PENALTY_RATIO, ZERO_ADDRESS
 
 from app.config.constants import ALLOWED_FEE_PAYMENT_TOKENS, COMMITTEE_SIZE, INITIAL_NETWORK_TRUST_SCORE, MAX_RECEIPT_HISTORY_BLOCKS, NEWRL_DB
-from app.config.ntypes import BLOCK_STATUS_MINING_TIMEOUT, BLOCK_VOTE_MINER, NEWRL_TOKEN_CODE, NEWRL_TOKEN_DECIMAL, NEWRL_TOKEN_MULTIPLIER, NEWRL_TOKEN_NAME, NUSD_TOKEN_CODE, NUSD_TOKEN_MULTIPLIER, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
+from app.config.ntypes import BLOCK_STATUS_MINING_TIMEOUT, BLOCK_VOTE_MINER, NEWRL_TOKEN_CODE, NEWRL_TOKEN_DECIMAL, NEWRL_TOKEN_MULTIPLIER, NEWRL_TOKEN_NAME, NUSD_TOKEN_CODE, NUSD_TOKEN_MULTIPLIER, TRANSACTION_CLEAN_UP, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TOKEN_CREATION, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION
 
 logger = logging.getLogger(__name__)
 
@@ -210,8 +210,25 @@ def update_state_from_transaction(cur, transaction_type, transaction_data, trans
             cr.delete_private_sc_state(transaction_data['table_name'], transaction_data["unique_column"],
                                        transaction_data["unique_value"], transaction_data["address"])
 
+    #used to clean up unsed tokens of custodians, canr remove newrl
+    if transaction_type == TRANSACTION_CLEAN_UP:
+        #get tokens, delete balances
+        tokens = transaction_data["tokens"]
+        for token in tokens:
+            delete_token_balances(cur, token)
+            #TODO delete token   
+            delete_token(cur, token) 
 
+def delete_token_balances(cur, token):
+    query = "DELETE FROM balances WHERE tokencode = ?"
+    # Execute the query with the token as a parameter
+    cur.execute(query, (token,))
 
+def delete_token(cur, token):
+    query = "DELETE FROM tokens WHERE tokencode = ?"
+    # Execute the query with the token as a parameter
+    cur.execute(query, (token,))
+    
 def add_block_reward(cur, creator, blockindex):
     """Reward the minder by chaning their NWRL balance"""
     if creator is None:
