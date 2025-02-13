@@ -17,11 +17,11 @@ from app.core.db.db_updater import get_contract_from_address, get_wallet_token_b
 from app.core.helpers.CustomExceptions import ContractValidationError
 from app.core.helpers.FetchRespository import FetchRepository
 from app.config.Configuration import Configuration
-from app.config.nvalues import CUSTODIAN_DAO_ADDRESS
+from app.config.nvalues import CUSTODIAN_DAO_ADDRESS, MEMBER_WALLET_LIST
 from app.core.blockchain.transactionutils import is_redundant_miner_broadcast
 
 
-from app.config.ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_MULTIPLIER, NUSD_TOKEN_CODE, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION,TOKEN_NFT
+from app.config.ntypes import NEWRL_TOKEN_CODE, NEWRL_TOKEN_MULTIPLIER, NUSD_TOKEN_CODE, TRANSACTION_CLEAN_UP, TRANSACTION_MINER_ADDITION, TRANSACTION_ONE_WAY_TRANSFER, TRANSACTION_SC_UPDATE, TRANSACTION_SMART_CONTRACT, TRANSACTION_TRUST_SCORE_CHANGE, TRANSACTION_TWO_WAY_TRANSFER, TRANSACTION_WALLET_CREATION, TRANSACTION_TOKEN_CREATION,TOKEN_NFT
 
 from app.config.constants import CUSTODIAN_OWNER_TYPE, MEMPOOL_PATH, NEWRL_DB
 from app.core.helpers.utils import get_person_id_for_wallet_address, get_time_ms
@@ -622,6 +622,18 @@ class Transactionmanager:
                 self.validity = 1
         if self.transaction['type'] == TRANSACTION_SC_UPDATE:
             self.validity = 1
+        if self.transaction['type'] == TRANSACTION_CLEAN_UP:
+
+            tokens = self.transaction['specific_data']['tokens']
+            # h7_wallet_list = json.loads(Configuration.config('MEMBER_WALLET_LIST'))    
+            h7_wallet_list = fetch_member_wallet_list(cur)
+            transaction_signer = self.signatures[0]
+            #validate that it shouldnt be newrl
+            if not "NEWRL" in tokens:
+                #validate for h7 signature
+                if (transaction_signer["wallet_address"] in h7_wallet_list):
+                    self.validity = 1
+
 
         if self.validity == 1:
             return {
@@ -974,6 +986,11 @@ def get_valid_addresses(transaction, address = None, cur=None):
         valid_addresses.append(transaction['specific_data']['address1'])
     if transaction_type == TRANSACTION_MINER_ADDITION:
         valid_addresses.append(transaction['specific_data']['wallet_address'])
+    if transaction_type == TRANSACTION_CLEAN_UP:
+        wallet = transaction['specific_data']['signers'][0]
+        if wallet not in valid_addresses:  # Check if wallet is already in the list
+            valid_addresses.append(wallet)
+        valid_addresses.append(wallet)    
     return valid_addresses
 
 
@@ -1080,3 +1097,25 @@ def validate_transaction_fee(transaction, signatures, cur):
     if cursor_opened:
         con.close()
     return True
+
+
+import json
+
+def fetch_member_wallet_list(cur):
+    query = """
+    SELECT property_value 
+    FROM configuration 
+    WHERE property_key = ?
+    """
+    cur.execute(query, ("MEMBER_WALLET_LIST",))
+    row = cur.fetchone()
+    
+    if row:
+        try:
+            return json.loads(row[0])
+        except json.JSONDecodeError as e:
+            print("Error decoding JSON from property_value:", e)
+            return []
+    else:
+        print("No entry found for property_key = MEMBER_WALLET_LIST")
+        return []
